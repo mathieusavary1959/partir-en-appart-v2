@@ -21,7 +21,7 @@ st.set_page_config(page_title="Partir en appart!", layout="wide")
 # Caveat (tout ce qui est « écrit à la main » dans l'univers).
 CSS = """
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Caveat:wght@600;700&family=Work+Sans:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Caveat:wght@600;700&family=Special+Elite&family=Work+Sans:wght@400;500;600;700;800&display=swap');
 :root{
   --mur:#1C1F27; --texte:#F5F2EA; --gris:#A7AEC2;
   --jaune:#FFD23F; --jaune-texte:#1C1F27; --encre:#2A2620; --crayon:#D93A2B;
@@ -298,6 +298,65 @@ p, li, label{ color:var(--texte); }
   padding:3px 8px; border-radius:2px; box-shadow:0 3px 6px rgba(42,38,32,.35); }
 .pf-m1{transform:rotate(-2deg);} .pf-m2{transform:rotate(1.5deg);} .pf-m3{transform:rotate(-1deg);}
 .pf-m4{transform:rotate(3deg);background:var(--jaune);}
+
+.s2-bandeau{ position:relative; border-radius:22px; margin-top:16px; padding:20px 26px 16px; overflow:hidden;
+  background:linear-gradient(158deg,#F6F2E7,#E9E3D2 55%,#D8D1BA);
+  box-shadow:0 24px 50px rgba(0,0,0,.55), inset 0 2px 0 rgba(255,255,255,.9); }
+.s2-bandeau .journal{ font-family:"Special Elite",monospace; font-size:13px; letter-spacing:.3em; color:#5A5344; }
+.s2-bandeau .titre{ font-family:"Bebas Neue",sans-serif; font-size:44px; line-height:1.02; color:var(--encre); }
+.s2-bandeau .titre span{ color:var(--crayon); }
+.s2-bandeau .aide{ color:#4A453C; font-size:14px; margin-top:5px; max-width:780px; }
+.st-key-s2_carte_0, .st-key-s2_carte_1, .st-key-s2_carte_2{
+  position:relative; background:linear-gradient(180deg,#FBF7EA,#F1EAD3); border-radius:2px;
+  padding:18px 15px 10px; box-shadow:0 14px 28px rgba(0,0,0,.45); margin-top:24px; }
+.st-key-s2_carte_0{ transform:rotate(-.8deg); }
+.st-key-s2_carte_1{ transform:rotate(.5deg); }
+.st-key-s2_carte_2{ transform:rotate(-.4deg); }
+.st-key-s2_carte_0 p, .st-key-s2_carte_1 p, .st-key-s2_carte_2 p{ color:var(--encre); }
+.st-key-s2_carte_0 label p, .st-key-s2_carte_1 label p, .st-key-s2_carte_2 label p{
+  font-family:"Special Elite",monospace; font-size:11.5px; letter-spacing:.1em;
+  text-transform:uppercase; color:#4A453C !important; }
+.st-key-s2_carte_0 .stTextInput input, .st-key-s2_carte_1 .stTextInput input, .st-key-s2_carte_2 .stTextInput input{
+  background:transparent !important; border:none !important; border-bottom:2px solid #B9B09A !important;
+  border-radius:0 !important; box-shadow:none !important; color:var(--encre) !important; font-weight:600; }
+.st-key-s2_carte_0 [data-testid="stNumberInput"] > div, .st-key-s2_carte_1 [data-testid="stNumberInput"] > div,
+.st-key-s2_carte_2 [data-testid="stNumberInput"] > div{
+  background:transparent; border:none; border-bottom:2px solid #B9B09A; border-radius:0; box-shadow:none; }
+.st-key-s2_carte_0 [data-testid="stNumberInput"] input, .st-key-s2_carte_1 [data-testid="stNumberInput"] input,
+.st-key-s2_carte_2 [data-testid="stNumberInput"] input{ background:transparent !important; color:var(--encre) !important; font-weight:700; }
+.s2-photo{ background:#FFFFFF; padding:6px 6px 3px; border-radius:2px; transform:rotate(-1.2deg);
+  box-shadow:0 6px 14px rgba(42,38,32,.3); margin-bottom:10px; }
+.s2-photo svg{ width:100%; height:auto; display:block; }
+.s2-photo .legende{ font-family:"Caveat",cursive; font-size:15.5px; color:#4A453C; text-align:center; line-height:1.15; }
+.s2-nom{ font-family:"Bebas Neue",sans-serif; font-size:25px; color:var(--encre); letter-spacing:.06em; }
+.pf-encercle{ position:absolute; top:150px; right:12px; z-index:5; transform:rotate(-8deg);
+  border:3px solid var(--crayon); border-radius:52% 48% 55% 45%/48% 55% 45% 52%;
+  color:var(--crayon); font-family:"Caveat",cursive; font-weight:700; font-size:21px;
+  padding:1px 13px 0; background:rgba(255,255,255,.3); }
+.st-key-s2_choix_zone{ position:relative; background:#FFFFFF; border-radius:3px; padding:16px 20px 8px;
+  box-shadow:0 14px 28px rgba(0,0,0,.45); margin-top:26px; border-left:6px solid var(--crayon); }
+.st-key-s2_choix_zone p, .st-key-s2_choix_zone label span{ color:var(--encre) !important; }
+.st-key-s2_choix_zone .stRadio label span, .st-key-s2_choix_zone .stRadio label p{ font-family:"Caveat",cursive !important; font-size:21px !important; color:var(--encre) !important; }
+.s2-choix-titre{ font-family:"Special Elite",monospace; letter-spacing:.16em; font-size:13px; color:var(--crayon); margin-bottom:2px; }
+.st-key-s2_justif{ position:relative; margin-top:20px; padding:14px 18px 6px; border-radius:3px;
+  background:repeating-linear-gradient(180deg,#FFFDF4 0 27px,#E4DCC4 27px 28px);
+  box-shadow:0 14px 28px rgba(0,0,0,.45); }
+.st-key-s2_justif p, .st-key-s2_justif label p{ color:var(--encre) !important; }
+.st-key-s2_justif label p{ font-family:"Caveat",cursive !important; font-size:22px !important; }
+.st-key-s2_justif [data-baseweb="textarea"]{ background:transparent !important; border:none !important; box-shadow:none !important; }
+.st-key-s2_justif .stTextArea > div{ background:transparent !important; border:none !important; }
+.st-key-s2_justif [data-baseweb="textarea"] > div{ background:transparent !important; }
+.st-key-s2_justif textarea{ background:transparent !important; border:none !important; box-shadow:none !important;
+  font-family:"Caveat",cursive !important; font-size:21px !important; line-height:28px !important; color:var(--encre) !important; }
+.st-key-s2_capture_zone{ margin-top:20px; padding:14px 18px 4px; border:2.5px dashed #8A8172; border-radius:6px;
+  background:rgba(255,255,255,.82); }
+.st-key-s2_capture_zone label p{ color:var(--encre) !important; font-family:"Special Elite",monospace;
+  font-size:12.5px; letter-spacing:.08em; }
+.s2-bail{ background:#FFFFFF; color:var(--encre); border:3px double #4A453C; border-radius:4px;
+  padding:16px 22px 12px; margin-top:22px; box-shadow:0 14px 28px rgba(0,0,0,.45); }
+.s2-bail .titre{ font-family:"Bebas Neue",sans-serif; font-size:26px; letter-spacing:.08em; color:var(--encre); }
+.s2-bail .sig{ font-family:"Caveat",cursive; font-size:21px; margin-top:10px; color:var(--encre); }
+.s2-bail .sig .nom{ border-bottom:2px solid #4A453C; padding:0 14px; }
 
 @media (max-width:980px){
   .pf-grille{ grid-template-columns:1fr; grid-template-areas:"solde" "calendrier" "croquis" "liste" "coloc" "epicerie" "energuide" "vide"; }
@@ -788,41 +847,51 @@ def page_s2(compte, dossier, profil):
         aller("accueil")
     s2 = donnees.obtenir_s2(dossier)
     deja_fait = dossier.get("progression", {}).get("S2") == "fait"
+    choix_affiche = st.session_state.get("s2_choix", s2.get("choix"))
 
     st.markdown(
-        "<section class='carte'><h2>S2 : Mon logement</h2>"
-        "<div class='aide'>Compare 3 annonces réelles à Trois-Rivières pour un "
-        "4 et demi. Repère de prix : loyer entre 950 $ et 1 200 $ par mois.</div>"
-        "<div>Trouve 3 vraies annonces de logements, remplis une carte par "
-        "annonce, puis choisis celle que tu prendrais pour vrai. Même si une "
-        "annonce dit « chauffé », note-la telle quelle : le calcul "
-        "d'électricité se fait à la S4, pour tout le monde.</div></section>",
+        "<div class='s2-bandeau'>"
+        "<div class='journal'>LES PETITES ANNONCES · TROIS-RIVIÈRES · 4 ET DEMI SEULEMENT</div>"
+        "<div class='titre'>S2 · TROUVER <span>SON LOGEMENT</span></div>"
+        "<div class='aide'>Compare 3 annonces réelles. Repère de prix : loyer entre "
+        "950 $ et 1 200 $ par mois. Découpe tes 3 annonces, épingle-les ici, puis "
+        "encercle celle que tu choisis au crayon rouge. Même si une annonce dit "
+        "« chauffé », note-la telle quelle : le calcul d'électricité se fait "
+        "à la S4, pour tout le monde.</div></div>",
         unsafe_allow_html=True)
     if deja_fait:
         st.success("Tu as déjà choisi ton logement : ta clé est arrivée. "
                    "Tu peux quand même modifier tes annonces et réenregistrer.")
 
+    aimants = ["pf-arouge", "pf-ableu", "pf-ajaune"]
+    colonnes = st.columns(3)
     for i, annonce in enumerate(s2["annonces"]):
-        st.markdown(f"<section class='carte'><h2>Annonce {i + 1}</h2></section>",
+        with colonnes[i]:
+            with st.container(key=f"s2_carte_{i}"):
+                st.markdown(
+                    f"<div class='pf-aimant {aimants[i]}'></div>"
+                    "<div class='s2-photo'>" + SVG_POLAROID +
+                    "<div class='legende'>Ta capture remplacera cette photo</div></div>"
+                    f"<div class='s2-nom'>ANNONCE {i + 1}</div>",
                     unsafe_allow_html=True)
-        st.text_input("Adresse ou secteur", value=annonce.get("adresse") or "",
-                      key=f"s2_a{i}_adresse")
-        col_loyer, col_distance = st.columns(2)
-        with col_loyer:
-            st.number_input("Loyer ($)", value=annonce.get("loyer"),
-                            min_value=0.0, step=1.0, format="%.2f",
-                            key=f"s2_a{i}_loyer")
-        with col_distance:
-            st.number_input("Distance de l'école ou du travail (km)",
-                            value=annonce.get("distance_km"),
-                            min_value=0.0, step=0.1, format="%.1f",
-                            key=f"s2_a{i}_distance")
-        st.text_input("Inclusions", value=annonce.get("inclusions") or "",
-                      key=f"s2_a{i}_inclusions",
-                      placeholder="Ex. chauffé, déneigement, stationnement")
-        st.text_input("Remarque", value=annonce.get("remarque") or "",
-                      key=f"s2_a{i}_remarque",
-                      placeholder="Ce que tu remarques : étage, état, bruit, sous-sol...")
+                if choix_affiche == i:
+                    st.markdown("<div class='pf-encercle'>Choisie!</div>",
+                                unsafe_allow_html=True)
+                st.text_input("Adresse ou secteur", value=annonce.get("adresse") or "",
+                              key=f"s2_a{i}_adresse")
+                st.number_input("Loyer ($)", value=annonce.get("loyer"),
+                                min_value=0.0, step=1.0, format="%.2f",
+                                key=f"s2_a{i}_loyer")
+                st.number_input("Distance de l'école ou du travail (km)",
+                                value=annonce.get("distance_km"),
+                                min_value=0.0, step=0.1, format="%.1f",
+                                key=f"s2_a{i}_distance")
+                st.text_input("Inclusions", value=annonce.get("inclusions") or "",
+                              key=f"s2_a{i}_inclusions",
+                              placeholder="Ex. chauffé, déneigement, stationnement")
+                st.text_input("Remarque", value=annonce.get("remarque") or "",
+                              key=f"s2_a{i}_remarque",
+                              placeholder="Étage, état, bruit, sous-sol...")
 
     def libelle_choix(i):
         a = s2["annonces"][i]
@@ -831,21 +900,44 @@ def page_s2(compte, dossier, profil):
             return f"Annonce {i + 1} : {adresse} ({fmt_montant(a['loyer'])})"
         return f"Annonce {i + 1}"
 
-    st.markdown("<section class='carte'><h2>Ton choix</h2>"
-                "<div class='aide'>Le loyer est un coût partagé : "
-                "ton coloc paie l'autre moitié.</div></section>",
+    with st.container(key="s2_choix_zone"):
+        st.markdown("<div class='s2-choix-titre'>TON CHOIX, AU CRAYON ROUGE</div>"
+                    "<p style='font-size:13.5px;color:#4A453C'>Le loyer est un coût "
+                    "partagé : ton coloc paie l'autre moitié.</p>",
+                    unsafe_allow_html=True)
+        choix_initial = s2.get("choix")
+        st.radio("Quelle annonce choisis-tu ?", [0, 1, 2],
+                 index=int(choix_initial) if choix_initial is not None else None,
+                 format_func=libelle_choix, key="s2_choix")
+
+    with st.container(key="s2_justif"):
+        st.markdown("<div class='pf-aimant pf-avert'></div>", unsafe_allow_html=True)
+        st.text_area("Justification du choix", value=s2.get("justification") or "",
+                     key="s2_justification", height=112,
+                     placeholder="Pourquoi cette annonce-là plutôt que les deux autres? "
+                     "Parle du prix, des inclusions, du secteur et de la distance.")
+
+    with st.container(key="s2_capture_zone"):
+        st.text_input("Référence de la capture de l'annonce choisie",
+                      value=s2.get("capture") or "", key="s2_capture",
+                      placeholder="Nom du fichier de capture déposé dans Classroom")
+
+    choix_vif = st.session_state.get("s2_choix")
+    if choix_vif is not None:
+        loyer_vif = st.session_state.get(f"s2_a{int(choix_vif)}_loyer")
+        adresse_vive = (st.session_state.get(f"s2_a{int(choix_vif)}_adresse") or "").strip()
+        if loyer_vif:
+            st.markdown(
+                "<div class='s2-bail'><div class='titre'>TON BAIL · BROUILLON</div>"
+                + rang("L'appartement choisi", adresse_vive or "Adresse à compléter")
+                + rang("Loyer total, par mois", fmt_montant(loyer_vif))
+                + "<div class='ligne total'><div>Ta part (50 %)</div>"
+                + f"<div class='valeur'>{fmt_montant(float(loyer_vif) / 2)}</div></div>"
+                + "<div class='sig'>Signé : <span class='nom'>" + profil["prenom"]
+                + "</span> et <span class='nom'>" + profil["coloc"]["prenom"]
+                + "</span>, ton coloc. Le vrai bail se signe dans ta tête : "
+                + "à partir de la S6, ce loyer sort de ton compte chaque mois.</div></div>",
                 unsafe_allow_html=True)
-    choix_initial = s2.get("choix")
-    st.radio("Quelle annonce choisis-tu ?", [0, 1, 2],
-             index=int(choix_initial) if choix_initial is not None else None,
-             format_func=libelle_choix, key="s2_choix")
-    st.text_area("Justification du choix", value=s2.get("justification") or "",
-                 key="s2_justification",
-                 placeholder="Pourquoi cette annonce-là plutôt que les deux autres? "
-                 "Parle du prix, des inclusions, du secteur et de la distance.")
-    st.text_input("Référence de la capture de l'annonce choisie",
-                  value=s2.get("capture") or "", key="s2_capture",
-                  placeholder="Nom du fichier de capture déposé dans Classroom")
 
     col_enr, col_fin = st.columns(2)
     with col_enr:
