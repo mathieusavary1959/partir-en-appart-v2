@@ -8,17 +8,24 @@ la justification, la capture) et section S3 (le jour de l'emménagement :
 les boîtes de déménagement par pièce, chaque achat prouvé par son lien,
 la facture d'électroménagers, le reçu de caisse sous le plafond de
 3 500 $) fonctionnelles, progression sauvegardée. La session survit au
-rafraîchissement de la page grâce à un jeton dans l'adresse, révoqué à
-la déconnexion et à la réinitialisation du mot de passe.
+rafraîchissement de la page grâce à un jeton dans un cookie du
+navigateur, révoqué à la déconnexion et à la réinitialisation du mot
+de passe.
 Le calendrier de vie, la console du prof et les sections S4 à S7
 arrivent aux phases suivantes.
 La couche de données vit dans donnees.py (magasin mémoire ou Supabase REST).
 """
+import datetime
 import html
 
 import streamlit as st
 
 import donnees
+
+try:
+    import extra_streamlit_components as stx
+except Exception:
+    stx = None
 
 # Garde-fou de déploiement : si le processus en ligne garde en mémoire une
 # ancienne version du module donnees (rechargement partiel de Streamlit
@@ -597,35 +604,71 @@ def aller(page):
     st.rerun()
 
 
+NOM_COOKIE_JETON = "appart2_jeton"
+
+
 def deconnecter():
+    st.session_state["_cookie_a_supprimer"] = True
     identifiant = st.session_state.get("identifiant")
     if identifiant:
         donnees.revoquer_jeton_session(MAGASIN, identifiant)
-    if "j" in st.query_params:
-        del st.query_params["j"]
     for cle in ("identifiant", "compte", "page"):
         st.session_state.pop(cle, None)
     st.rerun()
 
 
 def ouvrir_session(identifiant):
-    """Ouvre la session de l'élève et dépose son jeton dans l'adresse :
-    un rafraîchissement de la page ne le déconnecte plus."""
+    """Ouvre la session de l'élève et prépare son jeton de session
+    persistante (cookie de 90 jours) : un rafraîchissement de la page
+    ne le déconnecte plus. Le jeton est seulement PRÉPARÉ ici ; main()
+    le dépose dans le cookie au début de l'exécution suivante, parce
+    qu'un st.rerun() immédiat jetterait le composant d'écriture avant
+    que le navigateur ait enregistré le cookie (constaté en test).
+    Le jeton dans l'adresse a été abandonné le 28 oct. 2026 : sur
+    Streamlit Cloud, l'application ne reçoit pas les paramètres de
+    l'adresse après un vrai rechargement (vérifié en production)."""
     st.session_state["identifiant"] = identifiant
     st.session_state["page"] = "accueil"
     jeton = donnees.nouveau_jeton_session(MAGASIN, identifiant)
     if jeton:
-        st.query_params["j"] = jeton
+        st.session_state["_jeton_a_deposer"] = jeton
 
 
-def restaurer_session():
-    """Si l'adresse porte un jeton valide, rouvre le dossier sans
-    redemander le mot de passe (rafraîchissement, retour sur la page).
-    Le jeton est révoqué à la déconnexion et à chaque réinitialisation
-    du mot de passe par le prof."""
+def _traiter_cookie_en_attente(cm):
+    """Au début de chaque exécution, avant toute restauration : supprime
+    le cookie si une déconnexion l'a demandé (ce qui le retire aussi du
+    relevé local du gestionnaire), puis dépose le jeton en attente."""
+    if cm is None:
+        return
+    if st.session_state.pop("_cookie_a_supprimer", False):
+        try:
+            cm.delete(NOM_COOKIE_JETON)
+        except Exception:
+            pass
+    jeton = st.session_state.pop("_jeton_a_deposer", None)
+    if jeton:
+        try:
+            cm.set(NOM_COOKIE_JETON, jeton,
+                   expires_at=datetime.datetime.now()
+                   + datetime.timedelta(days=90),
+                   max_age=90 * 24 * 3600)
+        except Exception:
+            pass
+
+
+def restaurer_session(cm):
+    """Si le cookie du navigateur porte un jeton valide, rouvre le
+    dossier sans redemander le mot de passe (rafraîchissement, retour
+    sur la page). Le jeton est révoqué à la déconnexion et à chaque
+    réinitialisation du mot de passe par le prof."""
     if st.session_state.get("identifiant"):
         return
-    jeton = st.query_params.get("j")
+    jeton = None
+    if cm is not None:
+        try:
+            jeton = cm.get(NOM_COOKIE_JETON)
+        except Exception:
+            jeton = None
     if jeton:
         identifiant = donnees.identifiant_par_jeton(MAGASIN, jeton)
         if identifiant:
@@ -1622,7 +1665,14 @@ def page_attente(titre, texte, phase):
 
 # ----------------------------------------------------------------------- main
 def main():
-    restaurer_session()
+    cm = None
+    if stx is not None:
+        try:
+            cm = stx.CookieManager()
+        except Exception:
+            cm = None
+    _traiter_cookie_en_attente(cm)
+    restaurer_session(cm)
     if not st.session_state.get("identifiant"):
         ecran_acces()
         st.markdown(
