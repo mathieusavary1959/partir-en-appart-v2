@@ -121,6 +121,20 @@ p, li, label{ color:var(--texte); }
 .action .aide{ font-size:13.5px; font-weight:600; margin-top:2px; }
 
 .pied{ color:#6E7484; font-size:12.5px; margin-top:22px; text-align:center; line-height:1.6; }
+/* L'étape du bas : UN seul élément jaune, le bouton lui-même, pleine largeur. */
+.etape-titre{ font-family:"Bebas Neue",sans-serif; font-size:19px; letter-spacing:.2em; color:var(--jaune); margin-top:22px; }
+.etape-aide{ color:var(--gris); font-size:13.5px; margin-top:2px; }
+.st-key-etape_bar .stButton > button{
+  position:relative; overflow:hidden; width:100%; border:none; border-radius:14px;
+  background:var(--jaune); color:var(--jaune-texte);
+  font-family:"Bebas Neue",sans-serif; font-size:28px; letter-spacing:.04em;
+  padding:15px 24px; box-shadow:0 14px 34px rgba(255,210,63,.22); }
+.st-key-etape_bar .stButton > button:hover{ color:var(--jaune-texte); opacity:.94; }
+.st-key-etape_bar .stButton > button::after{
+  content:""; position:absolute; top:0; bottom:0; width:26%; left:-30%;
+  background:linear-gradient(100deg,transparent,rgba(255,255,255,.55),transparent);
+  animation:pfbrille 3.4s ease-in-out infinite; }
+.st-key-etape_bar .stButton > button p{ font-family:inherit; font-size:inherit; letter-spacing:inherit; color:inherit; }
 
 /* ============ LA PORTE DE FRIGO (accueil et bandeau d'accès) ============ */
 @keyframes pbalA{from{transform:rotate(-1.6deg);}to{transform:rotate(-0.7deg);}}
@@ -661,12 +675,13 @@ def page_accueil(compte, dossier, profil):
     if courante:
         nom = donnees.nom_section(courante)
         st.markdown(
-            "<section class='action'>"
-            f"<div class='quoi'>Ma prochaine étape : {nom[0].lower() + nom[1:]} ({courante})</div>"
-            f"<div class='aide'>{AIDES_ETAPES[courante]}</div></section>",
+            "<div class='etape-titre'>MA PROCHAINE ÉTAPE</div>"
+            f"<div class='etape-aide'>{AIDES_ETAPES[courante]}</div>",
             unsafe_allow_html=True)
-        if st.button(f"Aller à la section {courante}", type="primary"):
-            aller("s1" if courante == "S1" else "sections")
+        with st.container(key="etape_bar"):
+            if st.button(f"{courante} · {nom} →", type="primary",
+                         use_container_width=True):
+                aller("s1" if courante == "S1" else "sections")
     else:
         st.success("Tu as terminé toutes tes sections. Beau travail!")
 
