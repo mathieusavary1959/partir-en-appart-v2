@@ -16,6 +16,7 @@ import hashlib
 import hmac
 import json
 import os
+import secrets
 import unicodedata
 import urllib.parse
 import urllib.request
@@ -192,6 +193,12 @@ class MagasinMemoire:
         d = self.dossiers.get(identifiant)
         return json.loads(json.dumps(d)) if d is not None else None
 
+    def identifiant_par_jeton(self, jeton):
+        for identifiant, d in self.dossiers.items():
+            if d.get("jeton_session") and d["jeton_session"] == jeton:
+                return identifiant
+        return None
+
     def maj_mdp_hash(self, identifiant, nouveau_hash):
         if identifiant in self.comptes:
             self.comptes[identifiant]["mdp_hash"] = nouveau_hash
@@ -260,6 +267,13 @@ class MagasinSupabase:
                          + urllib.parse.quote(identifiant) + "&select=donnees")
         return rows[0]["donnees"] if rows else None
 
+    def identifiant_par_jeton(self, jeton):
+        champ = urllib.parse.quote("donnees->>jeton_session")
+        rows = self._req("GET", "/rest/v1/appart2_dossiers?" + champ
+                         + "=eq." + urllib.parse.quote(str(jeton))
+                         + "&select=identifiant")
+        return rows[0]["identifiant"] if rows else None
+
     def maj_mdp_hash(self, identifiant, nouveau_hash):
         rows = self._req("PATCH", "/rest/v1/appart2_comptes?identifiant=eq."
                          + urllib.parse.quote(identifiant),
@@ -277,6 +291,45 @@ def creer_magasin(config=None):
         if magasin.tester():
             return magasin
     return MagasinMemoire()
+
+
+# ------------------------------------------------------ sessions persistantes
+def nouveau_jeton_session(magasin, identifiant):
+    """Crée le jeton de session persistante d'un élève et le range dans
+    son dossier. Un seul jeton actif : un nouveau remplace l'ancien.
+    Le jeton voyage dans l'adresse de la page pour survivre au
+    rafraîchissement ; il ne donne accès qu'au dossier de son élève."""
+    dossier = magasin.charger_dossier(identifiant)
+    if dossier is None:
+        return None
+    jeton = secrets.token_urlsafe(24)
+    dossier["jeton_session"] = jeton
+    magasin.sauvegarder_dossier(identifiant, dossier)
+    return jeton
+
+
+def identifiant_par_jeton(magasin, jeton):
+    """Retrouve l'élève derrière un jeton de session. None si le jeton
+    est absent, révoqué ou inconnu ; une panne du magasin ne bloque
+    jamais l'écran d'accès."""
+    if not jeton:
+        return None
+    try:
+        return magasin.identifiant_par_jeton(jeton)
+    except Exception:
+        return None
+
+
+def revoquer_jeton_session(magasin, identifiant):
+    """Invalide le jeton de session (déconnexion, réinitialisation du
+    mot de passe) : l'ancienne adresse ne rouvre plus le dossier."""
+    try:
+        dossier = magasin.charger_dossier(identifiant)
+        if dossier is not None and dossier.get("jeton_session"):
+            dossier["jeton_session"] = None
+            magasin.sauvegarder_dossier(identifiant, dossier)
+    except Exception:
+        pass
 
 
 # ------------------------------------------------------------------- dossiers
@@ -363,7 +416,10 @@ PLAFOND_INSTALLATION = 3500.0
 PIECE_COLOC = "La chambre de mon coloc"
 
 # Seuils de niveau par pièce : (MINIMAL, MOYEN, MAXIMAL), en nombre
-# d'articles nommés. Barème validé par Mathieu le 28 octobre 2026.
+# d'articles prouvés. Barème validé par Mathieu le 28 octobre 2026.
+# JAMAIS affichés aux élèves (décision de Mathieu, 28 oct. 2026) :
+# à eux de juger si leur pièce est complète ; il explique les niveaux
+# en introduction de classe. Aucun message de l'app ne les révèle.
 SEUILS_S3 = {
     "Ma chambre": (8, 13, 17),
     "Cuisine": (11, 21, 28),
@@ -380,13 +436,15 @@ def _fmt_montant(valeur):
 
 def article_par_defaut(piece):
     """Article vide ajouté dans une pièce : usagé, personnel dans la
-    chambre de l'élève, partagé dans les pièces communes (fidèle à la v1)."""
-    return {"nom": "", "prix": None, "etat": "usagé",
+    chambre de l'élève, partagé dans les pièces communes (fidèle à la v1).
+    Le champ lien est la preuve de l'achat (règle de Mathieu, 28 oct. 2026) :
+    sans lien valide, l'achat ne compte pas."""
+    return {"nom": "", "prix": None, "etat": "usagé", "lien": "",
             "type": "personnel" if piece == "Ma chambre" else "partagé"}
 
 
 def electro_par_defaut():
-    return {"nom": "", "prix": None, "etat": "usagé", "capture": ""}
+    return {"nom": "", "prix": None, "etat": "usagé", "lien": ""}
 
 
 def s3_par_defaut():
@@ -415,6 +473,10 @@ def obtenir_s3(dossier):
             s3["pieces"][piece] = []
     if not isinstance(s3["electro"], list):
         s3["electro"] = []
+    for liste in list(s3["pieces"].values()) + [s3["electro"]]:
+        for a in liste:
+            if isinstance(a, dict) and "lien" not in a:
+                a["lien"] = a.get("capture") or ""
     return s3
 
 
@@ -434,8 +496,53 @@ def articles_nommes(articles):
     return sum(1 for a in articles or [] if (a.get("nom") or "").strip())
 
 
+def lien_valide(lien):
+    """Un lien de preuve plausible : http(s), un domaine avec un point,
+    aucun espace. La vérification réelle se fait par l'enseignant en
+    cliquant le lien ; ici on refuse ce qui ne peut pas être un lien."""
+    t = (lien or "").strip().lower()
+    if " " in t or not (t.startswith("http://") or t.startswith("https://")):
+        return False
+    domaine = t.split("://", 1)[1].split("/")[0]
+    return "." in domaine and len(domaine) >= 4
+
+
+def article_prouve(article):
+    """Un achat qui existe : un nom, un prix et un lien de preuve valide.
+    Sans les trois, l'achat n'a jamais existé et ne compte nulle part
+    (ni niveau, ni total)."""
+    return (bool((article.get("nom") or "").strip())
+            and bool(article.get("prix"))
+            and lien_valide(article.get("lien")))
+
+
+def article_entame(article):
+    """Un article commencé (au moins un champ rempli) mais pas prouvé."""
+    commence = (bool((article.get("nom") or "").strip())
+                or bool(article.get("prix"))
+                or bool((article.get("lien") or "").strip()))
+    return commence and not article_prouve(article)
+
+
+def nombre_prouves(articles):
+    """Nombre d'achats qui comptent (prouvés) dans une liste d'articles."""
+    return sum(1 for a in articles or [] if article_prouve(a))
+
+
+def manques_article(article):
+    """Ce qui manque à un article pour que l'achat compte."""
+    manques = []
+    if not (article.get("nom") or "").strip():
+        manques.append("un nom")
+    if not article.get("prix"):
+        manques.append("un prix")
+    if not lien_valide(article.get("lien")):
+        manques.append("un lien de preuve valide")
+    return manques
+
+
 def niveau_s3(nombre, seuils):
-    """Niveau atteint pour un nombre d'articles nommés :
+    """Niveau atteint pour un nombre d'articles prouvés :
     None sous le MINIMAL, puis MINIMAL, MOYEN, MAXIMAL."""
     minimal, moyen, maximal = seuils
     if nombre >= maximal:
@@ -455,17 +562,29 @@ def part_article(article):
 
 
 def totaux_piece(s3, piece):
-    """(total des prix de la pièce, part de l'élève) pour une pièce."""
-    articles = (s3.get("pieces") or {}).get(piece, [])
+    """(total des prix, part de l'élève) pour une pièce, en ne comptant
+    QUE les achats prouvés : un achat sans preuve n'existe pas."""
+    articles = [a for a in (s3.get("pieces") or {}).get(piece, [])
+                if article_prouve(a)]
     total = sum(float(a.get("prix") or 0) for a in articles)
     part = sum(part_article(a) for a in articles)
     return total, part
 
 
 def totaux_electro(s3):
-    """(total des électroménagers, part de l'élève = la moitié)."""
-    total = sum(float(a.get("prix") or 0) for a in s3.get("electro", []))
+    """(total des électroménagers prouvés, part de l'élève = la moitié)."""
+    total = sum(float(a.get("prix") or 0)
+                for a in s3.get("electro", []) if article_prouve(a))
     return total, total / 2
+
+
+def nombre_sans_preuve(s3):
+    """Nombre d'articles commencés mais non prouvés, dans toute la S3."""
+    n = 0
+    for articles in (s3.get("pieces") or {}).values():
+        n += sum(1 for a in articles if article_entame(a))
+    n += sum(1 for a in s3.get("electro", []) if article_entame(a))
+    return n
 
 
 def total_installation(s3):
@@ -490,31 +609,35 @@ def s3_manquants(s3):
 
     def verifier_articles(articles, endroit):
         for j, a in enumerate(articles or [], start=1):
-            nom_vide = not (a.get("nom") or "").strip()
-            sans_prix = not a.get("prix")
-            if nom_vide != sans_prix:
+            if article_entame(a):
+                nom = (a.get("nom") or "").strip()
+                quoi = f"article {j}" + (f" « {nom} »" if nom else "")
                 manques.append(
-                    f"{endroit}, article {j} : donne-lui un nom et un prix, "
-                    "ou retire-le.")
+                    f"{endroit}, {quoi} : il manque "
+                    + ", ".join(manques_article(a))
+                    + " pour que cet achat compte. Sans preuve, "
+                    "l'achat ne compte pas : complète-le ou retire-le.")
 
     for piece in PIECES:
         if piece == PIECE_COLOC:
             continue
         articles = (s3.get("pieces") or {}).get(piece, [])
         verifier_articles(articles, piece)
-        nombre = articles_nommes(articles)
+        nombre = nombre_prouves(articles)
         if niveau_s3(nombre, SEUILS_S3[piece]) is None:
             manques.append(
-                f"{piece} : il te faut au moins {SEUILS_S3[piece][0]} articles "
-                f"pour le niveau MINIMAL, tu en as {nombre}.")
+                f"{piece} : pas encore assez d'achats prouvés pour que "
+                "la pièce fonctionne. Pense à l'essentiel pour y vivre, "
+                "chaque achat avec son lien de preuve.")
 
     electro = s3.get("electro", [])
     verifier_articles(electro, "Électroménagers")
-    nombre_e = articles_nommes(electro)
+    nombre_e = nombre_prouves(electro)
     if niveau_s3(nombre_e, SEUILS_ELECTRO) is None:
         manques.append(
-            f"Électroménagers : il te faut au moins {SEUILS_ELECTRO[0]} articles "
-            f"pour le niveau MINIMAL, tu en as {nombre_e}.")
+            "Électroménagers : pas encore assez d'achats prouvés pour "
+            "que la cuisine et la lessive fonctionnent. Pense aux gros "
+            "essentiels, chaque achat avec son lien de preuve.")
 
     total = total_installation(s3)
     if total > PLAFOND_INSTALLATION:
@@ -628,4 +751,6 @@ def reinitialiser_mot_de_passe(magasin, identifiant, nouveau_mot_de_passe):
     if magasin.compte_par_identifiant(identifiant) is None:
         return False, "Compte introuvable."
     ok = magasin.maj_mdp_hash(identifiant, hacher_mot_de_passe(nouveau_mot_de_passe))
+    if ok:
+        revoquer_jeton_session(magasin, identifiant)
     return (True, "Mot de passe réinitialisé.") if ok else (False, "Échec de la réinitialisation.")

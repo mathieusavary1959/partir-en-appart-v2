@@ -4,13 +4,18 @@ Univers figé le 28 octobre 2026 : « la porte de frigo » (voir la charte
 files/charte-univers-frigo.md du dossier du projet et la maquette v7).
 Inscription avec mot de passe, connexion, accueil en porte de frigo,
 section S1 en lecture, section S2 (les 3 annonces comparées, le choix,
-la justification, la capture) et section S3 (le plan qui se meuble, les
-bons de commande par pièce, la facture d'électroménagers, le reçu sous
-le plafond de 3 500 $) fonctionnelles, progression sauvegardée.
+la justification, la capture) et section S3 (le jour de l'emménagement :
+les boîtes de déménagement par pièce, chaque achat prouvé par son lien,
+la facture d'électroménagers, le reçu de caisse sous le plafond de
+3 500 $) fonctionnelles, progression sauvegardée. La session survit au
+rafraîchissement de la page grâce à un jeton dans l'adresse, révoqué à
+la déconnexion et à la réinitialisation du mot de passe.
 Le calendrier de vie, la console du prof et les sections S4 à S7
 arrivent aux phases suivantes.
 La couche de données vit dans donnees.py (magasin mémoire ou Supabase REST).
 """
+import html
+
 import streamlit as st
 
 import donnees
@@ -18,7 +23,7 @@ import donnees
 # Garde-fou de déploiement : si le processus en ligne garde en mémoire une
 # ancienne version du module donnees (rechargement partiel de Streamlit
 # Cloud), on force son rechargement avant d'aller plus loin.
-if not hasattr(donnees, "PIECE_COLOC"):
+if not hasattr(donnees, "PIECE_COLOC") or not hasattr(donnees, "nouveau_jeton_session"):
     import importlib
     importlib.reload(donnees)
 
@@ -367,42 +372,83 @@ p, li, label{ color:var(--texte); }
 .s2-bail .sig{ font-family:"Caveat",cursive; font-size:21px; margin-top:10px; color:var(--encre); }
 .s2-bail .sig .nom{ border-bottom:2px solid #4A453C; padding:0 14px; }
 
-/* ============ S3 : LE PLAN QUI SE MEUBLE ============ */
-.s3-bandeau{ position:relative; border-radius:22px; margin-top:16px; padding:26px 26px 16px; overflow:hidden;
-  background:repeating-linear-gradient(0deg, rgba(42,38,32,.055) 0 1px, transparent 1px 26px),
-  repeating-linear-gradient(90deg, rgba(42,38,32,.055) 0 1px, transparent 1px 26px),
-  linear-gradient(160deg,#FDFDF8,#F1EEDF 60%,#E4DEC8);
-  box-shadow:0 24px 50px rgba(0,0,0,.55), inset 0 2px 0 rgba(255,255,255,.9); }
-.s3-bandeau::before{ content:""; position:absolute; top:0; left:7%; right:7%; height:17px;
-  background:linear-gradient(180deg,rgba(255,220,130,.75),rgba(245,205,105,.6));
-  box-shadow:0 2px 4px rgba(0,0,0,.18); }
-.s3-bandeau .chantier{ font-family:"Special Elite",monospace; font-size:13px; letter-spacing:.28em; color:#7A4A21; }
-.s3-bandeau .titre{ font-family:"Bebas Neue",sans-serif; font-size:44px; line-height:1.02; color:var(--encre); }
-.s3-bandeau .titre span{ color:#B07B1E; }
-.s3-bandeau .aide{ color:#4A453C; font-size:14px; margin-top:5px; max-width:840px; }
+/* ============ S3 : LE JOUR DE L'EMMÉNAGEMENT ============ */
+.s3-bandeau{ position:relative; border-radius:14px; margin-top:16px; padding:32px 26px 16px; overflow:hidden;
+  background:repeating-linear-gradient(0deg, rgba(90,60,20,.05) 0 2px, transparent 2px 9px),
+  linear-gradient(160deg,#DCB57F,#C8A166 55%,#B98F52);
+  box-shadow:0 24px 50px rgba(0,0,0,.55), inset 0 2px 0 rgba(255,255,255,.35); }
+.s3-bandeau::before{ content:""; position:absolute; top:0; left:6%; right:6%; height:20px;
+  background:linear-gradient(180deg,rgba(255,226,150,.85),rgba(240,205,110,.7));
+  box-shadow:0 2px 5px rgba(0,0,0,.22); }
+.s3-bandeau .chantier{ font-family:"Special Elite",monospace; font-size:13px; letter-spacing:.26em; color:#8C2B1D; }
+.s3-bandeau .titre{ font-family:"Bebas Neue",sans-serif; font-size:46px; line-height:1.02; color:#3A2410; }
+.s3-bandeau .titre span{ color:#8C2B1D; }
+.s3-bandeau .fraf{ position:absolute; right:22px; top:42px; transform:rotate(9deg);
+  border:3.5px solid #8C2B1D; color:#8C2B1D; border-radius:6px; padding:2px 12px 0;
+  font-family:"Bebas Neue",sans-serif; font-size:21px; letter-spacing:.22em; opacity:.85; }
+.s3-bandeau .aide{ color:#43301A; font-size:14.5px; margin-top:6px; max-width:860px; font-weight:600; }
+.s3-bandeau .aide b{ color:#8C2B1D; }
 .s3-plan{ position:relative; background:#FFFFFF; border-radius:3px; padding:20px 22px 12px; margin-top:28px;
   box-shadow:0 14px 30px rgba(0,0,0,.45); }
 .s3-plan .titre{ font-family:"Caveat",cursive; font-size:26px; color:var(--encre); line-height:1; }
 .s3-plan svg{ width:100%; height:auto; display:block; }
-.s3-plan .note{ font-size:13px; color:#4A453C; margin-top:4px; }
+.s3-plan .note{ font-size:13px; color:#4A453C; margin-top:10px; }
 .s3-plan .note b{ color:var(--crayon); }
+.s3-grille{ display:grid; margin-top:12px; grid-template-columns:repeat(12,1fr);
+  grid-template-areas:
+  "chambre chambre chambre chambre chambre chambre coloc coloc coloc coloc coloc coloc"
+  "bain bain bain cuisine cuisine cuisine cuisine entree entree entree entree entree"
+  "bain bain bain cuisine cuisine cuisine cuisine salon salon salon salon salon"; }
+.s3-cellule{ border:3px solid #2A2620; margin:-1.5px; padding:12px 14px 10px;
+  background:#FFFFFF; min-height:88px; }
+.s3-cellule .nom{ font-family:"Caveat",cursive; font-size:28px; font-weight:700;
+  color:var(--encre); line-height:1; }
+.s3-cellule .etat{ font-family:"Work Sans",sans-serif; font-size:12px; font-weight:800;
+  letter-spacing:.14em; text-transform:uppercase; margin-top:4px; }
+.s3-cellule .compte{ font-family:"Special Elite",monospace; font-size:11.5px;
+  color:#5A5344; margin-top:2px; }
+.s3-cellule.aucun .etat{ color:#A39B85; }
+.s3-cellule.minimal{ background:repeating-linear-gradient(45deg,#FFFFFF 0 10px,#F4F1E6 10px 20px); }
+.s3-cellule.minimal .etat{ color:#6E6759; }
+.s3-cellule.moyen{ background:#EAF6EC; }
+.s3-cellule.moyen .etat{ color:#1E9E4A; }
+.s3-cellule.maximal{ background:#FBF3D9; }
+.s3-cellule.maximal .etat{ color:#B07B1E; }
+.s3-cellule.coloc{ background:repeating-linear-gradient(45deg,#FFFFFF 0 10px,#EFEDE6 10px 20px); }
+.s3-cellule.coloc .etat{ color:#8A8172; text-transform:none; letter-spacing:0;
+  font-weight:600; font-size:13.5px; }
+@media (max-width:760px){
+  .s3-grille{ grid-template-columns:1fr;
+    grid-template-areas:"chambre" "coloc" "bain" "cuisine" "entree" "salon"; }
+}
 .st-key-s3_piece_0, .st-key-s3_piece_1, .st-key-s3_piece_2,
 .st-key-s3_piece_3, .st-key-s3_piece_4, .st-key-s3_piece_5{
-  position:relative; background:linear-gradient(180deg,#FFFDF4,#F7F1DE); border-radius:2px;
-  padding:18px 16px 10px; box-shadow:0 14px 28px rgba(0,0,0,.45); margin-top:28px; }
-.st-key-s3_piece_0{ transform:rotate(-.5deg); } .st-key-s3_piece_1{ transform:rotate(.45deg); }
-.st-key-s3_piece_2{ transform:rotate(-.4deg); } .st-key-s3_piece_3{ transform:rotate(.55deg); }
-.st-key-s3_piece_4{ transform:rotate(-.45deg); } .st-key-s3_piece_5{ transform:rotate(.4deg); }
+  position:relative; border-radius:8px; padding:36px 16px 12px; margin-top:30px;
+  background:repeating-linear-gradient(0deg, rgba(90,60,20,.045) 0 2px, transparent 2px 9px),
+  linear-gradient(180deg,#E0BE8A,#CEA96C 60%,#C29B5C);
+  box-shadow:0 16px 32px rgba(0,0,0,.5), inset 0 2px 0 rgba(255,255,255,.3); }
+.st-key-s3_piece_0::before, .st-key-s3_piece_1::before, .st-key-s3_piece_2::before,
+.st-key-s3_piece_3::before, .st-key-s3_piece_4::before, .st-key-s3_piece_5::before{
+  content:""; position:absolute; top:0; left:50%; transform:translateX(-50%);
+  width:150px; height:22px; border-radius:0 0 3px 3px;
+  background:linear-gradient(180deg,rgba(255,226,150,.92),rgba(240,205,110,.78));
+  box-shadow:0 2px 4px rgba(0,0,0,.2); }
+.st-key-s3_piece_0{ transform:rotate(-.4deg); } .st-key-s3_piece_1{ transform:rotate(.35deg); }
+.st-key-s3_piece_2{ transform:rotate(-.3deg); } .st-key-s3_piece_3{ transform:rotate(.45deg); }
+.st-key-s3_piece_4{ transform:rotate(-.35deg); } .st-key-s3_piece_5{ transform:rotate(.3deg); }
 .st-key-s3_piece_0 [data-testid="stMarkdownContainer"] p, .st-key-s3_piece_1 [data-testid="stMarkdownContainer"] p,
 .st-key-s3_piece_2 [data-testid="stMarkdownContainer"] p, .st-key-s3_piece_3 [data-testid="stMarkdownContainer"] p,
 .st-key-s3_piece_4 [data-testid="stMarkdownContainer"] p, .st-key-s3_piece_5 [data-testid="stMarkdownContainer"] p,
 .st-key-s3_piece_0 [data-testid="stMarkdownContainer"] li, .st-key-s3_piece_1 [data-testid="stMarkdownContainer"] li,
 .st-key-s3_piece_2 [data-testid="stMarkdownContainer"] li, .st-key-s3_piece_3 [data-testid="stMarkdownContainer"] li,
-.st-key-s3_piece_4 [data-testid="stMarkdownContainer"] li, .st-key-s3_piece_5 [data-testid="stMarkdownContainer"] li{ color:var(--encre); }
+.st-key-s3_piece_4 [data-testid="stMarkdownContainer"] li, .st-key-s3_piece_5 [data-testid="stMarkdownContainer"] li{ color:#3A2410; }
 .st-key-s3_piece_0 [data-testid="stExpander"] summary p, .st-key-s3_piece_1 [data-testid="stExpander"] summary p,
 .st-key-s3_piece_2 [data-testid="stExpander"] summary p, .st-key-s3_piece_3 [data-testid="stExpander"] summary p,
 .st-key-s3_piece_4 [data-testid="stExpander"] summary p, .st-key-s3_piece_5 [data-testid="stExpander"] summary p,
 .st-key-s3_electro_bloc [data-testid="stExpander"] summary p{ color:var(--encre) !important; }
+.st-key-s3_piece_0 [data-testid="stExpander"] summary p, .st-key-s3_piece_1 [data-testid="stExpander"] summary p,
+.st-key-s3_piece_2 [data-testid="stExpander"] summary p, .st-key-s3_piece_3 [data-testid="stExpander"] summary p,
+.st-key-s3_piece_4 [data-testid="stExpander"] summary p, .st-key-s3_piece_5 [data-testid="stExpander"] summary p{ color:#3A2410 !important; }
 .st-key-s3_piece_0 .stButton > button p, .st-key-s3_piece_1 .stButton > button p,
 .st-key-s3_piece_2 .stButton > button p, .st-key-s3_piece_3 .stButton > button p,
 .st-key-s3_piece_4 .stButton > button p, .st-key-s3_piece_5 .stButton > button p,
@@ -410,34 +456,46 @@ p, li, label{ color:var(--texte); }
 .st-key-s3_piece_0 label p, .st-key-s3_piece_1 label p, .st-key-s3_piece_2 label p,
 .st-key-s3_piece_3 label p, .st-key-s3_piece_4 label p, .st-key-s3_piece_5 label p{
   font-family:"Special Elite",monospace; font-size:11.5px; letter-spacing:.1em;
-  text-transform:uppercase; color:#4A453C !important; }
+  text-transform:uppercase; color:#5A4020 !important; }
 .st-key-s3_piece_0 .stTextInput input, .st-key-s3_piece_1 .stTextInput input, .st-key-s3_piece_2 .stTextInput input,
 .st-key-s3_piece_3 .stTextInput input, .st-key-s3_piece_4 .stTextInput input, .st-key-s3_piece_5 .stTextInput input{
-  background:transparent !important; border:none !important; border-bottom:2px solid #B9B09A !important;
-  border-radius:0 !important; box-shadow:none !important; color:var(--encre) !important; font-weight:600; }
+  background:transparent !important; border:none !important; border-bottom:2px solid #8A6B3F !important;
+  border-radius:0 !important; box-shadow:none !important; color:#2E1C08 !important; font-weight:600; }
 .st-key-s3_piece_0 [data-testid="stNumberInput"] > div, .st-key-s3_piece_1 [data-testid="stNumberInput"] > div,
 .st-key-s3_piece_2 [data-testid="stNumberInput"] > div, .st-key-s3_piece_3 [data-testid="stNumberInput"] > div,
 .st-key-s3_piece_4 [data-testid="stNumberInput"] > div, .st-key-s3_piece_5 [data-testid="stNumberInput"] > div{
-  background:transparent; border:none; border-bottom:2px solid #B9B09A; border-radius:0; box-shadow:none; }
+  background:transparent; border:none; border-bottom:2px solid #8A6B3F; border-radius:0; box-shadow:none; }
 .st-key-s3_piece_0 [data-testid="stNumberInput"] input, .st-key-s3_piece_1 [data-testid="stNumberInput"] input,
 .st-key-s3_piece_2 [data-testid="stNumberInput"] input, .st-key-s3_piece_3 [data-testid="stNumberInput"] input,
 .st-key-s3_piece_4 [data-testid="stNumberInput"] input, .st-key-s3_piece_5 [data-testid="stNumberInput"] input{
-  background:transparent !important; color:var(--encre) !important; font-weight:700; }
-.s3-piece-nom{ font-family:"Bebas Neue",sans-serif; font-size:25px; color:var(--encre);
+  background:transparent !important; color:#2E1C08 !important; font-weight:700; }
+.s3-piece-nom{ font-family:"Caveat",cursive; font-weight:700; font-size:35px; color:#3A2410;
+  letter-spacing:.01em; line-height:1; }
+.s3-facture-nom{ font-family:"Bebas Neue",sans-serif; font-size:26px; color:var(--encre);
   letter-spacing:.05em; line-height:1.05; }
 .s3-compte{ font-family:"Special Elite",monospace; font-size:12px; letter-spacing:.06em;
-  color:#5A5344; margin-top:2px; }
+  color:#5A4020; margin-top:3px; }
+.s3-compte .sans{ color:#B3271A; font-weight:700; }
 .s3-tampon{ display:inline-block; transform:rotate(-7deg); border:3px solid; border-radius:6px;
   padding:1px 11px 0; font-family:"Bebas Neue",sans-serif; font-size:18px; letter-spacing:.14em;
   white-space:nowrap; }
-.s3-tampon.minimal{ color:#6E6759; border-color:#6E6759; }
-.s3-tampon.moyen{ color:var(--vert); border-color:var(--vert); }
-.s3-tampon.maximal{ color:#B07B1E; border-color:#C9A227; background:rgba(255,210,63,.18); }
-.s3-sous{ display:flex; justify-content:space-between; gap:16px; border-top:2px dashed #B9B09A;
-  padding-top:8px; margin-top:2px; font-size:14.5px; color:var(--encre); }
+.s3-tampon.minimal{ color:#5A5344; border-color:#5A5344; }
+.s3-tampon.moyen{ color:#14632F; border-color:#1E9E4A; }
+.s3-tampon.maximal{ color:#7A5410; border-color:#B07B1E; background:rgba(255,210,63,.22); }
+.s3-sous{ display:flex; justify-content:space-between; gap:16px; border-top:2px dashed #8A6B3F;
+  padding-top:8px; margin-top:2px; font-size:14.5px; color:#3A2410; }
+.st-key-s3_electro_bloc .s3-sous{ border-top:2px dashed #B9B09A; color:var(--encre); }
 .s3-sous .part{ font-weight:800; }
+.s3-preuves{ display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; align-items:center; }
+.s3-preuves .titre{ font-family:"Special Elite",monospace; font-size:11.5px;
+  letter-spacing:.1em; color:#5A4020; }
+.st-key-s3_electro_bloc .s3-preuves .titre{ color:#4A453C; }
+.s3-preuve{ font-family:"Special Elite",monospace; font-size:11.5px; letter-spacing:.02em;
+  padding:2px 9px; border-radius:999px; border:1.8px solid; }
+.s3-preuve.ok{ color:#14532D; border-color:#1E9E4A; background:rgba(30,158,74,.15); }
+.s3-preuve.ko{ color:#8C1D12; border-color:#B3271A; background:rgba(179,39,26,.13); }
 .st-key-s3_electro_bloc{ position:relative; background:#FFFFFF; border:3px double #4A453C; border-radius:4px;
-  padding:18px 18px 10px; margin-top:28px; box-shadow:0 14px 28px rgba(0,0,0,.45); }
+  padding:18px 18px 10px; margin-top:30px; box-shadow:0 14px 28px rgba(0,0,0,.45); }
 .st-key-s3_electro_bloc [data-testid="stMarkdownContainer"] p,
 .st-key-s3_electro_bloc [data-testid="stMarkdownContainer"] li{ color:var(--encre); }
 .st-key-s3_electro_bloc label p{ font-family:"Special Elite",monospace; font-size:11.5px;
@@ -450,9 +508,23 @@ p, li, label{ color:var(--texte); }
 .st-key-s3_electro_bloc [data-testid="stNumberInput"] input{
   background:transparent !important; color:var(--encre) !important; font-weight:700; }
 .st-key-s3_electro_bloc .stButton > button{ padding-left:.5rem; padding-right:.5rem; }
-.s3-recu{ background:#FFFFFF; color:var(--encre); border-radius:3px; padding:18px 22px 14px;
-  margin-top:28px; position:relative; box-shadow:0 14px 30px rgba(0,0,0,.45); }
-.s3-recu .titre{ font-family:"Bebas Neue",sans-serif; font-size:26px; letter-spacing:.06em; color:var(--encre); }
+.s3-recu{ background:#FFFFFF; color:var(--encre); border-radius:2px; padding:20px 24px 26px;
+  margin:32px auto 34px; max-width:560px; position:relative;
+  filter:drop-shadow(0 14px 16px rgba(0,0,0,.45)); }
+.s3-recu::after{ content:""; position:absolute; left:0; right:0; bottom:-10px; height:10px;
+  background:linear-gradient(45deg, transparent 33.333%, #FFFFFF 33.333%, #FFFFFF 66.667%, transparent 66.667%),
+  linear-gradient(-45deg, transparent 33.333%, #FFFFFF 33.333%, #FFFFFF 66.667%, transparent 66.667%);
+  background-size:20px 40px; background-position:0 -20px; }
+.s3-recu .magasin{ text-align:center; font-family:"Special Elite",monospace; font-size:12px;
+  letter-spacing:.22em; color:#4A453C; }
+.s3-recu .titre{ font-family:"Special Elite",monospace; text-align:center; font-size:20px;
+  letter-spacing:.12em; color:var(--encre); margin-top:2px; }
+.s3-recu .ligne{ font-family:"Special Elite",monospace; font-size:13.5px; }
+.s3-sanspreuve{ color:#B3271A; font-weight:700; font-size:13.5px; margin-top:10px; }
+.s3-codebarre{ height:32px; margin-top:14px;
+  background:repeating-linear-gradient(90deg,#2A2620 0 2px,transparent 2px 5px,#2A2620 5px 6px,transparent 6px 10px,#2A2620 10px 13px,transparent 13px 16px,#2A2620 16px 17px,transparent 17px 21px,#2A2620 21px 24px,transparent 24px 27px); }
+.s3-recu .merci{ text-align:center; font-family:"Special Elite",monospace; font-size:11.5px;
+  letter-spacing:.14em; color:#4A453C; margin-top:6px; }
 .s3-jauge{ height:18px; border-radius:999px; background:#E7E0CB; overflow:hidden;
   margin-top:12px; border:1.5px solid #B9B09A; }
 .s3-jauge .remplissage{ height:100%; background:linear-gradient(90deg,#2FA84F,#7CC24A); }
@@ -462,7 +534,9 @@ p, li, label{ color:var(--texte); }
 .s3-jauge-txt b{ color:var(--crayon); }
 .st-key-s3_piece_0 [data-testid="stCaptionContainer"] p, .st-key-s3_piece_1 [data-testid="stCaptionContainer"] p,
 .st-key-s3_piece_2 [data-testid="stCaptionContainer"] p, .st-key-s3_piece_3 [data-testid="stCaptionContainer"] p,
-.st-key-s3_piece_4 [data-testid="stCaptionContainer"] p, .st-key-s3_piece_5 [data-testid="stCaptionContainer"] p,
+.st-key-s3_piece_4 [data-testid="stCaptionContainer"] p, .st-key-s3_piece_5 [data-testid="stCaptionContainer"] p{
+  color:#43301A !important; font-family:"Special Elite",monospace; font-size:11.5px;
+  letter-spacing:.1em; text-transform:uppercase; }
 .st-key-s3_electro_bloc [data-testid="stCaptionContainer"] p{
   color:#4A453C !important; font-family:"Special Elite",monospace; font-size:11.5px;
   letter-spacing:.1em; text-transform:uppercase; }
@@ -524,9 +598,39 @@ def aller(page):
 
 
 def deconnecter():
+    identifiant = st.session_state.get("identifiant")
+    if identifiant:
+        donnees.revoquer_jeton_session(MAGASIN, identifiant)
+    if "j" in st.query_params:
+        del st.query_params["j"]
     for cle in ("identifiant", "compte", "page"):
         st.session_state.pop(cle, None)
     st.rerun()
+
+
+def ouvrir_session(identifiant):
+    """Ouvre la session de l'élève et dépose son jeton dans l'adresse :
+    un rafraîchissement de la page ne le déconnecte plus."""
+    st.session_state["identifiant"] = identifiant
+    st.session_state["page"] = "accueil"
+    jeton = donnees.nouveau_jeton_session(MAGASIN, identifiant)
+    if jeton:
+        st.query_params["j"] = jeton
+
+
+def restaurer_session():
+    """Si l'adresse porte un jeton valide, rouvre le dossier sans
+    redemander le mot de passe (rafraîchissement, retour sur la page).
+    Le jeton est révoqué à la déconnexion et à chaque réinitialisation
+    du mot de passe par le prof."""
+    if st.session_state.get("identifiant"):
+        return
+    jeton = st.query_params.get("j")
+    if jeton:
+        identifiant = donnees.identifiant_par_jeton(MAGASIN, jeton)
+        if identifiant:
+            st.session_state["identifiant"] = identifiant
+            st.session_state["page"] = "accueil"
 
 
 def entete_marque(sous_titre):
@@ -657,8 +761,7 @@ def formulaire_inscription():
         res = donnees.inscrire(MAGASIN, prenom, nom, groupe, cas,
                                mot_de_passe, confirmation)
         if res["ok"]:
-            st.session_state["identifiant"] = res["identifiant"]
-            st.session_state["page"] = "accueil"
+            ouvrir_session(res["identifiant"])
             st.success(res["message"])
             st.rerun()
         else:
@@ -676,8 +779,7 @@ def formulaire_connexion():
     if st.button("Ouvrir mon dossier", type="primary"):
         res = donnees.connecter(MAGASIN, prenom, nom, mot_de_passe)
         if res["ok"]:
-            st.session_state["identifiant"] = res["compte"]["identifiant"]
-            st.session_state["page"] = "accueil"
+            ouvrir_session(res["compte"]["identifiant"])
             st.success(res["message"])
             st.rerun()
         else:
@@ -1131,144 +1233,46 @@ IDEES_ELECTRO = ["Réfrigérateur", "Cuisinière (four et plaques)", "Laveuse",
                  "Sécheuse", "Micro-ondes", "Lave-vaisselle"]
 
 
-def _meubles_svg(piece, niveau):
-    """Petits meubles dessinés à l'encre pour une pièce du plan, selon le
-    niveau atteint : chaque palier ajoute ses meubles (cumulatif)."""
-    if piece == donnees.PIECE_COLOC:
-        return ("<g fill='none' stroke='#A39B85' stroke-width='2'>"
-                "<rect x='172' y='46' width='52' height='28'/>"
-                "<rect x='172' y='46' width='52' height='8'/>"
-                "<rect x='268' y='52' width='28' height='16'/></g>")
-    if niveau is None:
-        return ""
-    m = []
-    if piece == "Ma chambre":
-        m += ["<rect x='12' y='42' width='54' height='30'/>",
-              "<rect x='12' y='42' width='54' height='9'/>",
-              "<rect x='17' y='45' width='14' height='5' fill='#2A2620' stroke='none' opacity='.25'/>",
-              "<rect x='104' y='58' width='42' height='18'/>",
-              "<line x1='118' y1='76' x2='118' y2='82'/>",
-              "<line x1='138' y1='76' x2='138' y2='82'/>"]
-        if niveau in ("MOYEN", "MAXIMAL"):
-            m += ["<rect x='104' y='36' width='42' height='18'/>",
-                  "<line x1='104' y1='45' x2='146' y2='45'/>",
-                  "<line x1='136' y1='58' x2='136' y2='47'/>",
-                  "<polygon points='130,47 142,47 139,41 133,41'/>"]
-        if niveau == "MAXIMAL":
-            m += ["<ellipse cx='58' cy='79' rx='36' ry='5'/>",
-                  "<circle cx='147' cy='17' r='6.5'/>"]
-    elif piece == "Cuisine":
-        m += ["<rect x='76' y='116' width='106' height='9'/>",
-              "<rect x='86' y='117' width='15' height='7'/>",
-              "<rect x='148' y='128' width='32' height='32'/>",
-              "<circle cx='157' cy='137' r='4'/><circle cx='171' cy='137' r='4'/>",
-              "<circle cx='157' cy='150' r='4'/><circle cx='171' cy='150' r='4'/>"]
-        if niveau in ("MOYEN", "MAXIMAL"):
-            m += ["<rect x='78' y='126' width='22' height='36'/>",
-                  "<line x1='78' y1='136' x2='100' y2='136'/>",
-                  "<rect x='110' y='134' width='28' height='18'/>",
-                  "<rect x='104' y='138' width='5' height='10'/>",
-                  "<rect x='139' y='138' width='5' height='10'/>"]
-        if niveau == "MAXIMAL":
-            m += ["<rect x='158' y='107' width='17' height='9'/>",
-                  "<rect x='140' y='108' width='8' height='8'/>"]
-    elif piece == "Salon":
-        m += ["<rect x='196' y='142' width='48' height='12'/>",
-              "<line x1='196' y1='147' x2='244' y2='147'/>",
-              "<line x1='310' y1='134' x2='310' y2='152'/>",
-              "<polygon points='304,134 316,134 313,128 307,128'/>"]
-        if niveau in ("MOYEN", "MAXIMAL"):
-            m += ["<rect x='232' y='157' width='22' height='4'/>",
-                  "<rect x='256' y='144' width='18' height='16'/>",
-                  "<line x1='256' y1='152' x2='274' y2='152'/>"]
-        if niveau == "MAXIMAL":
-            m += ["<rect x='284' y='130' width='24' height='14'/>",
-                  "<rect x='290' y='144' width='12' height='4'/>",
-                  "<ellipse cx='262' cy='161' rx='20' ry='2.5'/>",
-                  "<rect x='200' y='144' width='7' height='7'/>",
-                  "<rect x='230' y='144' width='7' height='7'/>"]
-    elif piece == "Salle de bain":
-        m += ["<rect x='9' y='118' width='52' height='21' rx='9'/>",
-              "<line x1='55' y1='118' x2='55' y2='113'/>",
-              "<rect x='10' y='146' width='15' height='11'/>"]
-        if niveau in ("MOYEN", "MAXIMAL"):
-            m += ["<rect x='32' y='144' width='13' height='13'/>",
-                  "<ellipse cx='38.5' cy='144' rx='6.5' ry='3'/>",
-                  "<rect x='50' y='140' width='13' height='17'/>"]
-        if niveau == "MAXIMAL":
-            m += ["<line x1='54' y1='114' x2='54' y2='128'/>",
-                  "<line x1='60' y1='114' x2='60' y2='128'/>",
-                  "<line x1='54' y1='120' x2='60' y2='120'/>",
-                  "<rect x='40' y='122' width='20' height='7'/>"]
-    elif piece == "Entrée et rangement":
-        m += ["<line x1='210' y1='94' x2='210' y2='120'/>",
-              "<line x1='210' y1='99' x2='217' y2='96'/>",
-              "<line x1='210' y1='107' x2='217' y2='104'/>",
-              "<line x1='210' y1='115' x2='217' y2='112'/>",
-              "<rect x='238' y='116' width='58' height='8'/>"]
-        if niveau in ("MOYEN", "MAXIMAL"):
-            m += ["<rect x='296' y='94' width='17' height='24'/>",
-                  "<line x1='296' y1='102' x2='313' y2='102'/>",
-                  "<line x1='296' y1='110' x2='313' y2='110'/>",
-                  "<line x1='228' y1='100' x2='222' y2='118'/>",
-                  "<rect x='218' y='116' width='8' height='5'/>"]
-        if niveau == "MAXIMAL":
-            m += ["<rect x='246' y='94' width='19' height='9'/>",
-                  "<rect x='249' y='87' width='14' height='7'/>"]
-    return ("<g fill='none' stroke='#2A2620' stroke-width='2'>"
-            + "".join(m) + "</g>")
-
-
-# (pièce, libellé sur le plan, x du nom, y du nom, x du niveau, y du niveau)
-_PLAN_PIECES = [
-    ("Ma chambre", "ma chambre", 12, 20, 12, 33),
-    (donnees.PIECE_COLOC, None, 162, 20, 162, 33),
-    ("Salle de bain", "bain", 10, 101, 10, 114),
-    ("Cuisine", "cuisine", 78, 101, 78, 114),
-    ("Entrée et rangement", "entrée", 194, 100, 194, 113),
-    ("Salon", "salon", 194, 139, 194, 162),
-]
-_COULEURS_NIVEAU = {None: "#A39B85", "MINIMAL": "#6E6759",
-                    "MOYEN": "#1E9E4A", "MAXIMAL": "#B07B1E"}
-
-
 def html_plan_s3(brouillon, profil):
-    """Le plan de l'appartement, dessiné à l'encre : les pièces se
-    meublent à mesure que leur niveau monte."""
-    murs = (
-        "<g fill='none' stroke='#2A2620' stroke-width='3'>"
-        "<rect x='4' y='4' width='312' height='160'/><rect x='4' y='4' width='150' height='82'/>"
-        "<rect x='154' y='4' width='162' height='82'/><rect x='4' y='86' width='66' height='78'/>"
-        "<rect x='70' y='86' width='118' height='78'/><rect x='188' y='86' width='128' height='40'/>"
-        "<rect x='188' y='126' width='128' height='38'/></g>")
-    morceaux = [murs]
-    for piece, libelle, nx, ny, lx, ly in _PLAN_PIECES:
+    """Le plan de l'appartement, en grille dessinée à l'encre : chaque
+    pièce y montre son état réel (niveau et achats prouvés), à taille
+    lisible. L'ancien plan en dessin vectoriel ne sortait pas bien :
+    noms démesurés, pièces vides, meubles illisibles (retour de Mathieu,
+    28 oct. 2026)."""
+    zones = {"Ma chambre": ("chambre", "ma chambre"),
+             donnees.PIECE_COLOC: ("coloc", None),
+             "Salle de bain": ("bain", "bain"),
+             "Cuisine": ("cuisine", "cuisine"),
+             "Entrée et rangement": ("entree", "entrée"),
+             "Salon": ("salon", "salon")}
+    cellules = []
+    for piece in ("Ma chambre", donnees.PIECE_COLOC, "Salle de bain",
+                  "Cuisine", "Entrée et rangement", "Salon"):
+        zone, libelle = zones[piece]
         if piece == donnees.PIECE_COLOC:
-            nom = profil["coloc"]["prenom"]
-            niveau = None
-            texte_niveau = "il apporte ses meubles"
-        else:
-            nom = libelle
-            nombre = donnees.articles_nommes(brouillon["pieces"][piece])
-            niveau = donnees.niveau_s3(nombre, donnees.SEUILS_S3[piece])
-            texte_niveau = niveau if niveau else "à meubler"
-        morceaux.append(_meubles_svg(piece, niveau))
-        morceaux.append(
-            f"<text x='{nx}' y='{ny}' font-family='Caveat, cursive' "
-            f"font-size='18' fill='#2A2620'>{nom}</text>")
-        morceaux.append(
-            f"<text x='{lx}' y='{ly}' font-family='Work Sans, sans-serif' "
-            f"font-size='9.5' font-weight='700' letter-spacing='1' "
-            f"fill='{_COULEURS_NIVEAU[niveau]}'>{texte_niveau}</text>")
-    svg = ("<svg viewBox='0 0 320 168' width='100%' height='auto' "
-           "aria-label='Plan de l appartement qui se meuble'>"
-           + "".join(morceaux) + "</svg>")
+            cellules.append(
+                f"<div class='s3-cellule coloc' style='grid-area:{zone}'>"
+                f"<div class='nom'>{html.escape(profil['coloc']['prenom'])}</div>"
+                "<div class='etat'>il apporte ses meubles</div></div>")
+            continue
+        articles = brouillon["pieces"][piece]
+        nombre = donnees.nombre_prouves(articles)
+        niveau = donnees.niveau_s3(nombre, donnees.SEUILS_S3[piece])
+        classe = (niveau or "aucun").lower()
+        etat = niveau if niveau else "à meubler"
+        cellules.append(
+            f"<div class='s3-cellule {classe}' style='grid-area:{zone}'>"
+            f"<div class='nom'>{libelle}</div>"
+            f"<div class='etat'>{etat}</div>"
+            f"<div class='compte'>{nombre} achat(s) prouvé(s)</div></div>")
     return ("<div class='s3-plan'><div class='pf-ruban'></div>"
             "<div class='titre'>Ton appart, vu d'en haut</div>"
-            + svg +
-            "<div class='note'>Chaque pièce se meuble quand son niveau monte : "
-            "<b>MINIMAL</b> elle fonctionne, <b>MOYEN</b> elle est complète "
-            "(c'est le niveau visé), <b>MAXIMAL</b> le confort est là.</div></div>")
+            "<div class='s3-grille'>" + "".join(cellules) + "</div>"
+            "<div class='note'>Chaque pièce se remplit à mesure que tes "
+            "achats <b>prouvés</b> s'ajoutent : <b>MINIMAL</b> elle "
+            "fonctionne, <b>MOYEN</b> elle est complète, <b>MAXIMAL</b> le "
+            "confort est là. Un achat sans lien de preuve ne meuble "
+            "rien.</div></div>")
 
 
 def _s3_gen():
@@ -1300,14 +1304,14 @@ def _synchroniser_s3(brouillon):
         if piece == donnees.PIECE_COLOC:
             continue
         for j, article in enumerate(brouillon["pieces"][piece]):
-            for champ in ("nom", "prix", "etat", "type"):
+            for champ in ("nom", "prix", "etat", "type", "lien"):
                 cle = f"s3_p{i}_{champ}_{j}_g{gen}"
                 if cle in etat:
                     article[champ] = etat[cle]
             if piece == "Ma chambre":
                 article["type"] = "personnel"
     for j, article in enumerate(brouillon["electro"]):
-        for champ in ("nom", "prix", "etat", "capture"):
+        for champ in ("nom", "prix", "etat", "lien"):
             cle = f"s3_e_{champ}_{j}_g{gen}"
             if cle in etat:
                 article[champ] = etat[cle]
@@ -1321,6 +1325,27 @@ def _tampon_html(niveau):
     return f"<div class='s3-tampon {niveau.lower()}'>{niveau}</div>"
 
 
+def _puces_preuve(articles):
+    """La rangée d'étiquettes de preuve sous une boîte : un achat prouvé
+    en vert, un achat commencé sans preuve en rouge. La règle du lien
+    doit se voir, pas seulement se lire."""
+    concernes = [a for a in articles
+                 if donnees.article_prouve(a) or donnees.article_entame(a)]
+    if not concernes:
+        return
+    puces = []
+    for a in concernes:
+        prouve = donnees.article_prouve(a)
+        nom = html.escape((a.get("nom") or "sans nom").strip()[:26])
+        puces.append(
+            f"<span class='s3-preuve {'ok' if prouve else 'ko'}'>"
+            f"{'✓' if prouve else '✗'} {nom}</span>")
+    st.markdown(
+        "<div class='s3-preuves'><span class='titre'>ÉTIQUETTES DE PREUVE :</span>"
+        + "".join(puces) + "</div>",
+        unsafe_allow_html=True)
+
+
 def page_s3(compte, dossier, profil):
     if st.button("Retour à l'accueil"):
         aller("accueil")
@@ -1330,13 +1355,19 @@ def page_s3(compte, dossier, profil):
 
     st.markdown(
         "<div class='s3-bandeau'>"
-        "<div class='chantier'>JOUR D'EMMÉNAGEMENT · LES BOÎTES SONT DANS L'ENTRÉE</div>"
+        "<div class='fraf'>FRAGILE</div>"
+        "<div class='chantier'>JOUR D'EMMÉNAGEMENT · LE CAMION EST DANS LA COUR</div>"
         "<div class='titre'>S3 · MEUBLER <span>L'APPART</span></div>"
-        "<div class='aide'>Plafond d'installation : 3 500 $ pour tout meubler, "
-        "ta part seulement. Meuble chaque pièce jusqu'au niveau MOYEN : c'est "
-        "le niveau visé. Tu choisis tes articles librement ; les idées de "
-        "chaque bon sont là pour t'inspirer, pas pour être copiées. "
-        "La chambre de ton coloc ne te coûte rien : il apporte ses meubles.</div></div>",
+        "<div class='aide'>Le camion est arrivé : à toi de tout installer, "
+        "sans dépasser le plafond de 3 500 $ (ta part seulement). "
+        "Tu meubles chaque boîte à ta façon : à toi de juger ce qu'il faut "
+        "pour qu'une pièce fonctionne, soit complète, puis confortable. "
+        "<b>Pour chaque article, colle le lien de l'annonce ou du produit : "
+        "c'est ta preuve d'achat.</b> Un lien absent, ou un lien qui ne "
+        "fonctionne pas, et l'achat n'a jamais existé : il ne compte ni "
+        "dans la pièce, ni dans le total. Ton enseignant vérifiera les "
+        "liens un par un. La chambre de ton coloc ne te coûte rien : "
+        "il apporte ses meubles.</div></div>",
         unsafe_allow_html=True)
     if deja_fait:
         st.success("Tu as déjà meublé ton appartement. Tu peux quand même "
@@ -1344,11 +1375,8 @@ def page_s3(compte, dossier, profil):
 
     st.markdown(html_plan_s3(brouillon, profil), unsafe_allow_html=True)
 
-    aimants = ["pf-arouge", "pf-ableu", "pf-ajaune", "pf-avert", "pf-arouge", "pf-ableu"]
     for i, piece in enumerate(donnees.PIECES):
         with st.container(key=f"s3_piece_{i}"):
-            st.markdown(f"<div class='pf-aimant {aimants[i]}'></div>",
-                        unsafe_allow_html=True)
             if piece == donnees.PIECE_COLOC:
                 st.markdown(
                     "<div class='s3-piece-nom'>La chambre de mon coloc</div>"
@@ -1367,15 +1395,18 @@ def page_s3(compte, dossier, profil):
                 continue
 
             articles = brouillon["pieces"][piece]
-            nombre = donnees.articles_nommes(articles)
-            seuils = donnees.SEUILS_S3[piece]
-            niveau = donnees.niveau_s3(nombre, seuils)
+            nombre = donnees.nombre_prouves(articles)
+            sans_preuve = sum(1 for a in articles if donnees.article_entame(a))
+            niveau = donnees.niveau_s3(nombre, donnees.SEUILS_S3[piece])
             col_nom, col_tampon = st.columns([3, 1])
             with col_nom:
+                compte_html = f"{nombre} ACHAT(S) PROUVÉ(S)"
+                if sans_preuve:
+                    compte_html += (f" · <span class='sans'>{sans_preuve} "
+                                    "SANS PREUVE</span>")
                 st.markdown(
                     f"<div class='s3-piece-nom'>{piece}</div>"
-                    f"<div class='s3-compte'>{nombre} ARTICLE(S) · MINIMAL À {seuils[0]}"
-                    f" · MOYEN À {seuils[1]} · MAXIMAL À {seuils[2]}</div>",
+                    f"<div class='s3-compte'>{compte_html}</div>",
                     unsafe_allow_html=True)
             with col_tampon:
                 st.markdown(_tampon_html(niveau), unsafe_allow_html=True)
@@ -1418,6 +1449,12 @@ def page_s3(compte, dossier, profil):
                         brouillon["pieces"][piece].pop(j)
                         st.session_state["s3_gen"] = gen + 1
                         st.rerun()
+                st.text_input(
+                    "Lien de preuve", value=article.get("lien") or "",
+                    key=f"s3_p{i}_lien_{j}_g{gen}",
+                    label_visibility="collapsed",
+                    placeholder="Colle le lien de l'annonce ou du produit "
+                                "(c'est ta preuve d'achat)")
             if st.button("Ajouter un article", key=f"s3_p{i}_ajout"):
                 _synchroniser_s3(brouillon)
                 brouillon["pieces"][piece].append(donnees.article_par_defaut(piece))
@@ -1429,25 +1466,29 @@ def page_s3(compte, dossier, profil):
                 f"{fmt_montant(total_piece)}</span>"
                 f"<span class='part'>Ta part : {fmt_montant(part_piece)}</span></div>",
                 unsafe_allow_html=True)
+            _puces_preuve(articles)
             with st.expander(f"Idées d'articles pour {piece.lower()}"):
                 st.write(" · ".join(IDEES_S3[piece]))
 
     with st.container(key="s3_electro_bloc"):
         electro = brouillon["electro"]
-        nombre_e = donnees.articles_nommes(electro)
+        nombre_e = donnees.nombre_prouves(electro)
+        sans_preuve_e = sum(1 for a in electro if donnees.article_entame(a))
         niveau_e = donnees.niveau_s3(nombre_e, donnees.SEUILS_ELECTRO)
         col_nom, col_tampon = st.columns([3, 1])
         with col_nom:
+            compte_e = f"{nombre_e} ACHAT(S) PROUVÉ(S) · COÛT PARTAGÉ, TA PART 50 %"
+            if sans_preuve_e:
+                compte_e += (f" · <span class='sans'>{sans_preuve_e} "
+                             "SANS PREUVE</span>")
             st.markdown(
-                "<div class='s3-piece-nom'>Électroménagers · la facture</div>"
-                f"<div class='s3-compte'>{nombre_e} ARTICLE(S) · MINIMAL À "
-                f"{donnees.SEUILS_ELECTRO[0]} · MOYEN À {donnees.SEUILS_ELECTRO[1]}"
-                f" · MAXIMAL À {donnees.SEUILS_ELECTRO[2]} · COÛT PARTAGÉ, TA PART 50 %</div>",
+                "<div class='s3-facture-nom'>Électroménagers · la facture</div>"
+                f"<div class='s3-compte' style='color:#5A5344'>{compte_e}</div>",
                 unsafe_allow_html=True)
         with col_tampon:
             st.markdown(_tampon_html(niveau_e), unsafe_allow_html=True)
         entetes = st.columns([3.0, 1.2, 1.1, 1.8, 0.9])
-        for col, texte in zip(entetes, ["Article", "Prix ($)", "État", "Capture", ""]):
+        for col, texte in zip(entetes, ["Article", "Prix ($)", "État", "Lien de preuve", ""]):
             with col:
                 st.caption(texte)
         for j, article in enumerate(electro):
@@ -1468,10 +1509,10 @@ def page_s3(compte, dossier, profil):
                              key=f"s3_e_etat_{j}_g{gen}",
                              label_visibility="collapsed")
             with c_cap:
-                st.text_input("Capture", value=article.get("capture") or "",
-                              key=f"s3_e_capture_{j}_g{gen}",
+                st.text_input("Lien de preuve", value=article.get("lien") or "",
+                              key=f"s3_e_lien_{j}_g{gen}",
                               label_visibility="collapsed",
-                              placeholder="Nom du fichier de capture")
+                              placeholder="Lien de l'annonce ou du produit")
             with c_ret:
                 if st.button("Retirer", key=f"s3_e_ret_{j}",
                              use_container_width=True):
@@ -1490,6 +1531,7 @@ def page_s3(compte, dossier, profil):
             f"{fmt_montant(total_e)}</span>"
             f"<span class='part'>Ta part : {fmt_montant(part_e)}</span></div>",
             unsafe_allow_html=True)
+        _puces_preuve(electro)
         with st.expander("Idées d'électroménagers"):
             st.write(" · ".join(IDEES_ELECTRO))
 
@@ -1507,16 +1549,24 @@ def page_s3(compte, dossier, profil):
     lignes_recu.append(
         "<div class='ligne total'><div>TOTAL DE TON INSTALLATION</div>"
         f"<div class='valeur'>{fmt_montant(total)}</div></div>")
+    sans_preuve_total = donnees.nombre_sans_preuve(brouillon)
     st.markdown(
-        "<div class='s3-recu'><div class='pf-aimant pf-arouge'></div>"
-        "<div class='titre'>LE REÇU DE L'INSTALLATION</div>"
+        "<div class='s3-recu'>"
+        "<div class='magasin'>MEUBLES & CIE · TROIS-RIVIÈRES</div>"
+        "<div class='titre'>REÇU D'INSTALLATION</div>"
         + "".join(lignes_recu)
+        + (f"<div class='s3-sanspreuve'>{sans_preuve_total} article(s) "
+           "sans preuve : ils ne comptent pas dans ce reçu.</div>"
+           if sans_preuve_total else "")
         + f"<div class='s3-jauge'><div class='remplissage {classe_jauge}' "
         + f"style='width:{pct:.1f}%'></div></div>"
         + f"<div class='s3-jauge-txt'>{fmt_montant(total)} sur 3 500,00 $ de plafond"
         + (f" · <b>dépassé de {fmt_montant(total - donnees.PLAFOND_INSTALLATION)}</b>"
            if total > donnees.PLAFOND_INSTALLATION else "")
-        + "</div></div>",
+        + "</div>"
+        + "<div class='s3-codebarre'></div>"
+        + f"<div class='merci'>CAS {int(profil['numero']):02d} · S3 · "
+        "MERCI, BON EMMÉNAGEMENT</div></div>",
         unsafe_allow_html=True)
 
     col_enr, col_fin = st.columns(2)
@@ -1524,7 +1574,7 @@ def page_s3(compte, dossier, profil):
         if st.button("Enregistrer", use_container_width=True):
             _synchroniser_s3(brouillon)
             donnees.enregistrer_s3(MAGASIN, compte["identifiant"], brouillon)
-            st.success("Tes bons de commande sont enregistrés.")
+            st.success("Tes boîtes sont enregistrées.")
     with col_fin:
         if st.button("J'ai terminé mon installation", type="primary",
                      use_container_width=True):
@@ -1572,6 +1622,7 @@ def page_attente(titre, texte, phase):
 
 # ----------------------------------------------------------------------- main
 def main():
+    restaurer_session()
     if not st.session_state.get("identifiant"):
         ecran_acces()
         st.markdown(
