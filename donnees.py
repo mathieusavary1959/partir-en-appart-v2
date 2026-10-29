@@ -344,6 +344,7 @@ def nouveau_dossier(profil):
         "s2": s2_par_defaut(),
         "s3": s3_par_defaut(),
         "s4": s4_par_defaut(),
+        "s5": s5_par_defaut(),
     }
 
 
@@ -917,3 +918,184 @@ def reinitialiser_mot_de_passe(magasin, identifiant, nouveau_mot_de_passe):
     if ok:
         revoquer_jeton_session(magasin, identifiant)
     return (True, "Mot de passe réinitialisé.") if ok else (False, "Échec de la réinitialisation.")
+
+
+# ---------------------------------------------------------------- S5
+# Fidèle à la v1 (src/outil-template.html) : transport {mode, cout,
+# justification} ; menus de 7 jours x 4 repas, chaque repas {nom,
+# ingredients: [{nom, prix, portionsAchat, portionsUtilisees}]}.
+# Coût d'un ingrédient : prix x portions utilisées / portions de l'achat.
+
+JOURS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi",
+         "Dimanche"]
+TYPES_REPAS = [("dejeuner", "Déjeuner"), ("diner", "Dîner"),
+               ("souper", "Souper"), ("collations", "Collations")]
+MODES_TRANSPORT = {
+    "a-pied": "À pied",
+    "velo": "Vélo",
+    "autobus-sttr": "Autobus STTR",
+    "auto": "Auto",
+}
+REPERE_STTR = 81.0
+FOURCHETTE_EPICERIE = (120.0, 190.0)
+
+
+def _repas_vide():
+    return {"nom": "", "ingredients": []}
+
+
+def s5_par_defaut():
+    return {
+        "transport": {"mode": "", "cout": None, "justification": ""},
+        "menus": [
+            {"jour": jour,
+             **{code: _repas_vide() for code, _ in TYPES_REPAS}}
+            for jour in JOURS
+        ],
+    }
+
+
+def obtenir_s5(dossier):
+    """S5 du dossier, avec migration à la volée si elle manque ou si un
+    jour / un repas manque (dossiers créés avant la S5)."""
+    s5 = dossier.get("s5")
+    if not isinstance(s5, dict):
+        s5 = s5_par_defaut()
+        dossier["s5"] = s5
+        return s5
+    if not isinstance(s5.get("transport"), dict):
+        s5["transport"] = {"mode": "", "cout": None, "justification": ""}
+    menus = s5.get("menus")
+    if not isinstance(menus, list) or len(menus) != len(JOURS):
+        s5["menus"] = s5_par_defaut()["menus"]
+        return s5
+    for i, jour in enumerate(JOURS):
+        if not isinstance(menus[i], dict):
+            menus[i] = {"jour": jour,
+                        **{c: _repas_vide() for c, _ in TYPES_REPAS}}
+            continue
+        menus[i]["jour"] = jour
+        for code, _ in TYPES_REPAS:
+            repas = menus[i].get(code)
+            if not isinstance(repas, dict):
+                menus[i][code] = _repas_vide()
+            else:
+                repas.setdefault("nom", "")
+                if not isinstance(repas.get("ingredients"), list):
+                    repas["ingredients"] = []
+    return s5
+
+
+def enregistrer_s5(magasin, identifiant, s5):
+    """Écrit la S5 dans le dossier et le sauvegarde. Renvoie le dossier."""
+    dossier = magasin.charger_dossier(identifiant)
+    if dossier is None:
+        raise ValueError("Dossier introuvable pour " + str(identifiant))
+    dossier["s5"] = s5
+    magasin.sauvegarder_dossier(identifiant, dossier)
+    return dossier
+
+
+def cout_ingredient(ligne):
+    """Coût réel d'un ingrédient : prix x portions utilisées / portions
+    de l'achat (arrondi au cent, comme la v1). Sans portions d'achat,
+    on prend les portions utilisées ; sans portion utilisée, 0."""
+    if not ligne:
+        return 0.0
+    prix = float(ligne.get("prix") or 0)
+    pa = float(ligne.get("portionsAchat") or 0)
+    pu = float(ligne.get("portionsUtilisees") or 0)
+    if pa <= 0:
+        pa = pu if pu > 0 else 1.0
+    if pu <= 0:
+        return 0.0
+    return _arrondir2(prix * pu / pa)
+
+
+def calculer_epicerie(menus):
+    """Totaux de la semaine type : achats inscrits (prix bruts),
+    nourriture utilisée (au prorata des portions), part de l'élève
+    (50 %) et part mensuelle (semaine x 4,33)."""
+    achats = 0.0
+    utilisee = 0.0
+    for jour in menus or []:
+        if not isinstance(jour, dict):
+            continue
+        for code, _ in TYPES_REPAS:
+            repas = jour.get(code) or {}
+            for ligne in repas.get("ingredients") or []:
+                if not isinstance(ligne, dict):
+                    continue
+                achats += float(ligne.get("prix") or 0)
+                utilisee += cout_ingredient(ligne)
+    achats = _arrondir2(achats)
+    utilisee = _arrondir2(utilisee)
+    semaine_part = _arrondir2(utilisee / 2)
+    return {
+        "achats_totale": achats,
+        "semaine_utilisee": utilisee,
+        "semaine_part": semaine_part,
+        "mois_part": _arrondir2(semaine_part * 4.33),
+        "mois_total": _arrondir2(utilisee * 4.33),
+    }
+
+
+def s5_manquants(s5):
+    """Ce qui manque pour déclarer la S5 terminée, dans l'ordre de la
+    page : transport, puis les menus (règles de la v1 : aucune case de
+    repas vide, chaque repas a ses ingrédients chiffrés avec portions,
+    jamais de prix à 0 $)."""
+    manques = []
+    transport = (s5 or {}).get("transport") or {}
+    if not (transport.get("mode") or ""):
+        manques.append("Le mode de transport n'est pas choisi.")
+    repas_vides, sans_ingredients, prix_zero, portions = [], [], [], []
+    for jour in (s5 or {}).get("menus") or []:
+        if not isinstance(jour, dict):
+            continue
+        for code, libelle in TYPES_REPAS:
+            repas = jour.get(code) or {}
+            etiquette = f"{jour.get('jour', '?')} · {libelle.lower()}"
+            if not (repas.get("nom") or "").strip():
+                repas_vides.append(etiquette)
+                continue
+            lignes = [l for l in repas.get("ingredients") or []
+                      if isinstance(l, dict)
+                      and ((l.get("nom") or "").strip()
+                           or (l.get("prix") or 0) > 0)]
+            if not lignes:
+                sans_ingredients.append(etiquette)
+                continue
+            for l in lignes:
+                nom = (l.get("nom") or "?").strip()
+                if (l.get("nom") or "").strip() and not (l.get("prix") or 0):
+                    prix_zero.append(f"{etiquette} : {nom}")
+                pa = l.get("portionsAchat") or 0
+                pu = l.get("portionsUtilisees") or 0
+                if pa < 1:
+                    portions.append(f"{etiquette} : portions de l'achat "
+                                    f"manquantes pour « {nom} »")
+                elif pu > pa:
+                    portions.append(f"{etiquette} : plus de portions "
+                                    f"utilisées qu'achetées pour « {nom} »")
+                elif pu <= 0:
+                    portions.append(f"{etiquette} : aucune portion "
+                                    f"utilisée pour « {nom} »")
+    if repas_vides:
+        manques.append(
+            f"{len(repas_vides)} case(s) de repas encore vide(s) "
+            f"(aucune ne peut rester vide) : "
+            + " ; ".join(repas_vides[:3])
+            + (" ; ..." if len(repas_vides) > 3 else ""))
+    if sans_ingredients:
+        manques.append(
+            f"{len(sans_ingredients)} repas sans aucun ingrédient : "
+            + " ; ".join(sans_ingredients[:3])
+            + (" ; ..." if len(sans_ingredients) > 3 else ""))
+    if prix_zero:
+        manques.append("Prix à 0 $ : " + " ; ".join(prix_zero[:3])
+                       + (" ; ..." if len(prix_zero) > 3 else ""))
+    if portions:
+        manques.append("Portions à vérifier : " + " ; ".join(portions[:3])
+                       + (" ; ..." if len(portions) > 3 else ""))
+    return manques

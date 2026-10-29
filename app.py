@@ -655,6 +655,85 @@ p, li, label{ color:var(--texte); }
   border-top:3px double #3A352B; margin-top:8px; padding-top:8px; }
 .s4-total .note{ text-align:center; font-size:12.5px; color:#4A4234; margin-top:10px; }
 
+/* S5 : le panier et la passe. Le transport est une vraie passe plastifiée
+   (bande magnétique en haut, bandeau de couleur selon le mode choisi) ;
+   l'épicerie est une liste de semainier : papier ligné, marge rouge à
+   gauche, jours en onglets au-dessus. Rien à voir avec les boîtes de la
+   S3 ni avec les bons de la S4. */
+.s5-bandeau{ position:relative; background:#FFFDF4; color:var(--encre);
+  border:3px solid #B02A20; box-shadow:0 0 0 5px #FFFDF4, 0 0 0 7px #B02A20,
+  0 18px 44px rgba(0,0,0,.5); border-radius:4px; padding:22px 26px 18px;
+  transform:rotate(-.3deg); margin:26px 0 8px; }
+.s5-bandeau p, .s5-bandeau div{ color:var(--encre); }
+.s5-bandeau .magasin{ font-family:"Special Elite",monospace; font-size:13px;
+  letter-spacing:.3em; color:#B02A20; text-align:center; }
+.s5-bandeau h2{ text-align:center; font-size:clamp(28px,3.4vw,42px);
+  margin:6px 0 8px; color:var(--encre); }
+.s5-bandeau .aide{ color:#3A352B; max-width:640px; margin:0 auto;
+  text-align:left; }
+.s5-burst{ position:absolute; top:-24px; right:-14px; width:104px; height:104px;
+  border-radius:50%; background:var(--jaune); color:#14161C;
+  transform:rotate(12deg); display:flex; align-items:center;
+  justify-content:center; text-align:center; font-family:"Bebas Neue",sans-serif;
+  font-size:17px; line-height:1.15; padding:10px;
+  box-shadow:0 8px 20px rgba(0,0,0,.45); }
+.st-key-s5_passe{ position:relative; border-radius:16px; color:#E8EEF2;
+  background:linear-gradient(#0D1114,#0D1114) top/100% 26px no-repeat,
+  linear-gradient(135deg,#2A4A63,#16222C);
+  padding:44px 24px 18px; box-shadow:0 16px 40px rgba(0,0,0,.55);
+  margin-top:26px; }
+.st-key-s5_passe p, .st-key-s5_passe label, .st-key-s5_passe div{ color:#E8EEF2; }
+.st-key-s5_passe .passe-titre{ font-family:"Special Elite",monospace;
+  font-size:13px; letter-spacing:.28em; color:#9FB6C4; }
+.s5-mode-band{ border-radius:10px; padding:10px 16px; margin:10px 0 4px;
+  display:flex; justify-content:space-between; align-items:baseline; gap:14px; }
+.s5-mode-band .mode{ font-family:"Bebas Neue",sans-serif; font-size:30px;
+  letter-spacing:.04em; }
+.s5-mode-band .prix{ font-family:"Special Elite",monospace; font-size:19px;
+  font-weight:700; }
+.st-key-s5_liste{ position:relative; margin-top:8px;
+  background:
+   linear-gradient(90deg, transparent 0 52px, rgba(200,60,50,.55) 52px 54px, transparent 54px),
+   repeating-linear-gradient(#FBF6E9 0 33px, #DCD2B8 33px 34px);
+  border-radius:4px; box-shadow:0 16px 40px rgba(0,0,0,.5);
+  padding:20px 26px 22px 72px; color:var(--encre); }
+.st-key-s5_liste label,
+.st-key-s5_liste [data-testid="stWidgetLabel"] p,
+.st-key-s5_liste [data-testid="stMarkdownContainer"],
+.st-key-s5_liste [data-testid="stMarkdownContainer"] p{ color:var(--encre); }
+.st-key-s5_passe [data-testid="stTextArea"] textarea{
+  background:#F2F6F9 !important; color:#14202A !important; }
+.st-key-s5_liste .stButton > button,
+.st-key-s5_liste .stButton > button p,
+.st-key-s5_liste .stButton > button [data-testid="stMarkdownContainer"]{
+  color:var(--texte) !important; }
+.st-key-s5_liste .stButton > button:hover,
+.st-key-s5_liste .stButton > button:hover p{ color:var(--jaune) !important; }
+.st-key-s5_liste [data-testid="stWidgetLabel"] p,
+.st-key-s5_liste [data-baseweb="input"] input,
+.st-key-s5_liste [data-testid="stNumberInput"] input{
+  color:var(--encre) !important; }
+.st-key-s5_liste [data-baseweb="input"],
+.st-key-s5_liste [data-testid="stNumberInput"] > div{
+  background:rgba(255,255,255,.55) !important; border:none !important;
+  border-bottom:2px solid #8A7B5C !important; border-radius:6px 6px 0 0 !important;
+  box-shadow:none !important; }
+.s5-jour-titre{ font-family:"Caveat",cursive; font-size:38px; font-weight:700;
+  color:var(--encre); line-height:1; }
+.s5-repas-titre{ font-family:"Special Elite",monospace; font-size:15px;
+  letter-spacing:.18em; color:#7A2E22; border-bottom:2px dashed #B4A888;
+  padding-bottom:4px; margin:18px 0 2px; }
+.s5-repas-cout{ font-family:"Special Elite",monospace; font-size:14px;
+  color:#3A352B; text-align:right; }
+.s5-totaux{ border-top:3px double #3A352B; margin-top:22px; padding-top:10px; }
+.s5-totaux .ligne{ display:flex; justify-content:space-between; gap:14px;
+  font-family:"Special Elite",monospace; font-size:14.5px; color:#3A352B;
+  padding:4px 0; }
+.s5-totaux .grand{ font-size:18px; font-weight:700; color:var(--encre);
+  border-top:2px solid #3A352B; margin-top:6px; padding-top:8px; }
+.s5-alerte{ font-family:"Special Elite",monospace; font-size:13.5px;
+  color:#8A5A00; margin-top:8px; }
+
 @media (max-width:980px){
   .pf-grille{ grid-template-columns:1fr; grid-template-areas:"solde" "calendrier" "croquis" "liste" "coloc" "epicerie" "energuide" "vide"; }
   .pf-congelo{ flex-wrap:wrap; }
@@ -719,7 +798,7 @@ def aller(page):
 NOM_COOKIE_JETON = "appart2_jeton"
 NOM_COOKIE_PAGE = "appart2_page"
 PAGES_CONNUES = {"accueil", "vie", "score", "imprevus", "sections",
-                 "s1", "s2", "s3"}
+                 "s1", "s2", "s3", "s4", "s5"}
 
 
 def deconnecter():
@@ -2031,10 +2110,353 @@ def page_s4(compte, dossier, profil):
                 aller("accueil")
 
 
+# ---------------------------------------------------------------- page S5
+def _copie_menus(menus):
+    import copy
+    copie = copy.deepcopy(menus)
+    for jour in copie:
+        for code, _ in donnees.TYPES_REPAS:
+            repas = jour.setdefault(code, {"nom": "", "ingredients": []})
+            if not repas.get("ingredients"):
+                repas["ingredients"] = [
+                    {"nom": "", "prix": None, "portionsAchat": None,
+                     "portionsUtilisees": None}]
+    return copie
+
+
+def _snapshot_s5():
+    """Relit les champs visibles du jour courant (seul jour affiché) et
+    les range dans le brouillon des menus gardé en session."""
+    brouillon = st.session_state.get("_s5_brouillon")
+    if brouillon is None:
+        return
+    gen = st.session_state.get("_s5_gen", 0)
+    j = st.session_state.get("_s5_jour", 0)
+    jour = brouillon[j]
+    for code, _ in donnees.TYPES_REPAS:
+        repas = jour[code]
+        cle_nom = f"s5_nom_{j}_{code}_g{gen}"
+        if cle_nom in st.session_state:
+            repas["nom"] = st.session_state[cle_nom]
+        n = max(len(repas.get("ingredients") or []), 1)
+        lignes = []
+        for i in range(n):
+            lignes.append({
+                "nom": st.session_state.get(
+                    f"s5_i_{j}_{code}_{i}_nom_g{gen}", ""),
+                "prix": st.session_state.get(
+                    f"s5_i_{j}_{code}_{i}_prix_g{gen}"),
+                "portionsAchat": st.session_state.get(
+                    f"s5_i_{j}_{code}_{i}_pa_g{gen}"),
+                "portionsUtilisees": st.session_state.get(
+                    f"s5_i_{j}_{code}_{i}_pu_g{gen}"),
+            })
+        repas["ingredients"] = lignes
+
+
+def _aller_jour_s5(j):
+    _snapshot_s5()
+    st.session_state["_s5_jour"] = j
+
+
+def _ajouter_ingredient_s5(j, code):
+    _snapshot_s5()
+    st.session_state["_s5_brouillon"][j][code]["ingredients"].append(
+        {"nom": "", "prix": None, "portionsAchat": None,
+         "portionsUtilisees": None})
+    st.session_state["_s5_gen"] = st.session_state.get("_s5_gen", 0) + 1
+
+
+def _retirer_ingredient_s5(j, code, i):
+    _snapshot_s5()
+    lignes = st.session_state["_s5_brouillon"][j][code]["ingredients"]
+    if 0 <= i < len(lignes):
+        del lignes[i]
+    st.session_state["_s5_gen"] = st.session_state.get("_s5_gen", 0) + 1
+
+
+def _menus_nettoyes(brouillon):
+    """Retire les lignes d'ingrédients restées complètement vides avant
+    l'enregistrement (le dossier reste fidèle à la v1)."""
+    import copy
+    menus = copy.deepcopy(brouillon)
+    for jour in menus:
+        for code, _ in donnees.TYPES_REPAS:
+            repas = jour[code]
+            repas["ingredients"] = [
+                l for l in repas.get("ingredients") or []
+                if (l.get("nom") or "").strip()
+                or (l.get("prix") or 0) > 0
+                or (l.get("portionsAchat") or 0) > 0
+                or (l.get("portionsUtilisees") or 0) > 0]
+    return menus
+
+
+def _jour_complet(jour):
+    for code, _ in donnees.TYPES_REPAS:
+        repas = jour.get(code) or {}
+        if not (repas.get("nom") or "").strip():
+            return False
+        lignes = [l for l in repas.get("ingredients") or []
+                  if (l.get("nom") or "").strip()]
+        if not lignes:
+            return False
+    return True
+
+
+def page_s5(compte, dossier, profil):
+    if st.button("Retour à l'accueil", key="s5_retour"):
+        _snapshot_s5()
+        aller("accueil")
+    identifiant = compte["identifiant"]
+    s5 = donnees.obtenir_s5(dossier)
+    if st.session_state.get("_s5_charge") != identifiant:
+        st.session_state["_s5_brouillon"] = _copie_menus(s5["menus"])
+        st.session_state["_s5_gen"] = 0
+        st.session_state["_s5_jour"] = 0
+        st.session_state["_s5_charge"] = identifiant
+    brouillon = st.session_state["_s5_brouillon"]
+    gen = st.session_state["_s5_gen"]
+    jour_idx = st.session_state["_s5_jour"]
+    transport = s5["transport"]
+
+    if dossier.get("progression", {}).get("S5") == "fait":
+        st.success("Ton transport et tes menus sont déjà planifiés. "
+                   "Tu peux quand même les corriger ici.")
+
+    st.markdown(
+        "<div class='s5-bandeau'>"
+        "<div class='magasin'>MARCHÉ DE LA COLOC · CIRCULAIRE DE LA SEMAINE</div>"
+        "<h2>S5 · TON TRANSPORT ET TES MENUS</h2>"
+        "<div class='aide'>Deux planifications qui reviennent chaque mois : "
+        "comment tu te déplaces, et ce que tu manges. Choisis d'abord ta "
+        "passe de transport. Ensuite, remplis ton semainier : 7 jours, "
+        "4 repas par jour, aucune case vide. Pour chaque repas, écris son "
+        "nom, puis ses ingrédients : le prix de l'article au magasin, le "
+        "nombre de portions dans l'achat et le nombre de portions "
+        "utilisées pour ce repas. L'outil divise le prix selon les "
+        "portions utilisées : c'est le coût réel de la nourriture mangée. "
+        "Si un même article sert dans deux repas (un pain, un bloc de "
+        "fromage), inscris-le dans chaque repas où tu l'utilises.</div>"
+        "<div class='s5-burst'>7 JOURS<br>28 REPAS</div></div>",
+        unsafe_allow_html=True)
+
+    # --- La passe de transport. ---
+    modes = list(donnees.MODES_TRANSPORT)
+    mode_stocke = transport.get("mode") or ""
+    with st.container(key="s5_passe"):
+        st.markdown("<div class='passe-titre'>LAISSEZ-PASSER · "
+                    "TROIS-RIVIÈRES</div>", unsafe_allow_html=True)
+        mode_vif = st.session_state.get("s5_mode", mode_stocke)
+        couleurs_mode = {"a-pied": ("#2E7D32", "#FFFFFF"),
+                         "velo": ("#F2A007", "#14161C"),
+                         "autobus-sttr": ("#00549A", "#FFFFFF"),
+                         "auto": ("#546E7A", "#FFFFFF")}
+        fond, encre = couleurs_mode.get(mode_vif, ("#37474F", "#FFFFFF"))
+        cout_vif = st.session_state.get("s5_cout", transport.get("cout"))
+        prix_txt = (fmt_montant(cout_vif) + " / mois"
+                    if cout_vif else "À CHOISIR")
+        nom_mode = donnees.MODES_TRANSPORT.get(
+            mode_vif, "CHOISIS TA PASSE")
+        st.markdown(
+            f"<div class='s5-mode-band' style='background:{fond};color:{encre}'>"
+            f"<span class='mode'>{nom_mode.upper()}</span>"
+            f"<span class='prix'>{prix_txt}</span></div>",
+            unsafe_allow_html=True)
+        st.selectbox(
+            "Choisis ta passe (ton mode de transport)",
+            modes,
+            index=modes.index(mode_stocke) if mode_stocke in modes else None,
+            placeholder="Choisis ton mode de transport",
+            format_func=lambda m: donnees.MODES_TRANSPORT[m],
+            key="s5_mode")
+        st.number_input(
+            "Coût mensuel de ton transport ($)",
+            min_value=0.0, step=1.0,
+            value=float(transport["cout"]) if transport.get("cout") else None,
+            placeholder="Ex. 81",
+            help="Repère STTR : laissez-passer mensuel général 81 $ par "
+                 "mois en 2026. À pied, ça peut être 0 $.",
+            key="s5_cout")
+        st.text_area(
+            "Pourquoi ce transport ? (justification)",
+            value=transport.get("justification") or "",
+            placeholder="Ex. Le cégep est à 25 minutes à pied, "
+                        "l'autobus passe aux 30 minutes...",
+            key="s5_justif")
+
+    def _lire_transport():
+        return {
+            "mode": st.session_state.get("s5_mode", mode_stocke) or "",
+            "cout": st.session_state.get("s5_cout", transport.get("cout")),
+            "justification": st.session_state.get(
+                "s5_justif", transport.get("justification") or ""),
+        }
+
+    # --- Le semainier : un onglet par jour. ---
+    st.markdown("<div style='height:18px'></div>", unsafe_allow_html=True)
+    colonnes_jours = st.columns(7)
+    for j, nom_jour in enumerate(donnees.JOURS):
+        with colonnes_jours[j]:
+            coche = " ✓" if _jour_complet(brouillon[j]) else ""
+            st.button(f"{nom_jour}{coche}", key=f"s5_jour_btn_{j}",
+                      type="primary" if j == jour_idx else "secondary",
+                      on_click=_aller_jour_s5, args=(j,),
+                      use_container_width=True)
+
+    # --- La liste du jour, sur le papier ligné. ---
+    jour = brouillon[jour_idx]
+    with st.container(key="s5_liste"):
+        remplis = sum(1 for c, _ in donnees.TYPES_REPAS
+                      if (jour[c].get("nom") or "").strip())
+        st.markdown(
+            f"<div class='s5-jour-titre'>{donnees.JOURS[jour_idx]}</div>"
+            f"<div class='pf-note'>{remplis} repas sur 4 nommés pour "
+            "cette journée.</div>",
+            unsafe_allow_html=True)
+        for code, libelle in donnees.TYPES_REPAS:
+            repas = jour[code]
+            st.markdown(f"<div class='s5-repas-titre'>{libelle.upper()}</div>",
+                        unsafe_allow_html=True)
+            st.text_input(
+                f"Nom du repas ({libelle.lower()})",
+                value=repas.get("nom") or "",
+                placeholder="Ex. Spaghetti sauce à la viande",
+                key=f"s5_nom_{jour_idx}_{code}_g{gen}")
+            lignes = repas.get("ingredients") or []
+            if not lignes:
+                lignes = [{"nom": "", "prix": None, "portionsAchat": None,
+                           "portionsUtilisees": None}]
+            lignes_lues = []
+            for i, ligne in enumerate(lignes):
+                c_nom, c_prix, c_pa, c_pu, c_cout, c_ret = st.columns(
+                    [3.1, 1.25, 1.3, 1.3, 1.15, 0.95])
+                with c_nom:
+                    st.text_input(
+                        "Ingrédient", value=ligne.get("nom") or "",
+                        placeholder="Ex. Pâtes (boîte)",
+                        key=f"s5_i_{jour_idx}_{code}_{i}_nom_g{gen}",
+                        label_visibility="collapsed" if i else "visible")
+                with c_prix:
+                    st.number_input(
+                        "Prix ($)", min_value=0.0, step=0.25,
+                        value=(float(ligne["prix"])
+                               if ligne.get("prix") else None),
+                        placeholder="0,00",
+                        key=f"s5_i_{jour_idx}_{code}_{i}_prix_g{gen}",
+                        label_visibility="collapsed" if i else "visible")
+                with c_pa:
+                    st.number_input(
+                        "Portions achetées", min_value=0.0, step=1.0,
+                        value=(float(ligne["portionsAchat"])
+                               if ligne.get("portionsAchat") else None),
+                        placeholder="Ex. 6",
+                        key=f"s5_i_{jour_idx}_{code}_{i}_pa_g{gen}",
+                        label_visibility="collapsed" if i else "visible")
+                with c_pu:
+                    st.number_input(
+                        "Portions utilisées", min_value=0.0, step=1.0,
+                        value=(float(ligne["portionsUtilisees"])
+                               if ligne.get("portionsUtilisees") else None),
+                        placeholder="Ex. 2",
+                        key=f"s5_i_{jour_idx}_{code}_{i}_pu_g{gen}",
+                        label_visibility="collapsed" if i else "visible")
+                with c_cout:
+                    lu = {"prix": st.session_state.get(
+                              f"s5_i_{jour_idx}_{code}_{i}_prix_g{gen}",
+                              ligne.get("prix")),
+                          "portionsAchat": st.session_state.get(
+                              f"s5_i_{jour_idx}_{code}_{i}_pa_g{gen}",
+                              ligne.get("portionsAchat")),
+                          "portionsUtilisees": st.session_state.get(
+                              f"s5_i_{jour_idx}_{code}_{i}_pu_g{gen}",
+                              ligne.get("portionsUtilisees"))}
+                    lignes_lues.append(lu)
+                    st.markdown(
+                        "<div class='s5-repas-cout'>"
+                        + ("Coût" if i == 0 else "") + "<br>"
+                        + fmt_montant(donnees.cout_ingredient(lu)) + "</div>",
+                        unsafe_allow_html=True)
+                with c_ret:
+                    if i == 0:
+                        st.markdown("<div class='s5-repas-cout'> </div>",
+                                    unsafe_allow_html=True)
+                    st.button("Retirer", key=f"s5_ret_{jour_idx}_{code}_{i}",
+                              on_click=_retirer_ingredient_s5,
+                              args=(jour_idx, code, i))
+            cout_repas = sum(
+                donnees.cout_ingredient(l) for l in lignes_lues)
+            col_vide, col_btn, col_cout = st.columns([2.2, 1.6, 1.4])
+            with col_btn:
+                st.button("+ Un ingrédient de plus",
+                          key=f"s5_ajout_{jour_idx}_{code}",
+                          on_click=_ajouter_ingredient_s5,
+                          args=(jour_idx, code))
+            with col_cout:
+                st.markdown(
+                    "<div class='s5-repas-cout'>Coût de ce repas "
+                    f"(2 pers.) : {fmt_montant(cout_repas)}</div>",
+                    unsafe_allow_html=True)
+        # Totaux de la semaine, lus sur les menus fusionnés.
+        _snapshot_s5()
+        totaux = donnees.calculer_epicerie(
+            _menus_nettoyes(st.session_state["_s5_brouillon"]))
+        bas, haut = donnees.FOURCHETTE_EPICERIE
+        alerte = ""
+        if 0 < totaux["achats_totale"] and not (
+                bas <= totaux["achats_totale"] <= haut):
+            alerte = ("<div class='s5-alerte'>Repère : les achats d'une "
+                      "semaine pour 2 personnes coûtent entre 120 $ et "
+                      "190 $. Vérifie ta liste.</div>")
+        st.markdown(
+            "<div class='s5-totaux'>"
+            "<div class='ligne'><span>Achats inscrits dans les menus "
+            f"(2 personnes)</span><span>{fmt_montant(totaux['achats_totale'])}</span></div>"
+            "<div class='ligne'><span>Nourriture utilisée dans la semaine "
+            f"(2 personnes)</span><span>{fmt_montant(totaux['semaine_utilisee'])}</span></div>"
+            "<div class='ligne'><span>Ta part de nourriture utilisée "
+            f"(50 %)</span><span>{fmt_montant(totaux['semaine_part'])}</span></div>"
+            "<div class='ligne grand'><span>Ta part pour le mois "
+            f"(semaine utilisée x 4,33)</span><span>{fmt_montant(totaux['mois_part'])}</span></div>"
+            "</div>" + alerte,
+            unsafe_allow_html=True)
+
+    def _enregistrer():
+        _snapshot_s5()
+        s5_neuf = {"transport": _lire_transport(),
+                   "menus": _menus_nettoyes(
+                       st.session_state["_s5_brouillon"])}
+        donnees.enregistrer_s5(MAGASIN, identifiant, s5_neuf)
+        return s5_neuf
+
+    st.markdown("<div style='height:14px'></div>", unsafe_allow_html=True)
+    col_enr, col_term = st.columns(2)
+    with col_enr:
+        if st.button("Enregistrer", use_container_width=True,
+                     key="s5_enregistrer"):
+            _enregistrer()
+            st.success("Ton transport et tes menus sont enregistrés.")
+    with col_term:
+        if st.button("J'ai terminé ma semaine", type="primary",
+                     use_container_width=True, key="s5_terminer"):
+            s5_neuf = _enregistrer()
+            manquants = donnees.s5_manquants(s5_neuf)
+            if manquants:
+                st.error("Il te manque des choses avant de terminer :")
+                for manque in manquants:
+                    st.warning(manque)
+            else:
+                donnees.marquer_section_faite(MAGASIN, identifiant, "S5")
+                st.success("S5 terminée. Ta semaine est planifiée "
+                           "au complet!")
+                aller("accueil")
+
+
+
 def page_sections(compte, dossier, profil):
     st.markdown("<section class='carte'><h2>Mes sections</h2>"
                 "<div class='aide'>Ton travail, section par section. "
-                "La S1, la S2, la S3 et la S4 sont prêtes ; les autres arrivent plus tard.</div></section>",
+                "La S1, la S2, la S3, la S4 et la S5 sont prêtes ; les autres arrivent plus tard.</div></section>",
                 unsafe_allow_html=True)
     progression = dossier.get("progression", {})
     courante = donnees.section_courante(dossier)
@@ -2046,7 +2468,7 @@ def page_sections(compte, dossier, profil):
             st.markdown(f"**{code} : {nom}** ({mot})")
             st.caption(AIDES_ETAPES[code])
         with col_bouton:
-            if code in ("S1", "S2", "S3", "S4"):
+            if code in ("S1", "S2", "S3", "S4", "S5"):
                 if st.button(f"Ouvrir la {code}", key=f"ouvrir_{code.lower()}"):
                     aller(code.lower())
             else:
@@ -2100,6 +2522,8 @@ def main():
         page_s3(compte, dossier, profil)
     elif page == "s4":
         page_s4(compte, dossier, profil)
+    elif page == "s5":
+        page_s5(compte, dossier, profil)
     elif page == "sections":
         page_sections(compte, dossier, profil)
     elif page == "vie":
