@@ -343,6 +343,7 @@ def nouveau_dossier(profil):
         "imprevus": [],
         "s2": s2_par_defaut(),
         "s3": s3_par_defaut(),
+        "s4": s4_par_defaut(),
     }
 
 
@@ -644,6 +645,168 @@ def s3_manquants(s3):
         manques.append(
             "Ton installation dépasse le plafond de 3 500 $ de "
             f"{_fmt_montant(total - PLAFOND_INSTALLATION)}.")
+    return manques
+
+
+# ------------------------------------------------------------------------ S4
+# Tarif D d'Hydro-Québec au 1er avril 2026 (constantes.md, fidèle à la v1) :
+# redevance d'accès 0,46154 $ par jour, calculée sur 30 jours ; tranche 1
+# à 0,07065 $/kWh jusqu'à 1 200 kWh (40 kWh par jour) ; tranche 2 à
+# 0,11142 $/kWh au-delà ; taxes de 14,975 %.
+TARIF_D = {
+    "acces_jour": 0.46154,
+    "jours": 30,
+    "tranche1_taux": 0.07065,
+    "tranche1_max_kwh": 1200,
+    "tranche2_taux": 0.11142,
+    "taxes": 0.14975,
+}
+BAREME_KWH = {"petit": 1050, "moyen": 1350, "grand": 1700}
+TAILLES_ELEC = ["petit", "moyen", "grand", "manuel"]
+
+
+def _arrondir2(valeur):
+    """Arrondi monétaire à 2 décimales, moitié vers le haut, comme le
+    Math.round de la v1 (le round de Python descendrait 66,305 à 66,30
+    alors que la référence des constantes est 66,31)."""
+    from decimal import Decimal, ROUND_HALF_UP
+    return float(Decimal(str(float(valeur))).quantize(
+        Decimal("0.01"), rounding=ROUND_HALF_UP))
+
+
+def s4_par_defaut():
+    """Structure vide de la S4 (fidèle à la v1) : l'électricité (taille
+    ou saisie manuelle des kWh), internet (prix pour l'appartement,
+    partagé), le cellulaire et l'assurance (personnels)."""
+    return {
+        "electricite": {"taille": "", "kwh_manuel": None},
+        "internet": {"fournisseur": "", "prix": None, "capture": ""},
+        "cellulaire": {"fournisseur": "", "prix": None, "capture": ""},
+        "assurance": {"compagnie": "", "prix": None},
+    }
+
+
+def obtenir_s4(dossier):
+    """La S4 du dossier, complétée par la structure vide si elle manque
+    (les dossiers créés avant la S4 n'en ont pas)."""
+    s4 = (dossier or {}).get("s4")
+    if not isinstance(s4, dict):
+        return s4_par_defaut()
+    defaut = s4_par_defaut()
+    for cle, valeur in defaut.items():
+        s4.setdefault(cle, valeur)
+        if isinstance(valeur, dict) and isinstance(s4[cle], dict):
+            for sous_cle, sous_valeur in valeur.items():
+                s4[cle].setdefault(sous_cle, sous_valeur)
+    return s4
+
+
+def enregistrer_s4(magasin, identifiant, s4):
+    """Écrit la S4 dans le dossier stocké et retourne le dossier."""
+    dossier = magasin.charger_dossier(identifiant)
+    if dossier is None:
+        raise ValueError(f"Dossier introuvable : {identifiant}")
+    dossier["s4"] = s4
+    magasin.sauvegarder_dossier(identifiant, dossier)
+    return dossier
+
+
+def resoudre_kwh(electricite):
+    """La consommation mensuelle en kWh selon la taille choisie, ou la
+    saisie manuelle (fidèle au resoudreKwh de la v1)."""
+    elec = electricite or {}
+    taille = elec.get("taille") or ""
+    if taille == "manuel":
+        return float(elec.get("kwh_manuel") or 0)
+    if taille in BAREME_KWH:
+        return float(BAREME_KWH[taille])
+    return 0.0
+
+
+def calculer_electricite(kwh):
+    """Le calcul complet du tarif D, démarche comprise (fidèle au
+    calculerElectricite de la v1, mêmes arrondis). La part est la
+    moitié : l'électricité est un coût partagé avec le coloc."""
+    k = max(0.0, float(kwh or 0))
+    if k <= 0:
+        return {"kwh": 0, "acces": 0.0, "tranche1_kwh": 0,
+                "tranche1": 0.0, "tranche2_kwh": 0, "tranche2": 0.0,
+                "sous_total": 0.0, "taxes": 0.0, "total": 0.0, "part": 0.0}
+    acces_brut = TARIF_D["acces_jour"] * TARIF_D["jours"]
+    t1_kwh = min(k, TARIF_D["tranche1_max_kwh"])
+    t2_kwh = max(0.0, k - TARIF_D["tranche1_max_kwh"])
+    t1_brut = t1_kwh * TARIF_D["tranche1_taux"]
+    t2_brut = t2_kwh * TARIF_D["tranche2_taux"]
+    sous_total = _arrondir2(acces_brut + t1_brut + t2_brut)
+    total = _arrondir2(sous_total * (1 + TARIF_D["taxes"]))
+    return {
+        "kwh": int(k) if float(k).is_integer() else k,
+        "acces": _arrondir2(acces_brut),
+        "tranche1_kwh": int(t1_kwh) if float(t1_kwh).is_integer() else t1_kwh,
+        "tranche1": _arrondir2(t1_brut),
+        "tranche2_kwh": int(t2_kwh) if float(t2_kwh).is_integer() else t2_kwh,
+        "tranche2": _arrondir2(t2_brut),
+        "sous_total": sous_total,
+        "taxes": _arrondir2(sous_total * TARIF_D["taxes"]),
+        "total": total,
+        "part": _arrondir2(total / 2),
+    }
+
+
+def totaux_s4(s4):
+    """Les montants mensuels de la S4, en parts de l'élève : électricité
+    et internet partagés à 50 %, cellulaire et assurance personnels.
+    C'est ce qui sortira de son compte chaque mois de vie (P3)."""
+    s4 = s4 or {}
+    elec = calculer_electricite(resoudre_kwh(s4.get("electricite")))
+    internet_total = float((s4.get("internet") or {}).get("prix") or 0)
+    internet_part = _arrondir2(internet_total / 2)
+    cellulaire = _arrondir2(float((s4.get("cellulaire") or {}).get("prix") or 0))
+    assurance = _arrondir2(float((s4.get("assurance") or {}).get("prix") or 0))
+    return {
+        "electricite_total": elec["total"],
+        "electricite_part": elec["part"],
+        "internet_total": _arrondir2(internet_total),
+        "internet_part": internet_part,
+        "cellulaire": cellulaire,
+        "assurance": assurance,
+        "total_mensuel_part": _arrondir2(
+            elec["part"] + internet_part + cellulaire + assurance),
+    }
+
+
+def s4_manquants(s4):
+    """Ce qu'il manque pour terminer la S4 (fidèle aux contrôles de la
+    v1 : taille d'électricité, captures internet et cellulaire)."""
+    manques = []
+    s4 = s4 or {}
+    elec = s4.get("electricite") or {}
+    taille = elec.get("taille") or ""
+    if not taille:
+        manques.append("Électricité : choisis la taille de ton "
+                       "appartement, le calcul du tarif D n'est pas fait.")
+    elif taille == "manuel" and resoudre_kwh(elec) <= 0:
+        manques.append("Électricité : ta saisie manuelle est à 0 kWh, "
+                       "aucun calcul n'est possible.")
+    internet = s4.get("internet") or {}
+    if not (internet.get("fournisseur") or "").strip():
+        manques.append("Internet : écris le nom du fournisseur.")
+    if not internet.get("prix"):
+        manques.append("Internet : écris le prix mensuel pour l'appartement.")
+    if not (internet.get("capture") or "").strip():
+        manques.append("Internet : écris la référence de ta capture du forfait.")
+    cellulaire = s4.get("cellulaire") or {}
+    if not (cellulaire.get("fournisseur") or "").strip():
+        manques.append("Cellulaire : écris le nom du fournisseur.")
+    if not cellulaire.get("prix"):
+        manques.append("Cellulaire : écris le prix mensuel de ton forfait.")
+    if not (cellulaire.get("capture") or "").strip():
+        manques.append("Cellulaire : écris la référence de ta capture du forfait.")
+    assurance = s4.get("assurance") or {}
+    if not (assurance.get("compagnie") or "").strip():
+        manques.append("Assurance habitation : écris le nom de la compagnie.")
+    if not assurance.get("prix"):
+        manques.append("Assurance habitation : écris le prix mensuel.")
     return manques
 
 

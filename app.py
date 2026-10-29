@@ -30,7 +30,8 @@ except Exception:
 # Garde-fou de déploiement : si le processus en ligne garde en mémoire une
 # ancienne version du module donnees (rechargement partiel de Streamlit
 # Cloud), on force son rechargement avant d'aller plus loin.
-if not hasattr(donnees, "PIECE_COLOC") or not hasattr(donnees, "nouveau_jeton_session"):
+if not hasattr(donnees, "PIECE_COLOC") or not hasattr(donnees, "nouveau_jeton_session") \
+        or not hasattr(donnees, "calculer_electricite"):
     import importlib
     importlib.reload(donnees)
 
@@ -547,6 +548,96 @@ p, li, label{ color:var(--texte); }
 .st-key-s3_electro_bloc [data-testid="stCaptionContainer"] p{
   color:#4A453C !important; font-family:"Special Elite",monospace; font-size:11.5px;
   letter-spacing:.1em; text-transform:uppercase; }
+
+/* S4 : les factures épinglées sur la porte. Chaque service est une vraie
+   facture papier, tenue par un aimant, chacune avec sa couleur qui la
+   suit jusqu'au total du mois. */
+.s4-bandeau{ background:#FDFCF7; color:var(--encre); border-radius:2px;
+  padding:20px 26px 16px; margin:26px 0 8px; position:relative;
+  transform:rotate(-.4deg); box-shadow:0 14px 28px rgba(0,0,0,.45); }
+.s4-bandeau::before{ content:""; position:absolute; top:-9px; left:50%; margin-left:-9px;
+  width:18px; height:18px; border-radius:50%; z-index:3;
+  background:radial-gradient(circle at 35% 30%, #FF8A75, #D93A2B 70%);
+  box-shadow:0 2px 4px rgba(0,0,0,.4); }
+.s4-bandeau .entete{ font-family:"Special Elite",monospace; font-size:12px;
+  letter-spacing:.22em; color:#4A453C; display:flex; justify-content:space-between; }
+.s4-bandeau .entete b{ color:#B3271A; }
+.s4-bandeau .titre{ font-family:"Bebas Neue",sans-serif; font-size:44px;
+  letter-spacing:.03em; line-height:1.02; color:var(--encre); margin-top:4px; }
+.s4-bandeau .titre span{ color:#B3271A; }
+.s4-bandeau .aide{ font-size:14.5px; color:#4A453C; margin-top:6px; max-width:65ch; }
+.st-key-s4_facture_elec, .st-key-s4_facture_internet,
+.st-key-s4_facture_cell, .st-key-s4_facture_ass{
+  background:#FFFFFF; color:var(--encre); border-radius:2px; position:relative;
+  padding:20px 20px 12px; margin-top:30px; box-shadow:0 14px 28px rgba(0,0,0,.45); }
+.st-key-s4_facture_elec{ transform:rotate(-.5deg); border-top:10px solid #00549A; }
+.st-key-s4_facture_internet{ transform:rotate(.45deg); border-top:10px solid #0E7C66; }
+.st-key-s4_facture_cell{ transform:rotate(-.35deg); border-top:10px solid #E07B00; }
+.st-key-s4_facture_ass{ transform:rotate(.5deg); border-top:10px solid #5B8C2A; }
+.st-key-s4_facture_elec label p, .st-key-s4_facture_internet label p,
+.st-key-s4_facture_cell label p, .st-key-s4_facture_ass label p{
+  font-family:"Special Elite",monospace; font-size:11.5px; letter-spacing:.1em;
+  text-transform:uppercase; color:#4A453C !important; }
+.st-key-s4_facture_elec [data-testid="stMarkdownContainer"] p,
+.st-key-s4_facture_internet [data-testid="stMarkdownContainer"] p,
+.st-key-s4_facture_cell [data-testid="stMarkdownContainer"] p,
+.st-key-s4_facture_ass [data-testid="stMarkdownContainer"] p,
+.st-key-s4_facture_elec [data-testid="stMarkdownContainer"] li,
+.st-key-s4_facture_internet [data-testid="stMarkdownContainer"] li,
+.st-key-s4_facture_cell [data-testid="stMarkdownContainer"] li,
+.st-key-s4_facture_ass [data-testid="stMarkdownContainer"] li{ color:var(--encre); }
+.st-key-s4_facture_elec .stTextInput input, .st-key-s4_facture_internet .stTextInput input,
+.st-key-s4_facture_cell .stTextInput input, .st-key-s4_facture_ass .stTextInput input{
+  background:transparent !important; border:none !important; border-bottom:2px solid #B9B09A !important;
+  border-radius:0 !important; box-shadow:none !important; color:var(--encre) !important; font-weight:600; }
+.st-key-s4_facture_elec [data-testid="stNumberInput"] > div,
+.st-key-s4_facture_internet [data-testid="stNumberInput"] > div,
+.st-key-s4_facture_cell [data-testid="stNumberInput"] > div,
+.st-key-s4_facture_ass [data-testid="stNumberInput"] > div{
+  background:transparent; border:none; border-bottom:2px solid #B9B09A; border-radius:0; box-shadow:none; }
+.st-key-s4_facture_elec [data-testid="stNumberInput"] input,
+.st-key-s4_facture_internet [data-testid="stNumberInput"] input,
+.st-key-s4_facture_cell [data-testid="stNumberInput"] input,
+.st-key-s4_facture_ass [data-testid="stNumberInput"] input{
+  background:transparent !important; color:var(--encre) !important; font-weight:700; }
+.st-key-s4_facture_elec [data-testid="stSelectbox"] > div > div{
+  background:transparent !important; border:none !important; border-bottom:2px solid #B9B09A !important;
+  border-radius:0 !important; box-shadow:none !important; color:var(--encre) !important; font-weight:600; }
+.s4-service{ font-family:"Bebas Neue",sans-serif; font-size:27px; letter-spacing:.04em;
+  color:var(--encre); line-height:1.05; }
+.s4-mention{ font-family:"Special Elite",monospace; font-size:11.5px; letter-spacing:.14em;
+  text-transform:uppercase; color:#4A453C; margin-bottom:6px; }
+.s4-part{ font-family:"Special Elite",monospace; font-size:13.5px; color:#4A453C;
+  border-top:2px dashed #B9B09A; margin-top:10px; padding-top:8px; }
+.s4-part b{ color:var(--encre); font-size:15px; }
+.s4-demarche{ margin-top:6px; }
+.s4-demarche .ligne{ display:flex; justify-content:space-between; gap:14px;
+  font-family:"Special Elite",monospace; font-size:13.5px; color:#3A352B;
+  border-bottom:1px dotted #B9B09A; padding:4px 0; }
+.s4-demarche .ligne.total{ font-weight:700; color:var(--encre); font-size:15px;
+  border-bottom:3px double #3A352B; }
+.s4-demarche .part{ background:#FFE066; color:var(--encre); font-weight:700;
+  font-family:"Special Elite",monospace; font-size:15px; display:flex;
+  justify-content:space-between; gap:14px; padding:7px 10px; margin-top:10px;
+  transform:rotate(-.6deg); box-shadow:0 3px 6px rgba(0,0,0,.25); }
+.s4-total{ background:#FFFFFF; color:var(--encre); border-radius:2px;
+  padding:20px 24px 24px; margin:36px auto 34px; max-width:560px; position:relative;
+  filter:drop-shadow(0 14px 16px rgba(0,0,0,.45)); }
+.s4-total::after{ content:""; position:absolute; left:0; right:0; bottom:-10px; height:10px;
+  background:linear-gradient(45deg, transparent 33.333%, #FFFFFF 33.333%, #FFFFFF 66.667%, transparent 66.667%),
+  linear-gradient(-45deg, transparent 33.333%, #FFFFFF 33.333%, #FFFFFF 66.667%, transparent 66.667%);
+  background-size:20px 40px; background-position:0 -20px; }
+.s4-total .titre{ font-family:"Special Elite",monospace; text-align:center; font-size:18px;
+  letter-spacing:.1em; color:var(--encre); }
+.s4-total .ligne{ display:flex; justify-content:space-between; gap:14px;
+  font-family:"Special Elite",monospace; font-size:13.5px; color:#3A352B;
+  border-bottom:1px dotted #B9B09A; padding:5px 0; }
+.s4-total .ligne .pastille{ display:inline-block; width:10px; height:10px; border-radius:50%;
+  margin-right:8px; }
+.s4-total .total{ display:flex; justify-content:space-between; gap:14px;
+  font-family:"Special Elite",monospace; font-weight:700; font-size:16.5px; color:var(--encre);
+  border-top:3px double #3A352B; margin-top:8px; padding-top:8px; }
+.s4-total .note{ text-align:center; font-size:12.5px; color:#4A453C; margin-top:10px; }
 
 @media (max-width:980px){
   .pf-grille{ grid-template-columns:1fr; grid-template-areas:"solde" "calendrier" "croquis" "liste" "coloc" "epicerie" "energuide" "vide"; }
@@ -1664,10 +1755,226 @@ def page_s3(compte, dossier, profil):
                 aller("accueil")
 
 
+# ------------------------------------------------------------------------ S4
+LIBELLES_TAILLE = {
+    "": "Choisis la taille de ton appartement",
+    "petit": "Petit (3 et demi ou petit 4 et demi) : 1 050 kWh par mois",
+    "moyen": "Moyen (4 et demi standard) : 1 350 kWh par mois",
+    "grand": "Grand (grand 4 et demi ou 5 et demi) : 1 700 kWh par mois",
+    "manuel": "Je saisis ma consommation moi-même (kWh)",
+}
+
+
+def _recueillir_s4():
+    """Lit les widgets de la page S4 et reconstruit la structure S4."""
+    return {
+        "electricite": {
+            "taille": st.session_state.get("s4_taille", ""),
+            "kwh_manuel": st.session_state.get("s4_kwh_manuel"),
+        },
+        "internet": {
+            "fournisseur": st.session_state.get("s4_internet_fournisseur", ""),
+            "prix": st.session_state.get("s4_internet_prix"),
+            "capture": st.session_state.get("s4_internet_capture", ""),
+        },
+        "cellulaire": {
+            "fournisseur": st.session_state.get("s4_cell_fournisseur", ""),
+            "prix": st.session_state.get("s4_cell_prix"),
+            "capture": st.session_state.get("s4_cell_capture", ""),
+        },
+        "assurance": {
+            "compagnie": st.session_state.get("s4_ass_compagnie", ""),
+            "prix": st.session_state.get("s4_ass_prix"),
+        },
+    }
+
+
+def page_s4(compte, dossier, profil):
+    if st.button("Retour à l'accueil"):
+        aller("accueil")
+    s4 = donnees.obtenir_s4(dossier)
+    deja_fait = dossier.get("progression", {}).get("S4") == "fait"
+
+    st.markdown(
+        "<div class='s4-bandeau'>"
+        "<div class='entete'><span>FACTURES DU MOIS</span><b>À PAYER CHAQUE MOIS</b></div>"
+        "<div class='titre'>S4 · TES FACTURES, <span>ÉPINGLÉES AU FRIGO</span></div>"
+        "<div class='aide'>Personne n'aime les factures, mais elles arrivent "
+        "pareil. Choisis la taille de ton appartement : ton électricité se "
+        "calcule toute seule, au tarif D d'Hydro-Québec, ligne par ligne. "
+        "Magasine ensuite tes forfaits (repères : internet 55 $ à 85 $, "
+        "cellulaire 35 $ à 60 $, assurance 20 $ à 35 $) et garde une capture "
+        "de chaque forfait comme preuve. L'électricité et internet se "
+        "partagent avec ton coloc ; le cellulaire et l'assurance, c'est "
+        "100 % à toi.</div></div>",
+        unsafe_allow_html=True)
+    if deja_fait:
+        st.success("Tes factures sont déjà épinglées. Tu peux quand même "
+                   "les modifier et réenregistrer.")
+
+    # --- Facture d'électricité : le calcul se fait devant l'élève. ---
+    elec = s4["electricite"]
+    taille_stockee = elec.get("taille") or ""
+    with st.container(key="s4_facture_elec"):
+        st.markdown("<div class='pf-aimant pf-ableu'></div>"
+                    "<div class='s4-mention'>Facture · À partager avec ton coloc</div>"
+                    "<div class='s4-service'>ÉLECTRICITÉ · TARIF D D'HYDRO-QUÉBEC</div>",
+                    unsafe_allow_html=True)
+        options_taille = ["", "petit", "moyen", "grand", "manuel"]
+        st.selectbox("Taille de l'appartement", options_taille,
+                     index=options_taille.index(taille_stockee)
+                     if taille_stockee in options_taille else 0,
+                     format_func=lambda t: LIBELLES_TAILLE[t],
+                     key="s4_taille")
+        taille_vive = st.session_state.get("s4_taille", taille_stockee)
+        if taille_vive == "manuel":
+            st.number_input("Ta consommation mensuelle (kWh)",
+                            value=elec.get("kwh_manuel"),
+                            min_value=0.0, step=10.0, format="%.0f",
+                            key="s4_kwh_manuel")
+        elec_vive = {"taille": taille_vive,
+                     "kwh_manuel": st.session_state.get(
+                         "s4_kwh_manuel", elec.get("kwh_manuel"))}
+        calcul = donnees.calculer_electricite(donnees.resoudre_kwh(elec_vive))
+        if calcul["kwh"] > 0:
+            lignes = [
+                ("Redevance d'accès (30 jours × 0,46154 $)",
+                 fmt_montant(calcul["acces"])),
+                (f"Tranche 1 : {calcul['tranche1_kwh']} kWh × 0,07065 $",
+                 fmt_montant(calcul["tranche1"])),
+            ]
+            if calcul["tranche2_kwh"] > 0:
+                lignes.append(
+                    (f"Tranche 2 : {calcul['tranche2_kwh']} kWh × 0,11142 $",
+                     fmt_montant(calcul["tranche2"])))
+            lignes.append(("Sous-total", fmt_montant(calcul["sous_total"])))
+            lignes.append(("Taxes (14,975 %)", fmt_montant(calcul["taxes"])))
+            html = "<div class='s4-demarche'>"
+            html += "".join(
+                f"<div class='ligne'><div>{lib}</div><div>{val}</div></div>"
+                for lib, val in lignes)
+            html += ("<div class='ligne total'><div>TOTAL POUR L'APPARTEMENT</div>"
+                     f"<div>{fmt_montant(calcul['total'])}</div></div>"
+                     "<div class='part'><div>TA PART (50 %)</div>"
+                     f"<div>{fmt_montant(calcul['part'])}</div></div></div>")
+            st.markdown(html, unsafe_allow_html=True)
+        else:
+            st.markdown("<div class='s4-part'>Choisis ta taille : ton calcul "
+                        "apparaîtra ici, ligne par ligne, comme sur une "
+                        "vraie facture.</div>", unsafe_allow_html=True)
+
+    # --- Facture internet : partagée. ---
+    internet = s4["internet"]
+    with st.container(key="s4_facture_internet"):
+        st.markdown("<div class='pf-aimant pf-avert'></div>"
+                    "<div class='s4-mention'>Facture · À partager avec ton coloc</div>"
+                    "<div class='s4-service'>INTERNET</div>",
+                    unsafe_allow_html=True)
+        st.text_input("Fournisseur", value=internet.get("fournisseur") or "",
+                      key="s4_internet_fournisseur",
+                      placeholder="Ex. Bell, Vidéotron, Fizz, Oricom...")
+        st.number_input("Prix mensuel pour l'appartement ($)",
+                        value=internet.get("prix"),
+                        min_value=0.0, step=1.0, format="%.2f",
+                        key="s4_internet_prix")
+        st.text_input("Référence de la capture du forfait",
+                      value=internet.get("capture") or "",
+                      key="s4_internet_capture",
+                      placeholder="Nom du fichier de capture déposé dans Classroom")
+        prix_vif = st.session_state.get("s4_internet_prix", internet.get("prix"))
+        if prix_vif:
+            st.markdown(
+                "<div class='s4-part'>TOTAL POUR L'APPARTEMENT : <b>"
+                + fmt_montant(prix_vif) + "</b> · TA PART (50 %) : <b>"
+                + fmt_montant(float(prix_vif) / 2) + "</b></div>",
+                unsafe_allow_html=True)
+
+    # --- Facture cellulaire : personnelle. ---
+    cellulaire = s4["cellulaire"]
+    with st.container(key="s4_facture_cell"):
+        st.markdown("<div class='pf-aimant pf-ajaune'></div>"
+                    "<div class='s4-mention'>Facture · Personnelle, 100 % à toi</div>"
+                    "<div class='s4-service'>CELLULAIRE</div>",
+                    unsafe_allow_html=True)
+        st.text_input("Fournisseur", value=cellulaire.get("fournisseur") or "",
+                      key="s4_cell_fournisseur",
+                      placeholder="Ex. Fizz, Public Mobile, Koodo, Rogers...")
+        st.number_input("Prix mensuel ($)", value=cellulaire.get("prix"),
+                        min_value=0.0, step=1.0, format="%.2f",
+                        key="s4_cell_prix")
+        st.text_input("Référence de la capture du forfait",
+                      value=cellulaire.get("capture") or "",
+                      key="s4_cell_capture",
+                      placeholder="Nom du fichier de capture déposé dans Classroom")
+
+    # --- Facture d'assurance : personnelle, sans capture en v1. ---
+    assurance = s4["assurance"]
+    with st.container(key="s4_facture_ass"):
+        st.markdown("<div class='pf-aimant pf-arouge'></div>"
+                    "<div class='s4-mention'>Facture · Personnelle, 100 % à toi</div>"
+                    "<div class='s4-service'>ASSURANCE HABITATION LOCATAIRE</div>",
+                    unsafe_allow_html=True)
+        st.text_input("Compagnie", value=assurance.get("compagnie") or "",
+                      key="s4_ass_compagnie",
+                      placeholder="Ex. Beneva, Desjardins, Intact, Sonnet...")
+        st.number_input("Prix mensuel ($)", value=assurance.get("prix"),
+                        min_value=0.0, step=1.0, format="%.2f",
+                        key="s4_ass_prix")
+        st.markdown("<div class='s4-part'>L'assurance locataire te protège "
+                    "si tu mets le feu, si tu inondes le voisin ou si on te "
+                    "vole. Aucune capture demandée pour celle-ci.</div>",
+                    unsafe_allow_html=True)
+
+    # --- Le total du mois : ce qui sortira du compte. ---
+    saisie_vive = _recueillir_s4()
+    totaux = donnees.totaux_s4(saisie_vive)
+    st.markdown(
+        "<div class='s4-total'><div class='titre'>TES FACTURES, CHAQUE MOIS</div>"
+        "<div class='ligne'><div><span class='pastille' style='background:#00549A'>"
+        "</span>Électricité (ta part)</div><div>"
+        + fmt_montant(totaux["electricite_part"]) + "</div></div>"
+        "<div class='ligne'><div><span class='pastille' style='background:#0E7C66'>"
+        "</span>Internet (ta part)</div><div>"
+        + fmt_montant(totaux["internet_part"]) + "</div></div>"
+        "<div class='ligne'><div><span class='pastille' style='background:#E07B00'>"
+        "</span>Cellulaire</div><div>"
+        + fmt_montant(totaux["cellulaire"]) + "</div></div>"
+        "<div class='ligne'><div><span class='pastille' style='background:#5B8C2A'>"
+        "</span>Assurance habitation</div><div>"
+        + fmt_montant(totaux["assurance"]) + "</div></div>"
+        "<div class='total'><div>CE QUI SORT DE TON COMPTE</div><div>"
+        + fmt_montant(totaux["total_mensuel_part"]) + "</div></div>"
+        "<div class='note'>Chaque mois de vie, ces factures tomberont dans "
+        "ton journal, aux jours 10 et 15. Mieux vaut les choisir que les "
+        "subir.</div></div>",
+        unsafe_allow_html=True)
+
+    col_enr, col_fin = st.columns(2)
+    with col_enr:
+        if st.button("Enregistrer", use_container_width=True):
+            donnees.enregistrer_s4(MAGASIN, compte["identifiant"],
+                                   _recueillir_s4())
+            st.success("Tes factures sont enregistrées.")
+    with col_fin:
+        if st.button("J'ai terminé mes services", type="primary",
+                     use_container_width=True):
+            saisie = _recueillir_s4()
+            donnees.enregistrer_s4(MAGASIN, compte["identifiant"], saisie)
+            manques = donnees.s4_manquants(saisie)
+            if manques:
+                for manque in manques:
+                    st.error(manque)
+            else:
+                donnees.definir_progression(MAGASIN, compte["identifiant"],
+                                            "S4", "fait")
+                st.success("S4 terminée. Tes factures sont épinglées au frigo!")
+                aller("accueil")
+
+
 def page_sections(compte, dossier, profil):
     st.markdown("<section class='carte'><h2>Mes sections</h2>"
                 "<div class='aide'>Ton travail, section par section. "
-                "La S1, la S2 et la S3 sont prêtes ; les autres arrivent plus tard.</div></section>",
+                "La S1, la S2, la S3 et la S4 sont prêtes ; les autres arrivent plus tard.</div></section>",
                 unsafe_allow_html=True)
     progression = dossier.get("progression", {})
     courante = donnees.section_courante(dossier)
@@ -1679,7 +1986,7 @@ def page_sections(compte, dossier, profil):
             st.markdown(f"**{code} : {nom}** ({mot})")
             st.caption(AIDES_ETAPES[code])
         with col_bouton:
-            if code in ("S1", "S2", "S3"):
+            if code in ("S1", "S2", "S3", "S4"):
                 if st.button(f"Ouvrir la {code}", key=f"ouvrir_{code.lower()}"):
                     aller(code.lower())
             else:
@@ -1731,6 +2038,8 @@ def main():
         page_s2(compte, dossier, profil)
     elif page == "s3":
         page_s3(compte, dossier, profil)
+    elif page == "s4":
+        page_s4(compte, dossier, profil)
     elif page == "sections":
         page_sections(compte, dossier, profil)
     elif page == "vie":
