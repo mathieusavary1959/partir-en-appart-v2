@@ -782,6 +782,13 @@ def obtenir_magasin():
 
 init_db()
 MAGASIN = obtenir_magasin()
+# Le magasin est mis en cache par processus : après un déploiement qui
+# ajoute des méthodes au magasin, l'ancienne instance survit au
+# rechargement du module. Si une méthode récente manque, on vide le
+# cache et on recrée le magasin à partir du code à jour.
+if not hasattr(MAGASIN, "comptes_du_groupe"):
+    obtenir_magasin.clear()
+    MAGASIN = obtenir_magasin()
 PROFILS = {int(p["numero"]): p for p in donnees.charger_profils()}
 
 # ------------------------------------------------------------------- utilitaires
