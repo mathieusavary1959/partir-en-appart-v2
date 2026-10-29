@@ -3,9 +3,11 @@
 Univers figé le 28 octobre 2026 : « la porte de frigo » (voir la charte
 files/charte-univers-frigo.md du dossier du projet et la maquette v7).
 Inscription avec mot de passe, connexion, accueil en porte de frigo,
-section S1 en lecture et section S2 (les 3 annonces comparées, le choix,
-la justification, la capture) fonctionnelles, progression sauvegardée.
-Le calendrier de vie, la console du prof et les sections S3 à S7
+section S1 en lecture, section S2 (les 3 annonces comparées, le choix,
+la justification, la capture) et section S3 (le plan qui se meuble, les
+bons de commande par pièce, la facture d'électroménagers, le reçu sous
+le plafond de 3 500 $) fonctionnelles, progression sauvegardée.
+Le calendrier de vie, la console du prof et les sections S4 à S7
 arrivent aux phases suivantes.
 La couche de données vit dans donnees.py (magasin mémoire ou Supabase REST).
 """
@@ -358,6 +360,106 @@ p, li, label{ color:var(--texte); }
 .s2-bail .sig{ font-family:"Caveat",cursive; font-size:21px; margin-top:10px; color:var(--encre); }
 .s2-bail .sig .nom{ border-bottom:2px solid #4A453C; padding:0 14px; }
 
+/* ============ S3 : LE PLAN QUI SE MEUBLE ============ */
+.s3-bandeau{ position:relative; border-radius:22px; margin-top:16px; padding:26px 26px 16px; overflow:hidden;
+  background:repeating-linear-gradient(0deg, rgba(42,38,32,.055) 0 1px, transparent 1px 26px),
+  repeating-linear-gradient(90deg, rgba(42,38,32,.055) 0 1px, transparent 1px 26px),
+  linear-gradient(160deg,#FDFDF8,#F1EEDF 60%,#E4DEC8);
+  box-shadow:0 24px 50px rgba(0,0,0,.55), inset 0 2px 0 rgba(255,255,255,.9); }
+.s3-bandeau::before{ content:""; position:absolute; top:0; left:7%; right:7%; height:17px;
+  background:linear-gradient(180deg,rgba(255,220,130,.75),rgba(245,205,105,.6));
+  box-shadow:0 2px 4px rgba(0,0,0,.18); }
+.s3-bandeau .chantier{ font-family:"Special Elite",monospace; font-size:13px; letter-spacing:.28em; color:#7A4A21; }
+.s3-bandeau .titre{ font-family:"Bebas Neue",sans-serif; font-size:44px; line-height:1.02; color:var(--encre); }
+.s3-bandeau .titre span{ color:#B07B1E; }
+.s3-bandeau .aide{ color:#4A453C; font-size:14px; margin-top:5px; max-width:840px; }
+.s3-plan{ position:relative; background:#FFFFFF; border-radius:3px; padding:20px 22px 12px; margin-top:28px;
+  box-shadow:0 14px 30px rgba(0,0,0,.45); }
+.s3-plan .titre{ font-family:"Caveat",cursive; font-size:26px; color:var(--encre); line-height:1; }
+.s3-plan svg{ width:100%; height:auto; display:block; }
+.s3-plan .note{ font-size:13px; color:#4A453C; margin-top:4px; }
+.s3-plan .note b{ color:var(--crayon); }
+.st-key-s3_piece_0, .st-key-s3_piece_1, .st-key-s3_piece_2,
+.st-key-s3_piece_3, .st-key-s3_piece_4, .st-key-s3_piece_5{
+  position:relative; background:linear-gradient(180deg,#FFFDF4,#F7F1DE); border-radius:2px;
+  padding:18px 16px 10px; box-shadow:0 14px 28px rgba(0,0,0,.45); margin-top:28px; }
+.st-key-s3_piece_0{ transform:rotate(-.5deg); } .st-key-s3_piece_1{ transform:rotate(.45deg); }
+.st-key-s3_piece_2{ transform:rotate(-.4deg); } .st-key-s3_piece_3{ transform:rotate(.55deg); }
+.st-key-s3_piece_4{ transform:rotate(-.45deg); } .st-key-s3_piece_5{ transform:rotate(.4deg); }
+.st-key-s3_piece_0 [data-testid="stMarkdownContainer"] p, .st-key-s3_piece_1 [data-testid="stMarkdownContainer"] p,
+.st-key-s3_piece_2 [data-testid="stMarkdownContainer"] p, .st-key-s3_piece_3 [data-testid="stMarkdownContainer"] p,
+.st-key-s3_piece_4 [data-testid="stMarkdownContainer"] p, .st-key-s3_piece_5 [data-testid="stMarkdownContainer"] p,
+.st-key-s3_piece_0 [data-testid="stMarkdownContainer"] li, .st-key-s3_piece_1 [data-testid="stMarkdownContainer"] li,
+.st-key-s3_piece_2 [data-testid="stMarkdownContainer"] li, .st-key-s3_piece_3 [data-testid="stMarkdownContainer"] li,
+.st-key-s3_piece_4 [data-testid="stMarkdownContainer"] li, .st-key-s3_piece_5 [data-testid="stMarkdownContainer"] li{ color:var(--encre); }
+.st-key-s3_piece_0 [data-testid="stExpander"] summary p, .st-key-s3_piece_1 [data-testid="stExpander"] summary p,
+.st-key-s3_piece_2 [data-testid="stExpander"] summary p, .st-key-s3_piece_3 [data-testid="stExpander"] summary p,
+.st-key-s3_piece_4 [data-testid="stExpander"] summary p, .st-key-s3_piece_5 [data-testid="stExpander"] summary p,
+.st-key-s3_electro_bloc [data-testid="stExpander"] summary p{ color:var(--encre) !important; }
+.st-key-s3_piece_0 .stButton > button p, .st-key-s3_piece_1 .stButton > button p,
+.st-key-s3_piece_2 .stButton > button p, .st-key-s3_piece_3 .stButton > button p,
+.st-key-s3_piece_4 .stButton > button p, .st-key-s3_piece_5 .stButton > button p,
+.st-key-s3_electro_bloc .stButton > button p{ color:var(--texte) !important; }
+.st-key-s3_piece_0 label p, .st-key-s3_piece_1 label p, .st-key-s3_piece_2 label p,
+.st-key-s3_piece_3 label p, .st-key-s3_piece_4 label p, .st-key-s3_piece_5 label p{
+  font-family:"Special Elite",monospace; font-size:11.5px; letter-spacing:.1em;
+  text-transform:uppercase; color:#4A453C !important; }
+.st-key-s3_piece_0 .stTextInput input, .st-key-s3_piece_1 .stTextInput input, .st-key-s3_piece_2 .stTextInput input,
+.st-key-s3_piece_3 .stTextInput input, .st-key-s3_piece_4 .stTextInput input, .st-key-s3_piece_5 .stTextInput input{
+  background:transparent !important; border:none !important; border-bottom:2px solid #B9B09A !important;
+  border-radius:0 !important; box-shadow:none !important; color:var(--encre) !important; font-weight:600; }
+.st-key-s3_piece_0 [data-testid="stNumberInput"] > div, .st-key-s3_piece_1 [data-testid="stNumberInput"] > div,
+.st-key-s3_piece_2 [data-testid="stNumberInput"] > div, .st-key-s3_piece_3 [data-testid="stNumberInput"] > div,
+.st-key-s3_piece_4 [data-testid="stNumberInput"] > div, .st-key-s3_piece_5 [data-testid="stNumberInput"] > div{
+  background:transparent; border:none; border-bottom:2px solid #B9B09A; border-radius:0; box-shadow:none; }
+.st-key-s3_piece_0 [data-testid="stNumberInput"] input, .st-key-s3_piece_1 [data-testid="stNumberInput"] input,
+.st-key-s3_piece_2 [data-testid="stNumberInput"] input, .st-key-s3_piece_3 [data-testid="stNumberInput"] input,
+.st-key-s3_piece_4 [data-testid="stNumberInput"] input, .st-key-s3_piece_5 [data-testid="stNumberInput"] input{
+  background:transparent !important; color:var(--encre) !important; font-weight:700; }
+.s3-piece-nom{ font-family:"Bebas Neue",sans-serif; font-size:25px; color:var(--encre);
+  letter-spacing:.05em; line-height:1.05; }
+.s3-compte{ font-family:"Special Elite",monospace; font-size:12px; letter-spacing:.06em;
+  color:#5A5344; margin-top:2px; }
+.s3-tampon{ display:inline-block; transform:rotate(-7deg); border:3px solid; border-radius:6px;
+  padding:1px 11px 0; font-family:"Bebas Neue",sans-serif; font-size:18px; letter-spacing:.14em;
+  white-space:nowrap; }
+.s3-tampon.minimal{ color:#6E6759; border-color:#6E6759; }
+.s3-tampon.moyen{ color:var(--vert); border-color:var(--vert); }
+.s3-tampon.maximal{ color:#B07B1E; border-color:#C9A227; background:rgba(255,210,63,.18); }
+.s3-sous{ display:flex; justify-content:space-between; gap:16px; border-top:2px dashed #B9B09A;
+  padding-top:8px; margin-top:2px; font-size:14.5px; color:var(--encre); }
+.s3-sous .part{ font-weight:800; }
+.st-key-s3_electro_bloc{ position:relative; background:#FFFFFF; border:3px double #4A453C; border-radius:4px;
+  padding:18px 18px 10px; margin-top:28px; box-shadow:0 14px 28px rgba(0,0,0,.45); }
+.st-key-s3_electro_bloc [data-testid="stMarkdownContainer"] p,
+.st-key-s3_electro_bloc [data-testid="stMarkdownContainer"] li{ color:var(--encre); }
+.st-key-s3_electro_bloc label p{ font-family:"Special Elite",monospace; font-size:11.5px;
+  letter-spacing:.1em; text-transform:uppercase; color:#4A453C !important; }
+.st-key-s3_electro_bloc .stTextInput input{
+  background:transparent !important; border:none !important; border-bottom:2px solid #B9B09A !important;
+  border-radius:0 !important; box-shadow:none !important; color:var(--encre) !important; font-weight:600; }
+.st-key-s3_electro_bloc [data-testid="stNumberInput"] > div{
+  background:transparent; border:none; border-bottom:2px solid #B9B09A; border-radius:0; box-shadow:none; }
+.st-key-s3_electro_bloc [data-testid="stNumberInput"] input{
+  background:transparent !important; color:var(--encre) !important; font-weight:700; }
+.st-key-s3_electro_bloc .stButton > button{ padding-left:.5rem; padding-right:.5rem; }
+.s3-recu{ background:#FFFFFF; color:var(--encre); border-radius:3px; padding:18px 22px 14px;
+  margin-top:28px; position:relative; box-shadow:0 14px 30px rgba(0,0,0,.45); }
+.s3-recu .titre{ font-family:"Bebas Neue",sans-serif; font-size:26px; letter-spacing:.06em; color:var(--encre); }
+.s3-jauge{ height:18px; border-radius:999px; background:#E7E0CB; overflow:hidden;
+  margin-top:12px; border:1.5px solid #B9B09A; }
+.s3-jauge .remplissage{ height:100%; background:linear-gradient(90deg,#2FA84F,#7CC24A); }
+.s3-jauge .remplissage.presque{ background:linear-gradient(90deg,#E3B505,#FF7A45); }
+.s3-jauge .remplissage.depasse{ background:linear-gradient(90deg,#D93A2B,#B01E12); }
+.s3-jauge-txt{ font-size:13.5px; color:#4A453C; margin-top:5px; font-weight:600; }
+.s3-jauge-txt b{ color:var(--crayon); }
+.st-key-s3_piece_0 [data-testid="stCaptionContainer"] p, .st-key-s3_piece_1 [data-testid="stCaptionContainer"] p,
+.st-key-s3_piece_2 [data-testid="stCaptionContainer"] p, .st-key-s3_piece_3 [data-testid="stCaptionContainer"] p,
+.st-key-s3_piece_4 [data-testid="stCaptionContainer"] p, .st-key-s3_piece_5 [data-testid="stCaptionContainer"] p,
+.st-key-s3_electro_bloc [data-testid="stCaptionContainer"] p{
+  color:#4A453C !important; font-family:"Special Elite",monospace; font-size:11.5px;
+  letter-spacing:.1em; text-transform:uppercase; }
+
 @media (max-width:980px){
   .pf-grille{ grid-template-columns:1fr; grid-template-areas:"solde" "calendrier" "croquis" "liste" "coloc" "epicerie" "energuide" "vide"; }
   .pf-congelo{ flex-wrap:wrap; }
@@ -579,7 +681,7 @@ def formulaire_connexion():
 def barre_navigation(page):
     onglets = [("accueil", "Accueil"), ("vie", "Ma vie"), ("score", "Mon score"),
                ("imprevus", "Mes imprévus"), ("sections", "Mes sections S1 à S7")]
-    actif = "sections" if page in ("s1", "s2") else page
+    actif = "sections" if page in ("s1", "s2", "s3") else page
     with st.container(key="nav_bar"):
         cols = st.columns([1.1, 1, 1.2, 1.4, 2.2, 1.5])
         for col, (code, nom) in zip(cols, onglets):
@@ -745,7 +847,7 @@ def page_accueil(compte, dossier, profil):
         with st.container(key="etape_bar"):
             if st.button(f"{courante} · {nom} →", type="primary",
                          use_container_width=True):
-                aller(courante.lower() if courante in ("S1", "S2") else "sections")
+                aller(courante.lower() if courante in ("S1", "S2", "S3") else "sections")
     else:
         st.success("Tu as terminé toutes tes sections. Beau travail!")
 
@@ -960,10 +1062,482 @@ def page_s2(compte, dossier, profil):
                 aller("accueil")
 
 
+# ------------------------------------------------------------------ S3 (data)
+# Listes de référence de la S3 (listes-s3-exhaustives.md) : des idées pour
+# s'inspirer, jamais une liste à copier. L'élève meuble librement.
+IDEES_S3 = {
+    "Ma chambre": [
+        "Base de lit", "Matelas", "Draps, couette et oreiller",
+        "Rangement pour les vêtements (commode ou garde-robe portatif)",
+        "Cintres (un paquet)", "Bureau ou petite table de travail",
+        "Chaise de bureau", "Lampe de bureau", "Protège-matelas",
+        "Rideaux ou stores", "Panier à linge sale", "Corbeille à papier",
+        "Multiprise ou rallonge", "Table de chevet", "Lampe de chevet",
+        "Miroir", "Tapis de chambre",
+    ],
+    "Cuisine": [
+        "Table pour manger", "Chaises (au moins 2)",
+        "Vaisselle de base (assiettes, bols, verres, tasses)",
+        "Ustensiles (fourchettes, couteaux, cuillères)",
+        "Batterie de cuisine (chaudrons, poêle, plaque)",
+        "Ustensiles de cuisson (spatule, louche, planche, couteau, ouvre-boîte)",
+        "Mitaines de four et sous-plats", "Linges à vaisselle et torchons",
+        "Poubelle de cuisine avec couvercle", "Contenants pour les restes",
+        "Éponges et liquide à vaisselle",
+        "Couteaux de cuisine (chef, pain, éplucheur)", "Bols à mélanger",
+        "Passoire", "Tasses et cuillères à mesurer", "Fouet et pinces de cuisine",
+        "Séchoir à vaisselle", "Bac de recyclage",
+        "Pellicule plastique, aluminium et papier parchemin",
+        "Produits nettoyants de cuisine", "Essuie-tout", "Grille-pain",
+        "Bouilloire électrique", "Cafetière", "Étagère de rangement",
+        "Horloge ou minuterie", "Ouvre-bouteille et tire-bouchon",
+        "Râpe et presse-ail",
+    ],
+    "Salon": [
+        "Divan ou fauteuils (2 personnes)", "Table basse ou d'appoint",
+        "Lampe de salon", "Petit meuble ou étagère de rangement",
+        "Corbeille à papier", "Multiprise ou rallonge",
+        "Meuble ou support pour la télévision", "Rideaux ou stores",
+        "Tapis de salon", "Coussins", "Horloge murale", "Couverture ou jeté",
+    ],
+    "Salle de bain": [
+        "Rideau de douche avec anneaux", "Tapis de bain", "Serviettes de bain",
+        "Débarbouillettes", "Serviettes à mains", "Poubelle de salle de bain",
+        "Ventouse (débouchoir)", "Brosse de toilette",
+        "Papier toilette (stock de départ)", "Savon pour les mains",
+        "Petit rangement (étagère ou panier)", "Gobelet et porte-brosses à dents",
+        "Nettoyant pour salle de bain et brosse à récurer",
+        "Porte-serviettes ou crochets", "Miroir", "Pèse-personne",
+        "Séchoir à linge pliable",
+    ],
+    "Entrée et rangement": [
+        "Porte-manteaux ou crochets", "Rangement pour chaussures et bottes",
+        "Tapis d'entrée", "Balai et porte-poussière", "Vadrouille et seau",
+        "Sacs à poubelle (stock de départ)", "Aspirateur",
+        "Étagère ou boîtes de rangement", "Nettoyants de base",
+        "Ampoules de rechange et piles", "Lampe de poche",
+        "Boîte à outils de base", "Trousse de premiers soins",
+        "Petit rangement pour clés et courrier", "Pelle à neige", "Sel déglaçant",
+    ],
+}
+IDEES_ELECTRO = ["Réfrigérateur", "Cuisinière (four et plaques)", "Laveuse",
+                 "Sécheuse", "Micro-ondes", "Lave-vaisselle"]
+
+
+def _meubles_svg(piece, niveau):
+    """Petits meubles dessinés à l'encre pour une pièce du plan, selon le
+    niveau atteint : chaque palier ajoute ses meubles (cumulatif)."""
+    if piece == donnees.PIECE_COLOC:
+        return ("<g fill='none' stroke='#A39B85' stroke-width='2'>"
+                "<rect x='172' y='46' width='52' height='28'/>"
+                "<rect x='172' y='46' width='52' height='8'/>"
+                "<rect x='268' y='52' width='28' height='16'/></g>")
+    if niveau is None:
+        return ""
+    m = []
+    if piece == "Ma chambre":
+        m += ["<rect x='12' y='42' width='54' height='30'/>",
+              "<rect x='12' y='42' width='54' height='9'/>",
+              "<rect x='17' y='45' width='14' height='5' fill='#2A2620' stroke='none' opacity='.25'/>",
+              "<rect x='104' y='58' width='42' height='18'/>",
+              "<line x1='118' y1='76' x2='118' y2='82'/>",
+              "<line x1='138' y1='76' x2='138' y2='82'/>"]
+        if niveau in ("MOYEN", "MAXIMAL"):
+            m += ["<rect x='104' y='36' width='42' height='18'/>",
+                  "<line x1='104' y1='45' x2='146' y2='45'/>",
+                  "<line x1='136' y1='58' x2='136' y2='47'/>",
+                  "<polygon points='130,47 142,47 139,41 133,41'/>"]
+        if niveau == "MAXIMAL":
+            m += ["<ellipse cx='58' cy='79' rx='36' ry='5'/>",
+                  "<circle cx='147' cy='17' r='6.5'/>"]
+    elif piece == "Cuisine":
+        m += ["<rect x='76' y='116' width='106' height='9'/>",
+              "<rect x='86' y='117' width='15' height='7'/>",
+              "<rect x='148' y='128' width='32' height='32'/>",
+              "<circle cx='157' cy='137' r='4'/><circle cx='171' cy='137' r='4'/>",
+              "<circle cx='157' cy='150' r='4'/><circle cx='171' cy='150' r='4'/>"]
+        if niveau in ("MOYEN", "MAXIMAL"):
+            m += ["<rect x='78' y='126' width='22' height='36'/>",
+                  "<line x1='78' y1='136' x2='100' y2='136'/>",
+                  "<rect x='110' y='134' width='28' height='18'/>",
+                  "<rect x='104' y='138' width='5' height='10'/>",
+                  "<rect x='139' y='138' width='5' height='10'/>"]
+        if niveau == "MAXIMAL":
+            m += ["<rect x='158' y='107' width='17' height='9'/>",
+                  "<rect x='140' y='108' width='8' height='8'/>"]
+    elif piece == "Salon":
+        m += ["<rect x='196' y='142' width='48' height='12'/>",
+              "<line x1='196' y1='147' x2='244' y2='147'/>",
+              "<line x1='310' y1='134' x2='310' y2='152'/>",
+              "<polygon points='304,134 316,134 313,128 307,128'/>"]
+        if niveau in ("MOYEN", "MAXIMAL"):
+            m += ["<rect x='232' y='157' width='22' height='4'/>",
+                  "<rect x='256' y='144' width='18' height='16'/>",
+                  "<line x1='256' y1='152' x2='274' y2='152'/>"]
+        if niveau == "MAXIMAL":
+            m += ["<rect x='284' y='130' width='24' height='14'/>",
+                  "<rect x='290' y='144' width='12' height='4'/>",
+                  "<ellipse cx='262' cy='161' rx='20' ry='2.5'/>",
+                  "<rect x='200' y='144' width='7' height='7'/>",
+                  "<rect x='230' y='144' width='7' height='7'/>"]
+    elif piece == "Salle de bain":
+        m += ["<rect x='9' y='118' width='52' height='21' rx='9'/>",
+              "<line x1='55' y1='118' x2='55' y2='113'/>",
+              "<rect x='10' y='146' width='15' height='11'/>"]
+        if niveau in ("MOYEN", "MAXIMAL"):
+            m += ["<rect x='32' y='144' width='13' height='13'/>",
+                  "<ellipse cx='38.5' cy='144' rx='6.5' ry='3'/>",
+                  "<rect x='50' y='140' width='13' height='17'/>"]
+        if niveau == "MAXIMAL":
+            m += ["<line x1='54' y1='114' x2='54' y2='128'/>",
+                  "<line x1='60' y1='114' x2='60' y2='128'/>",
+                  "<line x1='54' y1='120' x2='60' y2='120'/>",
+                  "<rect x='40' y='122' width='20' height='7'/>"]
+    elif piece == "Entrée et rangement":
+        m += ["<line x1='210' y1='94' x2='210' y2='120'/>",
+              "<line x1='210' y1='99' x2='217' y2='96'/>",
+              "<line x1='210' y1='107' x2='217' y2='104'/>",
+              "<line x1='210' y1='115' x2='217' y2='112'/>",
+              "<rect x='238' y='116' width='58' height='8'/>"]
+        if niveau in ("MOYEN", "MAXIMAL"):
+            m += ["<rect x='296' y='94' width='17' height='24'/>",
+                  "<line x1='296' y1='102' x2='313' y2='102'/>",
+                  "<line x1='296' y1='110' x2='313' y2='110'/>",
+                  "<line x1='228' y1='100' x2='222' y2='118'/>",
+                  "<rect x='218' y='116' width='8' height='5'/>"]
+        if niveau == "MAXIMAL":
+            m += ["<rect x='246' y='94' width='19' height='9'/>",
+                  "<rect x='249' y='87' width='14' height='7'/>"]
+    return ("<g fill='none' stroke='#2A2620' stroke-width='2'>"
+            + "".join(m) + "</g>")
+
+
+# (pièce, libellé sur le plan, x du nom, y du nom, x du niveau, y du niveau)
+_PLAN_PIECES = [
+    ("Ma chambre", "ma chambre", 12, 20, 12, 33),
+    (donnees.PIECE_COLOC, None, 162, 20, 162, 33),
+    ("Salle de bain", "bain", 10, 101, 10, 114),
+    ("Cuisine", "cuisine", 78, 101, 78, 114),
+    ("Entrée et rangement", "entrée", 194, 100, 194, 113),
+    ("Salon", "salon", 194, 139, 194, 162),
+]
+_COULEURS_NIVEAU = {None: "#A39B85", "MINIMAL": "#6E6759",
+                    "MOYEN": "#1E9E4A", "MAXIMAL": "#B07B1E"}
+
+
+def html_plan_s3(brouillon, profil):
+    """Le plan de l'appartement, dessiné à l'encre : les pièces se
+    meublent à mesure que leur niveau monte."""
+    murs = (
+        "<g fill='none' stroke='#2A2620' stroke-width='3'>"
+        "<rect x='4' y='4' width='312' height='160'/><rect x='4' y='4' width='150' height='82'/>"
+        "<rect x='154' y='4' width='162' height='82'/><rect x='4' y='86' width='66' height='78'/>"
+        "<rect x='70' y='86' width='118' height='78'/><rect x='188' y='86' width='128' height='40'/>"
+        "<rect x='188' y='126' width='128' height='38'/></g>")
+    morceaux = [murs]
+    for piece, libelle, nx, ny, lx, ly in _PLAN_PIECES:
+        if piece == donnees.PIECE_COLOC:
+            nom = profil["coloc"]["prenom"]
+            niveau = None
+            texte_niveau = "il apporte ses meubles"
+        else:
+            nom = libelle
+            nombre = donnees.articles_nommes(brouillon["pieces"][piece])
+            niveau = donnees.niveau_s3(nombre, donnees.SEUILS_S3[piece])
+            texte_niveau = niveau if niveau else "à meubler"
+        morceaux.append(_meubles_svg(piece, niveau))
+        morceaux.append(
+            f"<text x='{nx}' y='{ny}' font-family='Caveat, cursive' "
+            f"font-size='18' fill='#2A2620'>{nom}</text>")
+        morceaux.append(
+            f"<text x='{lx}' y='{ly}' font-family='Work Sans, sans-serif' "
+            f"font-size='9.5' font-weight='700' letter-spacing='1' "
+            f"fill='{_COULEURS_NIVEAU[niveau]}'>{texte_niveau}</text>")
+    svg = ("<svg viewBox='0 0 320 168' width='100%' height='auto' "
+           "aria-label='Plan de l appartement qui se meuble'>"
+           + "".join(morceaux) + "</svg>")
+    return ("<div class='s3-plan'><div class='pf-ruban'></div>"
+            "<div class='titre'>Ton appart, vu d'en haut</div>"
+            + svg +
+            "<div class='note'>Chaque pièce se meuble quand son niveau monte : "
+            "<b>MINIMAL</b> elle fonctionne, <b>MOYEN</b> elle est complète "
+            "(c'est le niveau visé), <b>MAXIMAL</b> le confort est là.</div></div>")
+
+
+def _s3_gen():
+    return st.session_state.get("s3_gen", 0)
+
+
+def _init_brouillon_s3(compte, dossier):
+    """Brouillon de travail de la S3, gardé dans la session : initialisé
+    depuis le dossier à la première ouverture pour ce compte, puis
+    synchronisé avec les widgets déjà affichés à chaque passage."""
+    import copy
+    proprietaire = st.session_state.get("s3_proprietaire")
+    if proprietaire != compte["identifiant"] or "s3_brouillon" not in st.session_state:
+        st.session_state["s3_brouillon"] = copy.deepcopy(donnees.obtenir_s3(dossier))
+        st.session_state["s3_proprietaire"] = compte["identifiant"]
+        st.session_state["s3_gen"] = _s3_gen() + 1
+        return st.session_state["s3_brouillon"]
+    brouillon = st.session_state["s3_brouillon"]
+    _synchroniser_s3(brouillon)
+    return brouillon
+
+
+def _synchroniser_s3(brouillon):
+    """Recopie dans le brouillon les valeurs des widgets affichés au
+    passage précédent (les clés portent la génération courante)."""
+    gen = _s3_gen()
+    etat = st.session_state
+    for i, piece in enumerate(donnees.PIECES):
+        if piece == donnees.PIECE_COLOC:
+            continue
+        for j, article in enumerate(brouillon["pieces"][piece]):
+            for champ in ("nom", "prix", "etat", "type"):
+                cle = f"s3_p{i}_{champ}_{j}_g{gen}"
+                if cle in etat:
+                    article[champ] = etat[cle]
+            if piece == "Ma chambre":
+                article["type"] = "personnel"
+    for j, article in enumerate(brouillon["electro"]):
+        for champ in ("nom", "prix", "etat", "capture"):
+            cle = f"s3_e_{champ}_{j}_g{gen}"
+            if cle in etat:
+                article[champ] = etat[cle]
+    if "s3_note_coloc" in etat:
+        brouillon["note_coloc"] = etat["s3_note_coloc"]
+
+
+def _tampon_html(niveau):
+    if niveau is None:
+        return ""
+    return f"<div class='s3-tampon {niveau.lower()}'>{niveau}</div>"
+
+
+def page_s3(compte, dossier, profil):
+    if st.button("Retour à l'accueil"):
+        aller("accueil")
+    brouillon = _init_brouillon_s3(compte, dossier)
+    gen = _s3_gen()
+    deja_fait = dossier.get("progression", {}).get("S3") == "fait"
+
+    st.markdown(
+        "<div class='s3-bandeau'>"
+        "<div class='chantier'>JOUR D'EMMÉNAGEMENT · LES BOÎTES SONT DANS L'ENTRÉE</div>"
+        "<div class='titre'>S3 · MEUBLER <span>L'APPART</span></div>"
+        "<div class='aide'>Plafond d'installation : 3 500 $ pour tout meubler, "
+        "ta part seulement. Meuble chaque pièce jusqu'au niveau MOYEN : c'est "
+        "le niveau visé. Tu choisis tes articles librement ; les idées de "
+        "chaque bon sont là pour t'inspirer, pas pour être copiées. "
+        "La chambre de ton coloc ne te coûte rien : il apporte ses meubles.</div></div>",
+        unsafe_allow_html=True)
+    if deja_fait:
+        st.success("Tu as déjà meublé ton appartement. Tu peux quand même "
+                   "modifier tes bons et réenregistrer.")
+
+    st.markdown(html_plan_s3(brouillon, profil), unsafe_allow_html=True)
+
+    aimants = ["pf-arouge", "pf-ableu", "pf-ajaune", "pf-avert", "pf-arouge", "pf-ableu"]
+    for i, piece in enumerate(donnees.PIECES):
+        with st.container(key=f"s3_piece_{i}"):
+            st.markdown(f"<div class='pf-aimant {aimants[i]}'></div>",
+                        unsafe_allow_html=True)
+            if piece == donnees.PIECE_COLOC:
+                st.markdown(
+                    "<div class='s3-piece-nom'>La chambre de mon coloc</div>"
+                    "<div class='s3-compte'>0 $ POUR TOI · IL APPORTE SES MEUBLES</div>",
+                    unsafe_allow_html=True)
+                st.write("Ton coloc meuble sa chambre lui-même. Écris une ligne "
+                         "pour dire ce qu'il apporte, et c'est réglé.")
+                st.text_input(
+                    "Sa chambre, en une ligne", value=brouillon["note_coloc"],
+                    key="s3_note_coloc",
+                    placeholder="Ex. Il apporte son lit, son bureau et sa commode.")
+                st.markdown(
+                    "<div class='s3-sous'><span>Total de la pièce</span>"
+                    "<span class='part'>Ta part : 0,00 $</span></div>",
+                    unsafe_allow_html=True)
+                continue
+
+            articles = brouillon["pieces"][piece]
+            nombre = donnees.articles_nommes(articles)
+            seuils = donnees.SEUILS_S3[piece]
+            niveau = donnees.niveau_s3(nombre, seuils)
+            col_nom, col_tampon = st.columns([3, 1])
+            with col_nom:
+                st.markdown(
+                    f"<div class='s3-piece-nom'>{piece}</div>"
+                    f"<div class='s3-compte'>{nombre} ARTICLE(S) · MINIMAL À {seuils[0]}"
+                    f" · MOYEN À {seuils[1]} · MAXIMAL À {seuils[2]}</div>",
+                    unsafe_allow_html=True)
+            with col_tampon:
+                st.markdown(_tampon_html(niveau), unsafe_allow_html=True)
+
+            entetes = st.columns([3.2, 1.1, 1.1, 1.1, 0.7])
+            for col, texte in zip(entetes, ["Article", "Prix ($)", "État", "Type", ""]):
+                with col:
+                    st.caption(texte)
+            for j, article in enumerate(articles):
+                c_nom, c_prix, c_etat, c_type, c_ret = st.columns([3.2, 1.1, 1.1, 1.1, 0.7])
+                with c_nom:
+                    st.text_input("Article", value=article.get("nom") or "",
+                                  key=f"s3_p{i}_nom_{j}_g{gen}",
+                                  label_visibility="collapsed",
+                                  placeholder="Nom de l'article")
+                with c_prix:
+                    st.number_input("Prix ($)", value=article.get("prix"),
+                                    min_value=0.0, step=1.0, format="%.2f",
+                                    key=f"s3_p{i}_prix_{j}_g{gen}",
+                                    label_visibility="collapsed")
+                with c_etat:
+                    st.selectbox("État", ["neuf", "usagé"],
+                                 index=0 if article.get("etat") == "neuf" else 1,
+                                 key=f"s3_p{i}_etat_{j}_g{gen}",
+                                 label_visibility="collapsed")
+                with c_type:
+                    if piece == "Ma chambre":
+                        st.markdown("<div style='padding-top:8px;font-size:13.5px;"
+                                    "color:#4A453C'>Personnel</div>",
+                                    unsafe_allow_html=True)
+                    else:
+                        st.selectbox("Type", ["partagé", "personnel"],
+                                     index=0 if article.get("type") == "partagé" else 1,
+                                     key=f"s3_p{i}_type_{j}_g{gen}",
+                                     label_visibility="collapsed")
+                with c_ret:
+                    if st.button("Retirer", key=f"s3_p{i}_ret_{j}",
+                                 use_container_width=True):
+                        _synchroniser_s3(brouillon)
+                        brouillon["pieces"][piece].pop(j)
+                        st.session_state["s3_gen"] = gen + 1
+                        st.rerun()
+            if st.button("Ajouter un article", key=f"s3_p{i}_ajout"):
+                _synchroniser_s3(brouillon)
+                brouillon["pieces"][piece].append(donnees.article_par_defaut(piece))
+                st.session_state["s3_gen"] = gen + 1
+                st.rerun()
+            total_piece, part_piece = donnees.totaux_piece(brouillon, piece)
+            st.markdown(
+                "<div class='s3-sous'><span>Total de la pièce : "
+                f"{fmt_montant(total_piece)}</span>"
+                f"<span class='part'>Ta part : {fmt_montant(part_piece)}</span></div>",
+                unsafe_allow_html=True)
+            with st.expander(f"Idées d'articles pour {piece.lower()}"):
+                st.write(" · ".join(IDEES_S3[piece]))
+
+    with st.container(key="s3_electro_bloc"):
+        electro = brouillon["electro"]
+        nombre_e = donnees.articles_nommes(electro)
+        niveau_e = donnees.niveau_s3(nombre_e, donnees.SEUILS_ELECTRO)
+        col_nom, col_tampon = st.columns([3, 1])
+        with col_nom:
+            st.markdown(
+                "<div class='s3-piece-nom'>Électroménagers · la facture</div>"
+                f"<div class='s3-compte'>{nombre_e} ARTICLE(S) · MINIMAL À "
+                f"{donnees.SEUILS_ELECTRO[0]} · MOYEN À {donnees.SEUILS_ELECTRO[1]}"
+                f" · MAXIMAL À {donnees.SEUILS_ELECTRO[2]} · COÛT PARTAGÉ, TA PART 50 %</div>",
+                unsafe_allow_html=True)
+        with col_tampon:
+            st.markdown(_tampon_html(niveau_e), unsafe_allow_html=True)
+        entetes = st.columns([3.0, 1.2, 1.1, 1.8, 0.9])
+        for col, texte in zip(entetes, ["Article", "Prix ($)", "État", "Capture", ""]):
+            with col:
+                st.caption(texte)
+        for j, article in enumerate(electro):
+            c_nom, c_prix, c_etat, c_cap, c_ret = st.columns([3.0, 1.2, 1.1, 1.8, 0.9])
+            with c_nom:
+                st.text_input("Article", value=article.get("nom") or "",
+                              key=f"s3_e_nom_{j}_g{gen}",
+                              label_visibility="collapsed",
+                              placeholder="Nom de l'électroménager")
+            with c_prix:
+                st.number_input("Prix ($)", value=article.get("prix"),
+                                min_value=0.0, step=1.0, format="%.2f",
+                                key=f"s3_e_prix_{j}_g{gen}",
+                                label_visibility="collapsed")
+            with c_etat:
+                st.selectbox("État", ["neuf", "usagé"],
+                             index=0 if article.get("etat") == "neuf" else 1,
+                             key=f"s3_e_etat_{j}_g{gen}",
+                             label_visibility="collapsed")
+            with c_cap:
+                st.text_input("Capture", value=article.get("capture") or "",
+                              key=f"s3_e_capture_{j}_g{gen}",
+                              label_visibility="collapsed",
+                              placeholder="Nom du fichier de capture")
+            with c_ret:
+                if st.button("Retirer", key=f"s3_e_ret_{j}",
+                             use_container_width=True):
+                    _synchroniser_s3(brouillon)
+                    brouillon["electro"].pop(j)
+                    st.session_state["s3_gen"] = gen + 1
+                    st.rerun()
+        if st.button("Ajouter un électroménager", key="s3_e_ajout"):
+            _synchroniser_s3(brouillon)
+            brouillon["electro"].append(donnees.electro_par_defaut())
+            st.session_state["s3_gen"] = gen + 1
+            st.rerun()
+        total_e, part_e = donnees.totaux_electro(brouillon)
+        st.markdown(
+            "<div class='s3-sous'><span>Total des électroménagers : "
+            f"{fmt_montant(total_e)}</span>"
+            f"<span class='part'>Ta part : {fmt_montant(part_e)}</span></div>",
+            unsafe_allow_html=True)
+        with st.expander("Idées d'électroménagers"):
+            st.write(" · ".join(IDEES_ELECTRO))
+
+    total = donnees.total_installation(brouillon)
+    pct = min(total / donnees.PLAFOND_INSTALLATION * 100, 100)
+    classe_jauge = "depasse" if total > donnees.PLAFOND_INSTALLATION else (
+        "presque" if pct >= 85 else "")
+    lignes_recu = []
+    for piece in donnees.PIECES:
+        if piece == donnees.PIECE_COLOC:
+            continue
+        lignes_recu.append(rang(f"{piece} · ta part",
+                                fmt_montant(donnees.totaux_piece(brouillon, piece)[1])))
+    lignes_recu.append(rang("Électroménagers · ta part", fmt_montant(part_e)))
+    lignes_recu.append(
+        "<div class='ligne total'><div>TOTAL DE TON INSTALLATION</div>"
+        f"<div class='valeur'>{fmt_montant(total)}</div></div>")
+    st.markdown(
+        "<div class='s3-recu'><div class='pf-aimant pf-arouge'></div>"
+        "<div class='titre'>LE REÇU DE L'INSTALLATION</div>"
+        + "".join(lignes_recu)
+        + f"<div class='s3-jauge'><div class='remplissage {classe_jauge}' "
+        + f"style='width:{pct:.1f}%'></div></div>"
+        + f"<div class='s3-jauge-txt'>{fmt_montant(total)} sur 3 500,00 $ de plafond"
+        + (f" · <b>dépassé de {fmt_montant(total - donnees.PLAFOND_INSTALLATION)}</b>"
+           if total > donnees.PLAFOND_INSTALLATION else "")
+        + "</div></div>",
+        unsafe_allow_html=True)
+
+    col_enr, col_fin = st.columns(2)
+    with col_enr:
+        if st.button("Enregistrer", use_container_width=True):
+            _synchroniser_s3(brouillon)
+            donnees.enregistrer_s3(MAGASIN, compte["identifiant"], brouillon)
+            st.success("Tes bons de commande sont enregistrés.")
+    with col_fin:
+        if st.button("J'ai terminé mon installation", type="primary",
+                     use_container_width=True):
+            _synchroniser_s3(brouillon)
+            donnees.enregistrer_s3(MAGASIN, compte["identifiant"], brouillon)
+            manques = donnees.s3_manquants(brouillon)
+            if manques:
+                for manque in manques:
+                    st.error(manque)
+            else:
+                donnees.definir_progression(MAGASIN, compte["identifiant"],
+                                            "S3", "fait")
+                st.success("S3 terminée. Ton appart est meublé, bon emménagement!")
+                aller("accueil")
+
+
 def page_sections(compte, dossier, profil):
     st.markdown("<section class='carte'><h2>Mes sections</h2>"
                 "<div class='aide'>Ton travail, section par section. "
-                "La S1 et la S2 sont prêtes ; les autres arrivent plus tard.</div></section>",
+                "La S1, la S2 et la S3 sont prêtes ; les autres arrivent plus tard.</div></section>",
                 unsafe_allow_html=True)
     progression = dossier.get("progression", {})
     courante = donnees.section_courante(dossier)
@@ -975,7 +1549,7 @@ def page_sections(compte, dossier, profil):
             st.markdown(f"**{code} : {nom}** ({mot})")
             st.caption(AIDES_ETAPES[code])
         with col_bouton:
-            if code in ("S1", "S2"):
+            if code in ("S1", "S2", "S3"):
                 if st.button(f"Ouvrir la {code}", key=f"ouvrir_{code.lower()}"):
                     aller(code.lower())
             else:
@@ -1017,6 +1591,8 @@ def main():
         page_s1(compte, dossier, profil)
     elif page == "s2":
         page_s2(compte, dossier, profil)
+    elif page == "s3":
+        page_s3(compte, dossier, profil)
     elif page == "sections":
         page_sections(compte, dossier, profil)
     elif page == "vie":

@@ -289,6 +289,7 @@ def nouveau_dossier(profil):
         "cree_le": maintenant_str(),
         "imprevus": [],
         "s2": s2_par_defaut(),
+        "s3": s3_par_defaut(),
     }
 
 
@@ -355,6 +356,172 @@ def loyer_choisi(s2):
     if choix is None or not (0 <= int(choix) < len(annonces)):
         return None
     return annonces[int(choix)].get("loyer")
+
+
+# ------------------------------------------------------------------------ S3
+PLAFOND_INSTALLATION = 3500.0
+PIECE_COLOC = "La chambre de mon coloc"
+
+# Seuils de niveau par pièce : (MINIMAL, MOYEN, MAXIMAL), en nombre
+# d'articles nommés. Barème validé par Mathieu le 28 octobre 2026.
+SEUILS_S3 = {
+    "Ma chambre": (8, 13, 17),
+    "Cuisine": (11, 21, 28),
+    "Salon": (3, 6, 12),
+    "Salle de bain": (10, 13, 17),
+    "Entrée et rangement": (6, 13, 16),
+}
+SEUILS_ELECTRO = (2, 4, 6)
+
+
+def _fmt_montant(valeur):
+    return f"{float(valeur):,.2f}".replace(",", " ").replace(".", ",") + " $"
+
+
+def article_par_defaut(piece):
+    """Article vide ajouté dans une pièce : usagé, personnel dans la
+    chambre de l'élève, partagé dans les pièces communes (fidèle à la v1)."""
+    return {"nom": "", "prix": None, "etat": "usagé",
+            "type": "personnel" if piece == "Ma chambre" else "partagé"}
+
+
+def electro_par_defaut():
+    return {"nom": "", "prix": None, "etat": "usagé", "capture": ""}
+
+
+def s3_par_defaut():
+    """Structure vide de la S3 : les 6 pièces, les électroménagers et la
+    note sur la chambre du coloc (fidèle à la v1)."""
+    return {
+        "pieces": {piece: [] for piece in PIECES},
+        "electro": [],
+        "note_coloc": "",
+    }
+
+
+def obtenir_s3(dossier):
+    """La S3 du dossier, complétée par la structure vide si elle manque
+    (les dossiers créés avant la phase P2 n'ont pas encore de S3)."""
+    s3 = (dossier or {}).get("s3")
+    if not isinstance(s3, dict):
+        return s3_par_defaut()
+    defaut = s3_par_defaut()
+    for cle, valeur in defaut.items():
+        s3.setdefault(cle, valeur)
+    if not isinstance(s3["pieces"], dict):
+        s3["pieces"] = {}
+    for piece in PIECES:
+        if not isinstance(s3["pieces"].get(piece), list):
+            s3["pieces"][piece] = []
+    if not isinstance(s3["electro"], list):
+        s3["electro"] = []
+    return s3
+
+
+def enregistrer_s3(magasin, identifiant, s3):
+    """Écrit la S3 dans le dossier stocké et retourne le dossier."""
+    dossier = magasin.charger_dossier(identifiant)
+    if dossier is None:
+        raise ValueError(f"Dossier introuvable : {identifiant}")
+    dossier["s3"] = s3
+    magasin.sauvegarder_dossier(identifiant, dossier)
+    return dossier
+
+
+def articles_nommes(articles):
+    """Nombre d'articles dont le nom est écrit (les lignes vides ne
+    comptent pas dans le niveau d'une pièce)."""
+    return sum(1 for a in articles or [] if (a.get("nom") or "").strip())
+
+
+def niveau_s3(nombre, seuils):
+    """Niveau atteint pour un nombre d'articles nommés :
+    None sous le MINIMAL, puis MINIMAL, MOYEN, MAXIMAL."""
+    minimal, moyen, maximal = seuils
+    if nombre >= maximal:
+        return "MAXIMAL"
+    if nombre >= moyen:
+        return "MOYEN"
+    if nombre >= minimal:
+        return "MINIMAL"
+    return None
+
+
+def part_article(article):
+    """La part de l'élève pour un article : le prix au complet si
+    personnel, la moitié si partagé. Un prix absent compte pour 0."""
+    prix = article.get("prix") or 0
+    return float(prix) / 2 if article.get("type") == "partagé" else float(prix)
+
+
+def totaux_piece(s3, piece):
+    """(total des prix de la pièce, part de l'élève) pour une pièce."""
+    articles = (s3.get("pieces") or {}).get(piece, [])
+    total = sum(float(a.get("prix") or 0) for a in articles)
+    part = sum(part_article(a) for a in articles)
+    return total, part
+
+
+def totaux_electro(s3):
+    """(total des électroménagers, part de l'élève = la moitié)."""
+    total = sum(float(a.get("prix") or 0) for a in s3.get("electro", []))
+    return total, total / 2
+
+
+def total_installation(s3):
+    """La part de l'élève pour toute l'installation : les 5 pièces
+    facturables (la chambre du coloc coûte 0 $) + la part électro."""
+    total = totaux_electro(s3)[1]
+    for piece in PIECES:
+        if piece == PIECE_COLOC:
+            continue
+        total += totaux_piece(s3, piece)[1]
+    return total
+
+
+def s3_manquants(s3):
+    """Ce qu'il manque pour terminer la S3 (liste vide = elle est complète).
+
+    Il faut : chaque pièce facturable et les électroménagers au niveau
+    MINIMAL au moins, aucun article à moitié rempli, et le total de
+    l'installation sous le plafond de 3 500 $.
+    """
+    manques = []
+
+    def verifier_articles(articles, endroit):
+        for j, a in enumerate(articles or [], start=1):
+            nom_vide = not (a.get("nom") or "").strip()
+            sans_prix = not a.get("prix")
+            if nom_vide != sans_prix:
+                manques.append(
+                    f"{endroit}, article {j} : donne-lui un nom et un prix, "
+                    "ou retire-le.")
+
+    for piece in PIECES:
+        if piece == PIECE_COLOC:
+            continue
+        articles = (s3.get("pieces") or {}).get(piece, [])
+        verifier_articles(articles, piece)
+        nombre = articles_nommes(articles)
+        if niveau_s3(nombre, SEUILS_S3[piece]) is None:
+            manques.append(
+                f"{piece} : il te faut au moins {SEUILS_S3[piece][0]} articles "
+                f"pour le niveau MINIMAL, tu en as {nombre}.")
+
+    electro = s3.get("electro", [])
+    verifier_articles(electro, "Électroménagers")
+    nombre_e = articles_nommes(electro)
+    if niveau_s3(nombre_e, SEUILS_ELECTRO) is None:
+        manques.append(
+            f"Électroménagers : il te faut au moins {SEUILS_ELECTRO[0]} articles "
+            f"pour le niveau MINIMAL, tu en as {nombre_e}.")
+
+    total = total_installation(s3)
+    if total > PLAFOND_INSTALLATION:
+        manques.append(
+            "Ton installation dépasse le plafond de 3 500 $ de "
+            f"{_fmt_montant(total - PLAFOND_INSTALLATION)}.")
+    return manques
 
 
 def nom_section(code_section):
