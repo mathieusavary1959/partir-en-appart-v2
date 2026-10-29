@@ -288,7 +288,73 @@ def nouveau_dossier(profil):
         "solde": float(profil["epargne_depart"]),
         "cree_le": maintenant_str(),
         "imprevus": [],
+        "s2": s2_par_defaut(),
     }
+
+
+def s2_par_defaut():
+    """Structure vide de la S2 : 3 annonces à comparer, un choix, une
+    justification et la référence de la capture (fidèle à la v1)."""
+    return {
+        "annonces": [
+            {"adresse": "", "loyer": None, "inclusions": "",
+             "distance_km": None, "remarque": ""}
+            for _ in range(3)
+        ],
+        "choix": None,
+        "justification": "",
+        "capture": "",
+    }
+
+
+def obtenir_s2(dossier):
+    """La S2 du dossier, complétée par la structure vide si elle manque
+    (les dossiers créés en phase P1 n'ont pas encore de S2)."""
+    s2 = (dossier or {}).get("s2")
+    if not isinstance(s2, dict):
+        return s2_par_defaut()
+    defaut = s2_par_defaut()
+    for cle, valeur in defaut.items():
+        s2.setdefault(cle, valeur)
+    while len(s2["annonces"]) < 3:
+        s2["annonces"].append({"adresse": "", "loyer": None, "inclusions": "",
+                                "distance_km": None, "remarque": ""})
+    return s2
+
+
+def enregistrer_s2(magasin, identifiant, s2):
+    """Écrit la S2 dans le dossier stocké et retourne le dossier."""
+    dossier = magasin.charger_dossier(identifiant)
+    if dossier is None:
+        raise ValueError(f"Dossier introuvable : {identifiant}")
+    dossier["s2"] = s2
+    magasin.sauvegarder_dossier(identifiant, dossier)
+    return dossier
+
+
+def s2_manquants(s2):
+    """Ce qu'il manque pour terminer la S2 (liste vide = elle est complète)."""
+    manques = []
+    for i, a in enumerate(s2.get("annonces", []), start=1):
+        if not (a.get("adresse") or "").strip() or not a.get("loyer"):
+            manques.append(f"Annonce {i} : il faut au moins l'adresse "
+                           "ou le secteur, et le loyer.")
+    if s2.get("choix") is None:
+        manques.append("Choisis une des 3 annonces.")
+    if not (s2.get("justification") or "").strip():
+        manques.append("Écris ta justification du choix.")
+    if not (s2.get("capture") or "").strip():
+        manques.append("Écris la référence de ta capture de l'annonce choisie.")
+    return manques
+
+
+def loyer_choisi(s2):
+    """Le loyer de l'annonce choisie, ou None si rien n'est choisi."""
+    choix = (s2 or {}).get("choix")
+    annonces = (s2 or {}).get("annonces", [])
+    if choix is None or not (0 <= int(choix) < len(annonces)):
+        return None
+    return annonces[int(choix)].get("loyer")
 
 
 def nom_section(code_section):

@@ -3,8 +3,10 @@
 Univers figé le 28 octobre 2026 : « la porte de frigo » (voir la charte
 files/charte-univers-frigo.md du dossier du projet et la maquette v7).
 Inscription avec mot de passe, connexion, accueil en porte de frigo,
-section S1 en lecture et progression sauvegardée. Le calendrier de vie,
-la console du prof et les sections S2 à S7 arrivent aux phases suivantes.
+section S1 en lecture et section S2 (les 3 annonces comparées, le choix,
+la justification, la capture) fonctionnelles, progression sauvegardée.
+Le calendrier de vie, la console du prof et les sections S3 à S7
+arrivent aux phases suivantes.
 La couche de données vit dans donnees.py (magasin mémoire ou Supabase REST).
 """
 import streamlit as st
@@ -518,7 +520,7 @@ def formulaire_connexion():
 def barre_navigation(page):
     onglets = [("accueil", "Accueil"), ("vie", "Ma vie"), ("score", "Mon score"),
                ("imprevus", "Mes imprévus"), ("sections", "Mes sections S1 à S7")]
-    actif = "sections" if page == "s1" else page
+    actif = "sections" if page in ("s1", "s2") else page
     with st.container(key="nav_bar"):
         cols = st.columns([1.1, 1, 1.2, 1.4, 2.2, 1.5])
         for col, (code, nom) in zip(cols, onglets):
@@ -595,7 +597,10 @@ def html_porte_accueil(compte, dossier, profil):
         f"<div style='margin-top:9px;'><span class='pf-plaque'>BIENVENUE CHEZ {profil['prenom'].upper()}</span></div></div>"
         f"<div class='pf-polaroid'>{SVG_POLAROID}<div class='legende'>Le jour des clés!</div></div>"
         f"<div class='pf-clezone'><div class='pf-crochet'></div>{SVG_CLE}"
-        "<div class='pf-cle-legende'>Ta clé arrive<br>à la fin de la S2</div></div>"
+        + ("<div class='pf-cle-legende'>Ta clé<br>est arrivée!</div>"
+           if dossier.get("progression", {}).get("S2") == "fait"
+           else "<div class='pf-cle-legende'>Ta clé arrive<br>à la fin de la S2</div>")
+        + "</div>"
         "</div>"
         "<div class='pf-principale'><div class='pf-poignee'></div><div class='pf-grille'>"
 
@@ -681,7 +686,7 @@ def page_accueil(compte, dossier, profil):
         with st.container(key="etape_bar"):
             if st.button(f"{courante} · {nom} →", type="primary",
                          use_container_width=True):
-                aller("s1" if courante == "S1" else "sections")
+                aller(courante.lower() if courante in ("S1", "S2") else "sections")
     else:
         st.success("Tu as terminé toutes tes sections. Beau travail!")
 
@@ -759,10 +764,114 @@ def page_s1(compte, dossier, profil):
         aller("accueil")
 
 
+def _recueillir_s2():
+    """Lit les widgets de la page S2 et reconstruit la structure S2."""
+    annonces = []
+    for i in range(3):
+        annonces.append({
+            "adresse": st.session_state.get(f"s2_a{i}_adresse", ""),
+            "loyer": st.session_state.get(f"s2_a{i}_loyer"),
+            "inclusions": st.session_state.get(f"s2_a{i}_inclusions", ""),
+            "distance_km": st.session_state.get(f"s2_a{i}_distance"),
+            "remarque": st.session_state.get(f"s2_a{i}_remarque", ""),
+        })
+    return {
+        "annonces": annonces,
+        "choix": st.session_state.get("s2_choix"),
+        "justification": st.session_state.get("s2_justification", ""),
+        "capture": st.session_state.get("s2_capture", ""),
+    }
+
+
+def page_s2(compte, dossier, profil):
+    if st.button("Retour à l'accueil"):
+        aller("accueil")
+    s2 = donnees.obtenir_s2(dossier)
+    deja_fait = dossier.get("progression", {}).get("S2") == "fait"
+
+    st.markdown(
+        "<section class='carte'><h2>S2 : Mon logement</h2>"
+        "<div class='aide'>Compare 3 annonces réelles à Trois-Rivières pour un "
+        "4 et demi. Repère de prix : loyer entre 950 $ et 1 200 $ par mois.</div>"
+        "<div>Trouve 3 vraies annonces de logements, remplis une carte par "
+        "annonce, puis choisis celle que tu prendrais pour vrai. Même si une "
+        "annonce dit « chauffé », note-la telle quelle : le calcul "
+        "d'électricité se fait à la S4, pour tout le monde.</div></section>",
+        unsafe_allow_html=True)
+    if deja_fait:
+        st.success("Tu as déjà choisi ton logement : ta clé est arrivée. "
+                   "Tu peux quand même modifier tes annonces et réenregistrer.")
+
+    for i, annonce in enumerate(s2["annonces"]):
+        st.markdown(f"<section class='carte'><h2>Annonce {i + 1}</h2></section>",
+                    unsafe_allow_html=True)
+        st.text_input("Adresse ou secteur", value=annonce.get("adresse") or "",
+                      key=f"s2_a{i}_adresse")
+        col_loyer, col_distance = st.columns(2)
+        with col_loyer:
+            st.number_input("Loyer ($)", value=annonce.get("loyer"),
+                            min_value=0.0, step=1.0, format="%.2f",
+                            key=f"s2_a{i}_loyer")
+        with col_distance:
+            st.number_input("Distance de l'école ou du travail (km)",
+                            value=annonce.get("distance_km"),
+                            min_value=0.0, step=0.1, format="%.1f",
+                            key=f"s2_a{i}_distance")
+        st.text_input("Inclusions", value=annonce.get("inclusions") or "",
+                      key=f"s2_a{i}_inclusions",
+                      placeholder="Ex. chauffé, déneigement, stationnement")
+        st.text_input("Remarque", value=annonce.get("remarque") or "",
+                      key=f"s2_a{i}_remarque",
+                      placeholder="Ce que tu remarques : étage, état, bruit, sous-sol...")
+
+    def libelle_choix(i):
+        a = s2["annonces"][i]
+        adresse = (a.get("adresse") or "").strip()
+        if adresse and a.get("loyer"):
+            return f"Annonce {i + 1} : {adresse} ({fmt_montant(a['loyer'])})"
+        return f"Annonce {i + 1}"
+
+    st.markdown("<section class='carte'><h2>Ton choix</h2>"
+                "<div class='aide'>Le loyer est un coût partagé : "
+                "ton coloc paie l'autre moitié.</div></section>",
+                unsafe_allow_html=True)
+    choix_initial = s2.get("choix")
+    st.radio("Quelle annonce choisis-tu ?", [0, 1, 2],
+             index=int(choix_initial) if choix_initial is not None else None,
+             format_func=libelle_choix, key="s2_choix")
+    st.text_area("Justification du choix", value=s2.get("justification") or "",
+                 key="s2_justification",
+                 placeholder="Pourquoi cette annonce-là plutôt que les deux autres? "
+                 "Parle du prix, des inclusions, du secteur et de la distance.")
+    st.text_input("Référence de la capture de l'annonce choisie",
+                  value=s2.get("capture") or "", key="s2_capture",
+                  placeholder="Nom du fichier de capture déposé dans Classroom")
+
+    col_enr, col_fin = st.columns(2)
+    with col_enr:
+        if st.button("Enregistrer", use_container_width=True):
+            donnees.enregistrer_s2(MAGASIN, compte["identifiant"], _recueillir_s2())
+            st.success("Tes annonces sont enregistrées.")
+    with col_fin:
+        if st.button("J'ai terminé mon logement", type="primary",
+                     use_container_width=True):
+            saisie = _recueillir_s2()
+            donnees.enregistrer_s2(MAGASIN, compte["identifiant"], saisie)
+            manques = donnees.s2_manquants(saisie)
+            if manques:
+                for manque in manques:
+                    st.error(manque)
+            else:
+                donnees.definir_progression(MAGASIN, compte["identifiant"],
+                                            "S2", "fait")
+                st.success("S2 terminée. Ta clé est arrivée, bienvenue chez toi!")
+                aller("accueil")
+
+
 def page_sections(compte, dossier, profil):
     st.markdown("<section class='carte'><h2>Mes sections</h2>"
                 "<div class='aide'>Ton travail, section par section. "
-                "La S1 est prête ; les autres arrivent plus tard.</div></section>",
+                "La S1 et la S2 sont prêtes ; les autres arrivent plus tard.</div></section>",
                 unsafe_allow_html=True)
     progression = dossier.get("progression", {})
     courante = donnees.section_courante(dossier)
@@ -774,9 +883,9 @@ def page_sections(compte, dossier, profil):
             st.markdown(f"**{code} : {nom}** ({mot})")
             st.caption(AIDES_ETAPES[code])
         with col_bouton:
-            if code == "S1":
-                if st.button("Ouvrir la S1", key="ouvrir_s1"):
-                    aller("s1")
+            if code in ("S1", "S2"):
+                if st.button(f"Ouvrir la {code}", key=f"ouvrir_{code.lower()}"):
+                    aller(code.lower())
             else:
                 st.caption("Arrive plus tard")
 
@@ -814,6 +923,8 @@ def main():
         page_accueil(compte, dossier, profil)
     elif page == "s1":
         page_s1(compte, dossier, profil)
+    elif page == "s2":
+        page_s2(compte, dossier, profil)
     elif page == "sections":
         page_sections(compte, dossier, profil)
     elif page == "vie":
