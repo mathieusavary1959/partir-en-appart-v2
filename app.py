@@ -215,11 +215,15 @@ def formulaire_inscription():
     confirme = st.checkbox("C'est bien mon cas.", key="insc_confirme")
     mot_de_passe = st.text_input(
         "Choisis un mot de passe (au moins 6 caractères)",
-        type="password", key="insc_mdp")
-    st.caption("Ne dis ton mot de passe à personne.")
+        type="password", key="insc_mdp", autocomplete="new-password")
+    if mot_de_passe:
+        st.caption(f"{len(mot_de_passe)} caractères saisis. "
+                   "Ne dis ton mot de passe à personne.")
+    else:
+        st.caption("Ne dis ton mot de passe à personne.")
     confirmation = st.text_input(
         "Écris ton mot de passe une deuxième fois",
-        type="password", key="insc_mdp2")
+        type="password", key="insc_mdp2", autocomplete="new-password")
     if st.button("Créer mon compte", type="primary", disabled=not confirme):
         res = donnees.inscrire(MAGASIN, prenom, nom, groupe, cas,
                                mot_de_passe, confirmation)
