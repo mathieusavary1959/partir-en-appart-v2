@@ -15,6 +15,13 @@ import streamlit as st
 
 import donnees
 
+# Garde-fou de déploiement : si le processus en ligne garde en mémoire une
+# ancienne version du module donnees (rechargement partiel de Streamlit
+# Cloud), on force son rechargement avant d'aller plus loin.
+if not hasattr(donnees, "PIECE_COLOC"):
+    import importlib
+    importlib.reload(donnees)
+
 st.set_page_config(page_title="Partir en appart!", layout="wide")
 
 # --------------------------------------------------------------------- style
