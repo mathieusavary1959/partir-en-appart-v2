@@ -1,9 +1,10 @@
-"""Partir en appart! v2 : application Streamlit (phase P1).
+"""Partir en appart! v2 : application Streamlit (phase P1, univers figé).
 
-Squelette : inscription avec mot de passe, connexion, accueil « Mon appart »
-fidèle à la maquette v3 (accueil simplifié), section S1 en lecture et
-progression sauvegardée. Le calendrier de vie, la console du prof et les
-sections S2 à S7 arrivent aux phases suivantes (voir RAPPORT_P1.md).
+Univers figé le 28 octobre 2026 : « la porte de frigo » (voir la charte
+files/charte-univers-frigo.md du dossier du projet et la maquette v7).
+Inscription avec mot de passe, connexion, accueil en porte de frigo,
+section S1 en lecture et progression sauvegardée. Le calendrier de vie,
+la console du prof et les sections S2 à S7 arrivent aux phases suivantes.
 La couche de données vit dans donnees.py (magasin mémoire ou Supabase REST).
 """
 import streamlit as st
@@ -13,101 +14,232 @@ import donnees
 st.set_page_config(page_title="Partir en appart!", layout="wide")
 
 # --------------------------------------------------------------------- style
-# Palette 3 validée : fond presque noir, un seul accent jaune moutarde.
+# Univers « la porte de frigo » : mur de cuisine sombre, porte émaillée,
+# papiers épinglés. Bebas Neue (structure), Work Sans (interface),
+# Caveat (tout ce qui est « écrit à la main » dans l'univers).
 CSS = """
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Work+Sans:wght@400;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Caveat:wght@600;700&family=Work+Sans:wght@400;500;600;700;800&display=swap');
 :root{
-  --fond:#0E0D0B; --panneau:#171512; --panneau2:#1E1B16; --bord:#35312A;
-  --texte:#F5F2EA; --doux:#A79E8D; --accent:#E3B505; --accent-texte:#1A1402;
+  --mur:#1C1F27; --texte:#F5F2EA; --gris:#A7AEC2;
+  --jaune:#FFD23F; --jaune-texte:#1C1F27; --encre:#2A2620; --crayon:#D93A2B;
+  --vert:#1E9E4A;
 }
-.stApp{ background:var(--fond); color:var(--texte); font-family:"Work Sans",sans-serif; }
-.block-container{ max-width:1180px; padding-top:1.4rem; }
+.stApp{
+  background-color:var(--mur);
+  background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);
+  background-size:118px 118px;
+  color:var(--texte); font-family:"Work Sans",sans-serif;
+}
+.block-container{ max-width:1180px; padding-top:1.2rem; }
 [data-testid="stHeader"]{ background:transparent; }
-h1,h2,h3{ color:var(--texte); font-family:"Work Sans",sans-serif; }
+h1,h2,h3{ color:var(--texte); }
 p, li, label{ color:var(--texte); }
+.stCaption, [data-testid="stCaptionContainer"] p{ color:var(--gris) !important; }
 
-/* Widgets Streamlit dans la palette */
-.stButton > button{
-  border-radius:999px; border:1px solid var(--bord); background:var(--panneau);
-  color:var(--texte); font-weight:700; padding:.45rem 1.1rem;
-}
-.stButton > button:hover{ border-color:var(--accent); color:var(--accent); }
-.stButton > button[kind="primary"]{
-  background:var(--accent); border-color:var(--accent); color:var(--accent-texte);
-}
-.stButton > button[kind="primary"]:hover{ color:var(--accent-texte); opacity:.92; }
-.stButton > button:disabled{ opacity:.45; }
+/* Widgets : les formulaires sont des papiers sur le mur */
 .stTextInput input{
-  background:var(--panneau) !important; color:var(--texte) !important;
-  border:1px solid var(--bord) !important; border-radius:10px;
+  background:#FFFFFF !important; color:var(--encre) !important;
+  border:2px solid #CFC9B6 !important; border-radius:8px;
+  box-shadow:0 6px 14px rgba(0,0,0,.35);
 }
 [data-baseweb="select"] > div{
-  background:var(--panneau); border-color:var(--bord); color:var(--texte);
-  border-radius:10px;
+  background:#FFFFFF; border:2px solid #CFC9B6; color:var(--encre); border-radius:8px;
+  box-shadow:0 6px 14px rgba(0,0,0,.35);
 }
+[data-baseweb="select"] span{ color:var(--encre) !important; }
+.stButton > button{
+  border-radius:999px; border:1.5px solid #454B5C; background:#2B2F3A;
+  color:var(--texte); font-weight:700; padding:.45rem 1.1rem;
+}
+.stButton > button:hover{ border-color:var(--jaune); color:var(--jaune); }
+.stButton > button[kind="primary"]{
+  background:var(--jaune); border-color:var(--jaune); color:var(--jaune-texte);
+  box-shadow:0 10px 24px rgba(255,210,63,.25);
+}
+.stButton > button[kind="primary"]:hover{ color:var(--jaune-texte); opacity:.93; }
+.stButton > button:disabled{ opacity:.45; }
 .stCheckbox label span, .stRadio label span{ color:var(--texte); }
 
-/* Blocs repris de la maquette v3 */
-.marque{ font-family:"Bebas Neue",sans-serif; font-size:54px; letter-spacing:.03em; line-height:.95; }
-.marque span{ color:var(--accent); }
-.sous{ color:var(--doux); font-size:14px; margin-top:4px; }
+/* Le mur : titre et identité */
+.marque{ font-family:"Bebas Neue",sans-serif; font-size:56px; letter-spacing:.03em; line-height:.95; text-shadow:0 4px 0 rgba(0,0,0,.4); }
+.marque span{ color:var(--jaune); }
+.sous{ color:var(--gris); font-size:14.5px; margin-top:4px; }
 .puces{ display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; }
-.puce{ background:var(--panneau); border:1px solid var(--bord); border-radius:999px;
-  padding:7px 14px; font-size:13.5px; font-weight:600; }
-.puce b{ color:var(--accent); }
-.bandeau{ display:grid; grid-template-columns:1.2fr 1fr; gap:16px; margin-top:16px; }
-.solde{ background:linear-gradient(180deg,var(--panneau2),var(--panneau));
-  border:1px solid var(--bord); border-radius:16px; padding:22px 24px;
-  box-shadow:0 12px 34px -20px rgba(227,181,5,.5); }
-.solde .etiquette, .prochain .etiquette{ color:var(--doux); font-size:12px; font-weight:700;
-  text-transform:uppercase; letter-spacing:.1em; }
-.solde .montant{ font-size:56px; font-weight:800; margin-top:4px; font-variant-numeric:tabular-nums; }
-.solde .precision, .prochain .precision{ color:var(--doux); font-size:13.5px; margin-top:5px; line-height:1.45; }
-.prochain{ background:var(--panneau); border:1px solid var(--bord); border-radius:16px;
-  padding:22px 24px; display:flex; flex-direction:column; justify-content:center; }
-.prochain .quoi{ font-size:21px; font-weight:800; margin-top:6px; line-height:1.3; }
-.prochain .quoi b{ color:var(--accent); }
-.carte{ background:var(--panneau); border:1px solid var(--bord); border-radius:16px;
-  padding:20px; margin-top:16px; }
+.puce{ background:#2B2F3A; border:1.5px solid #454B5C; border-radius:999px;
+  padding:7px 14px; font-size:13.5px; font-weight:600; color:var(--texte); }
+.puce b{ color:var(--jaune); }
+
+/* Feuilles de papier (écrans de travail : S1, sections, attentes) */
+.carte{ background:#FFFFFF; color:var(--encre); border-radius:4px;
+  padding:22px 24px; margin-top:16px; position:relative;
+  box-shadow:0 14px 30px rgba(0,0,0,.45); }
 .carte h2{ font-family:"Bebas Neue",sans-serif; font-weight:400; font-size:27px;
-  letter-spacing:.05em; margin:0; }
-.carte .aide{ color:var(--doux); font-size:13.5px; margin:3px 0 14px; }
-.plan{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
-.piece{ border:1.5px solid var(--bord); border-radius:12px; padding:14px 15px;
-  background:var(--panneau2); min-height:104px; position:relative; }
-.piece .nom{ font-family:"Bebas Neue",sans-serif; font-size:22px; letter-spacing:.05em; padding-right:96px; }
-.piece .contenu{ color:var(--doux); font-size:13px; line-height:1.5; margin-top:5px; }
-.etat{ position:absolute; top:12px; right:12px; font-size:10.5px; font-weight:800;
-  letter-spacing:.07em; padding:4px 9px; border-radius:999px;
-  text-transform:uppercase; white-space:nowrap; }
-.etat.complet{ background:var(--accent); color:var(--accent-texte); }
-.etat.partiel{ border:1.5px solid var(--accent); color:var(--accent); }
-.etat.afaire{ border:1.5px solid var(--bord); color:var(--doux); }
-.piece.remplie{ border-color:rgba(227,181,5,.55); box-shadow:inset 0 0 0 1px rgba(227,181,5,.22); }
-.action{ margin-top:16px; background:var(--accent); color:var(--accent-texte);
-  border-radius:16px; padding:20px 24px; }
+  letter-spacing:.05em; margin:0; color:var(--encre); }
+.carte p, .carte div, .carte li{ color:var(--encre); }
+.carte .aide{ color:#6E6759; font-size:13.5px; margin:3px 0 14px; }
+.ligne{ display:flex; justify-content:space-between; gap:16px; padding:8px 0;
+  border-bottom:1px dashed #C9C2AE; font-size:15px; color:var(--encre); }
+.ligne .valeur{ font-weight:700; font-variant-numeric:tabular-nums; text-align:right; }
+.ligne.total .valeur{ color:var(--crayon); }
+.bloc-accent{ border-left:5px solid var(--jaune); }
+
+/* Le bouton étape, avec le reflet brillant de la maquette */
+.action{ margin-top:18px; background:var(--jaune); color:var(--jaune-texte);
+  border-radius:14px; padding:18px 24px; position:relative; overflow:hidden;
+  box-shadow:0 14px 34px rgba(255,210,63,.22); }
+.action::after{ content:""; position:absolute; top:0; bottom:0; width:26%; left:-30%;
+  background:linear-gradient(100deg,transparent,rgba(255,255,255,.55),transparent);
+  animation:pfbrille 3.4s ease-in-out infinite; }
+@keyframes pfbrille{ 0%{left:-30%;} 60%,100%{left:110%;} }
 .action .quoi{ font-family:"Bebas Neue",sans-serif; font-size:27px; letter-spacing:.04em; }
 .action .aide{ font-size:13.5px; font-weight:600; margin-top:2px; }
-.etapes{ display:grid; grid-template-columns:repeat(7,1fr); gap:10px; margin-top:16px; }
-.etape{ background:var(--panneau); border:1px solid var(--bord); border-radius:12px; padding:12px 13px; }
-.etape .code{ font-family:"Bebas Neue",sans-serif; font-size:19px; letter-spacing:.05em; }
-.etape .nom{ color:var(--doux); font-size:12px; line-height:1.35; min-height:32px; }
-.etape .mot{ font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.06em; margin-top:6px; color:var(--doux); }
-.etape.fait .mot{ color:var(--accent); }
-.etape.encours{ border-color:var(--accent); }
-.etape.encours .mot{ color:var(--accent); }
-.ligne{ display:flex; justify-content:space-between; gap:16px; padding:8px 0;
-  border-bottom:1px solid var(--bord); font-size:15px; }
-.ligne .valeur{ font-weight:700; font-variant-numeric:tabular-nums; text-align:right; }
-.ligne.total .valeur{ color:var(--accent); }
-.bloc-accent{ border-left:4px solid var(--accent); }
-footer-note{ }
-.pied{ color:var(--doux); font-size:12.5px; margin-top:22px; text-align:center; line-height:1.6; }
+
+.pied{ color:#6E7484; font-size:12.5px; margin-top:22px; text-align:center; line-height:1.6; }
+
+/* ============ LA PORTE DE FRIGO (accueil et bandeau d'accès) ============ */
+@keyframes pbalA{from{transform:rotate(-1.6deg);}to{transform:rotate(-0.7deg);}}
+@keyframes pbalB{from{transform:rotate(0.1deg);}to{transform:rotate(1.0deg);}}
+@keyframes pbalC{from{transform:rotate(-0.5deg);}to{transform:rotate(0.4deg);}}
+@keyframes pbalD{from{transform:rotate(0.5deg);}to{transform:rotate(1.3deg);}}
+@keyframes pbalE{from{transform:rotate(-2.0deg);}to{transform:rotate(-1.2deg);}}
+@keyframes pbalCle{from{transform:rotate(-4deg);}to{transform:rotate(4deg);}}
+@keyframes plumiere{0%,70%{transform:translateX(-140%) skewX(-14deg);}92%,100%{transform:translateX(260%) skewX(-14deg);}}
+.pf-balA{animation:pbalA 6.2s ease-in-out infinite alternate;transform-origin:50% -8px;}
+.pf-balB{animation:pbalB 7.4s ease-in-out infinite alternate;transform-origin:50% -8px;}
+.pf-balC{animation:pbalC 5.4s ease-in-out infinite alternate;transform-origin:50% -8px;}
+.pf-balD{animation:pbalD 8.1s ease-in-out infinite alternate;transform-origin:50% -8px;}
+.pf-balE{animation:pbalE 6.8s ease-in-out infinite alternate;transform-origin:50% -8px;}
+
+.pf-porte{ position:relative; border-radius:28px; overflow:hidden; margin-top:18px;
+  background:linear-gradient(158deg,#F6F2E7 0%,#E9E3D2 48%,#D8D1BA 82%,#CFC7AC 100%);
+  box-shadow:0 40px 90px rgba(0,0,0,.65), inset 0 2px 0 rgba(255,255,255,.95), inset 0 -5px 12px rgba(0,0,0,.18); }
+.pf-porte::after{ content:""; position:absolute; top:0; bottom:0; width:30%; left:0; pointer-events:none; z-index:6;
+  background:linear-gradient(100deg,transparent,rgba(255,255,255,.30),transparent); animation:plumiere 9.5s ease-in-out infinite; }
+.pf-congelo{ position:relative; padding:18px 28px 16px; border-bottom:3px solid rgba(42,38,32,.25);
+  display:flex; gap:26px; align-items:center; box-shadow:0 3px 5px rgba(42,38,32,.18); }
+.pf-lettres{ display:flex; gap:6px; align-items:center; }
+.pf-lettre{ font-family:"Bebas Neue",sans-serif; font-size:34px; line-height:1; width:39px; height:43px; border-radius:8px;
+  display:flex; align-items:center; justify-content:center; color:#FFFFFF;
+  background-image:radial-gradient(circle at 32% 26%,rgba(255,255,255,.55),rgba(255,255,255,0) 46%);
+  text-shadow:0 2px 0 rgba(0,0,0,.25); box-shadow:0 5px 9px rgba(42,38,32,.42), inset 0 -4px 0 rgba(0,0,0,.18); }
+.pf-l1{background-color:#D93A2B;transform:rotate(-4deg);} .pf-l2{background-color:#2E7CD6;transform:rotate(3deg);}
+.pf-l3{background-color:#E3B505;transform:rotate(-2deg);} .pf-l4{background-color:#2FA84F;transform:rotate(4deg);}
+.pf-l5{background-color:#FF7A45;transform:rotate(-3deg);} .pf-l6{background-color:#2ED3C6;transform:rotate(2deg);}
+.pf-l7{background-color:#B388FF;transform:rotate(-4deg);}
+.pf-plaque{ display:inline-block; background:linear-gradient(180deg,#D5CFBC,#AEA88F); color:#4A453C;
+  font-family:"Bebas Neue",sans-serif; font-size:13.5px; letter-spacing:.28em; padding:5px 12px 3px; border-radius:4px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.75), 0 1px 2px rgba(0,0,0,.25); }
+.pf-marque{ position:absolute; top:12px; right:24px; font-family:"Bebas Neue",sans-serif;
+  font-size:14px; letter-spacing:.34em; color:#7A7261; }
+.pf-polaroid{ background:#FFFFFF; padding:7px 7px 5px; border-radius:3px; width:158px; flex:none;
+  box-shadow:0 12px 24px rgba(42,38,32,.4); transform:rotate(2.5deg); }
+.pf-polaroid .legende{ font-family:"Caveat",cursive; font-size:18px; color:var(--encre); text-align:center; line-height:1.15; margin-top:2px; }
+.pf-clezone{ margin-left:auto; text-align:center; flex:none; }
+.pf-crochet{ width:17px; height:17px; border-radius:50%; margin:0 auto;
+  background:radial-gradient(circle at 35% 30%,#F2EDE0,#8F8875 75%); box-shadow:0 2px 4px rgba(0,0,0,.35); }
+.pf-cle{ transform-origin:50% 0; animation:pbalCle 5.5s ease-in-out infinite alternate; filter:drop-shadow(2px 3px 3px rgba(0,0,0,.35)); }
+.pf-cle-legende{ font-family:"Caveat",cursive; font-size:18px; color:#5A5344; line-height:1.1; margin-top:2px; }
+
+.pf-principale{ position:relative; padding:24px 28px 28px; }
+.pf-grille{ display:grid; gap:18px; grid-template-columns:1.05fr 1fr 1fr;
+  grid-template-areas:"solde calendrier calendrier" "croquis croquis liste" "coloc epicerie liste" "energuide energuide vide"; }
+.pf-papier{ position:relative; border-radius:3px; padding:15px 17px 13px; color:var(--encre);
+  box-shadow:0 12px 24px rgba(42,38,32,.35); }
+.pf-papier::before{ content:""; position:absolute; inset:0; border-radius:3px; pointer-events:none; opacity:.05;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E"); }
+.pf-aimant{ position:absolute; top:-8px; left:50%; margin-left:-8px; width:16px; height:16px; border-radius:50%; z-index:3;
+  box-shadow:0 2px 4px rgba(0,0,0,.4), inset 0 -2px 3px rgba(0,0,0,.25); }
+.pf-arouge{background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.8),rgba(255,255,255,0) 45%),#D93A2B;}
+.pf-ajaune{background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.8),rgba(255,255,255,0) 45%),#E3B505;}
+.pf-ableu{background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.8),rgba(255,255,255,0) 45%),#2E7CD6;}
+.pf-avert{background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.8),rgba(255,255,255,0) 45%),#2FA84F;}
+.pf-ruban{ position:absolute; width:74px; height:20px; top:-9px; left:22px; transform:rotate(-5deg); z-index:3;
+  background:linear-gradient(180deg,rgba(255,220,130,.88),rgba(245,205,105,.82));
+  clip-path:polygon(2% 6%,7% 0,93% 3%,98% 0,100% 45%,97% 94%,92% 100%,8% 97%,3% 100%,0 55%);
+  box-shadow:0 2px 4px rgba(0,0,0,.2); }
+
+.pf-solde{ grid-area:solde; background:linear-gradient(180deg,#FFF3A6,#FFE873); }
+.pf-solde::after{ content:""; position:absolute; right:0; bottom:0; width:34px; height:34px; border-radius:0 0 3px 0;
+  background:linear-gradient(315deg,rgba(230,220,190,0) 47%,rgba(0,0,0,.16) 50%,#FFF8C4 54%,#F2DC72 100%); }
+.pf-solde .main{ font-family:"Caveat",cursive; font-size:27px; line-height:1; }
+.pf-solde .montant{ font-family:"Bebas Neue",sans-serif; font-size:50px; line-height:1.02; }
+.pf-solde .detail{ font-size:13px; margin-top:2px; }
+.pf-solde .detail b{ color:var(--crayon); }
+
+.pf-cal{ grid-area:calendrier; background:#FFFFFF; }
+.pf-cal .titre{ font-family:"Bebas Neue",sans-serif; font-size:19px; letter-spacing:.14em; display:flex; justify-content:space-between; }
+.pf-cal .titre .mois{ color:var(--crayon); }
+.pf-cal table{ width:100%; border-collapse:collapse; margin-top:5px; font-size:14px; }
+.pf-cal td{ padding:4px 2px; border-bottom:1px dashed #C9C2AE; }
+.pf-cal tr:last-child td{ border-bottom:none; }
+.pf-cal .jour{ font-family:"Bebas Neue",sans-serif; font-size:16px; width:44px; }
+.pf-cal .cercle{ display:inline-block; border:2.5px solid var(--crayon); padding:0 7px; transform:rotate(-3deg);
+  border-radius:52% 48% 55% 45%/48% 55% 45% 52%; }
+.pf-cal .plus{ color:var(--vert); font-weight:700; text-align:right; }
+.pf-cal .avenir{ color:#8A8172; text-align:right; font-size:13px; }
+
+.pf-croquis{ grid-area:croquis; background:#FFFFFF; }
+.pf-croquis .titre{ font-family:"Caveat",cursive; font-size:26px; line-height:1; }
+.pf-croquis .note{ font-size:13px; margin-top:5px; }
+.pf-croquis .note b{ color:var(--crayon); }
+.pf-autocollant{ position:absolute; right:-12px; bottom:-14px; width:74px; height:74px; border-radius:50%; z-index:4;
+  background:radial-gradient(circle at 35% 28%,#4CC96B,#2FA84F 70%); border:3px solid #FFFFFF; transform:rotate(-9deg);
+  box-shadow:0 8px 16px rgba(42,38,32,.4); color:#FFFFFF; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  font-family:"Bebas Neue",sans-serif; text-align:center; line-height:1; }
+.pf-autocollant .gros{ font-size:15px; letter-spacing:.05em; }
+.pf-autocollant .petit{ font-size:13px; margin-top:2px; }
+
+.pf-liste{ grid-area:liste; color:var(--encre); padding-top:11px;
+  background:repeating-linear-gradient(180deg,#FFFFFF 0 30px,#D8E2F0 30px 31px); }
+.pf-liste .titre{ font-family:"Caveat",cursive; font-size:28px; line-height:1; }
+.pf-liste ul{ list-style:none; margin-top:7px; }
+.pf-liste li{ font-family:"Caveat",cursive; font-size:22px; line-height:30px; display:flex; gap:9px; align-items:baseline; }
+.pf-liste .case{ flex:none; width:14px; height:14px; border:2px solid #6E6759; border-radius:3px; position:relative; top:1px; transform:rotate(-1.5deg); }
+.pf-liste li.fait .case::after{ content:"✓"; position:absolute; left:0; top:-10px; font-size:19px; color:var(--vert); font-weight:700; transform:rotate(-6deg); }
+.pf-liste li.fait{ color:#6E6759; text-decoration:line-through; text-decoration-color:var(--vert); }
+.pf-liste li.encours span.nom{ box-shadow:inset 0 -8px 0 rgba(255,210,63,.55); }
+.pf-liste .consigne{ font-family:"Work Sans",sans-serif; font-size:12px; color:#6E6759; margin-top:7px; line-height:1.45; }
+
+.pf-coloc{ grid-area:coloc; background:linear-gradient(180deg,#DCEBF7,#C9DDF2); }
+.pf-coloc .main{ font-family:"Caveat",cursive; font-size:22px; line-height:1.18; }
+.pf-coloc .sig{ font-family:"Caveat",cursive; font-size:21px; text-align:right; }
+
+.pf-epicerie{ grid-area:epicerie; color:var(--encre); padding-top:10px;
+  background:repeating-linear-gradient(180deg,#FFFDF4 0 27px,#E4DCC4 27px 28px); }
+.pf-epicerie .titre{ font-family:"Caveat",cursive; font-size:25px; line-height:1; }
+.pf-epicerie .txt{ font-family:"Caveat",cursive; font-size:20px; line-height:1.3; margin-top:4px; color:#5A5344; }
+
+.pf-energuide{ grid-area:energuide; background:#FFFFFF; display:flex; gap:15px; align-items:center; padding:11px 17px; }
+.pf-energuide .bloc-noir{ background:#191919; color:#FFFFFF; font-family:"Bebas Neue",sans-serif; font-size:18px;
+  letter-spacing:.14em; padding:8px 12px 6px; border-radius:3px; text-align:center; line-height:1.05; }
+.pf-energuide .echelle{ flex:1; }
+.pf-energuide .rangee{ display:flex; align-items:center; gap:8px; font-size:12.5px; color:#6E6759; margin-top:3px; }
+.pf-energuide .barres-wrap{ flex:1; position:relative; padding-top:9px; }
+.pf-energuide .fleche{ position:absolute; top:-1px; left:30%; transform:translateX(-50%); width:0; height:0;
+  border-left:7px solid transparent; border-right:7px solid transparent; border-top:9px solid #191919; }
+.pf-energuide .barres{ display:flex; gap:3px; }
+.pf-energuide .barres i{ height:11px; flex:1; border-radius:2px; }
+.pf-energuide .b1{background:#2FA84F;} .pf-energuide .b2{background:#7CC24A;} .pf-energuide .b3{background:#E3B505;}
+.pf-energuide .b4{background:#FF7A45;} .pf-energuide .b5{background:#D93A2B;}
+.pf-energuide .niveau{ font-family:"Bebas Neue",sans-serif; font-size:29px; color:var(--vert); }
+.pf-energuide .explication{ font-size:12.5px; color:#6E6759; line-height:1.4; }
+
+.pf-vide{ grid-area:vide; border:2.5px dashed #A79E8E; border-radius:6px; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; color:#8A8172; text-align:center; padding:14px; position:relative;
+  background:rgba(255,255,255,.25); }
+.pf-vide .titre{ font-family:"Bebas Neue",sans-serif; font-size:15px; letter-spacing:.16em; }
+.pf-vide .txt{ font-size:12.5px; margin-top:4px; line-height:1.45; }
+
+.pf-mots{ display:flex; gap:8px; margin-top:20px; align-items:center; }
+.pf-mot{ background:#FFFFFF; color:#33302A; font-weight:700; font-size:11.5px; letter-spacing:.07em;
+  padding:3px 8px; border-radius:2px; box-shadow:0 3px 6px rgba(42,38,32,.35); }
+.pf-m1{transform:rotate(-2deg);} .pf-m2{transform:rotate(1.5deg);} .pf-m3{transform:rotate(-1deg);}
+.pf-m4{transform:rotate(3deg);background:var(--jaune);}
+
 @media (max-width:980px){
-  .bandeau{ grid-template-columns:1fr; }
-  .etapes{ grid-template-columns:repeat(3,1fr); }
-  .plan{ grid-template-columns:1fr 1fr; }
+  .pf-grille{ grid-template-columns:1fr; grid-template-areas:"solde" "calendrier" "croquis" "liste" "coloc" "epicerie" "energuide" "vide"; }
+  .pf-congelo{ flex-wrap:wrap; }
 }
 </style>
 """
@@ -173,6 +305,56 @@ def entete_marque(sous_titre):
         unsafe_allow_html=True)
 
 
+SVG_POLAROID = (
+    "<svg viewBox='0 0 156 96' width='100%' height='auto' aria-label='Photo de l immeuble'>"
+    "<defs><linearGradient id='pfciel' x1='0' y1='0' x2='0' y2='1'>"
+    "<stop offset='0' stop-color='#A8CCE8'/><stop offset='1' stop-color='#D8EAF5'/></linearGradient></defs>"
+    "<rect x='0' y='0' width='156' height='96' fill='url(#pfciel)'/>"
+    "<circle cx='133' cy='17' r='10' fill='#FFD23F'/>"
+    "<rect x='16' y='24' width='68' height='72' fill='#8A8172'/>"
+    "<g fill='#FFF3A6'><rect x='24' y='36' width='10' height='10'/><rect x='42' y='36' width='10' height='10'/>"
+    "<rect x='60' y='36' width='10' height='10'/><rect x='24' y='54' width='10' height='10'/>"
+    "<rect x='42' y='54' width='10' height='10'/><rect x='60' y='54' width='10' height='10'/>"
+    "<rect x='24' y='72' width='10' height='10'/><rect x='42' y='72' width='10' height='10'/></g>"
+    "<g><rect x='97' y='58' width='3' height='26' fill='#6E6759'/>"
+    "<rect x='88' y='44' width='22' height='15' fill='#FFFFFF' stroke='#D93A2B' stroke-width='1.6'/>"
+    "<text x='99' y='55' font-family='Bebas Neue, sans-serif' font-size='8.5' fill='#D93A2B' text-anchor='middle'>À LOUER</text></g>"
+    "<rect x='118' y='68' width='20' height='15' fill='#B07B4F'/><rect x='136' y='72' width='15' height='11' fill='#C98F5F'/>"
+    "<rect x='0' y='90' width='156' height='6' fill='#7A9A5B'/></svg>")
+
+SVG_CLE = (
+    "<svg class='pf-cle' width='48' height='64' viewBox='0 0 52 70' aria-label='Ta clé'>"
+    "<defs><linearGradient id='pfor' x1='0' y1='0' x2='1' y2='1'>"
+    "<stop offset='0' stop-color='#E8C95A'/><stop offset='.55' stop-color='#C9A227'/>"
+    "<stop offset='1' stop-color='#9A7B1A'/></linearGradient></defs>"
+    "<circle cx='17' cy='15' r='10.5' fill='none' stroke='url(#pfor)' stroke-width='5.5'/>"
+    "<rect x='14.5' y='24' width='5' height='32' fill='url(#pfor)'/>"
+    "<rect x='19.5' y='43' width='8.5' height='4.5' fill='url(#pfor)'/>"
+    "<rect x='19.5' y='51' width='6.5' height='4.5' fill='url(#pfor)'/>"
+    "<g transform='rotate(14 38 34)'><rect x='29' y='22' width='19' height='25' rx='4' fill='#2E7CD6'/>"
+    "<circle cx='38.5' cy='27.5' r='2.4' fill='#E9E3D2'/>"
+    "<text x='38.5' y='41' font-family='Caveat, cursive' font-size='11.5' font-weight='700' fill='#FFFFFF' text-anchor='middle'>402</text></g></svg>")
+
+
+def bandeau_frigo(plaque, legende_cle):
+    """Le haut de la porte : lettres aimantées, polaroid, clé. Sur l'accès
+    comme sur l'accueil, c'est la signature de l'univers."""
+    lettres = "".join(
+        f"<span class='pf-lettre pf-l{i}'>{c}</span>"
+        for i, c in enumerate("APPART!", start=1))
+    st.markdown(
+        "<div class='pf-porte' style='margin-top:14px;'><div class='pf-congelo'>"
+        "<div class='pf-marque'>ARCTIQUE</div>"
+        f"<div><div class='pf-lettres'>{lettres}</div>"
+        f"<div style='margin-top:9px;'><span class='pf-plaque'>{plaque}</span></div></div>"
+        f"<div class='pf-polaroid'>{SVG_POLAROID}"
+        "<div class='legende'>Le jour des clés!</div></div>"
+        f"<div class='pf-clezone'><div class='pf-crochet'></div>{SVG_CLE}"
+        f"<div class='pf-cle-legende'>{legende_cle}</div></div>"
+        "</div></div>",
+        unsafe_allow_html=True)
+
+
 AIDES_ETAPES = {
     "S1": "Lis ton profil en entier : tes revenus, ton atout, ton handicap et ton coloc.",
     "S2": "Compare 3 annonces de 4 et demi à Trois-Rivières.",
@@ -186,6 +368,8 @@ AIDES_ETAPES = {
 # ------------------------------------------------------------- écrans publics
 def ecran_acces():
     entete_marque("Ton premier appartement, pour vrai. Trois-Rivières, en colocation.")
+    bandeau_frigo("BIENVENUE · TON PREMIER APPART",
+                  "Ta clé arrive<br>à la fin de la S2")
     ecran = st.radio("Que veux-tu faire?",
                      ["Je me connecte", "Je m'inscris (première fois)"],
                      horizontal=True, key="ecran_acces")
@@ -286,76 +470,125 @@ def entete_eleve(compte, profil):
             deconnecter()
 
 
-def html_pieces(profil, dossier):
-    coloc = profil["coloc"]
-    etats = {"a_faire": ("afaire", "À faire"),
-             "partielle": ("partiel", "Partielle"),
-             "complete": ("complet", "Complète")}
-    contenus = {
-        "Ma chambre": "Ta chambre à toi. Rien pour le moment : tu la meubleras dans la section S3.",
-        "Cuisine": f"Pièce commune avec {coloc['prenom']}. Rien pour le moment : tu la meubleras dans la section S3.",
-        "Salon": f"Pièce commune avec {coloc['prenom']}. Rien pour le moment : tu le meubleras dans la section S3.",
-        "Salle de bain": f"Pièce commune avec {coloc['prenom']}. Rien pour le moment : tu la meubleras dans la section S3.",
-        "Entrée et rangement": f"Pièce commune avec {coloc['prenom']}. Rien pour le moment : section S3.",
-    }
-    morceaux = []
-    for piece in donnees.PIECES:
-        if piece == "La chambre de mon coloc":
-            classe_etat, mot = "afaire", "Coloc"
-            contenu = (f"{coloc['prenom']} apporte ses meubles, ça ne te coûte rien. "
-                       f"{coloc['handicap']}")
-            remplie = ""
-        else:
-            etat_piece = dossier.get("pieces", {}).get(piece, "a_faire")
-            classe_etat, mot = etats.get(etat_piece, etats["a_faire"])
-            contenu = contenus[piece]
-            remplie = " remplie" if etat_piece == "complete" else ""
-        morceaux.append(
-            f"<div class='piece{remplie}'><div class='nom'>{piece}</div>"
-            f"<span class='etat {classe_etat}'>{mot}</span>"
-            f"<div class='contenu'>{contenu}</div></div>")
-    return "<div class='plan'>" + "".join(morceaux) + "</div>"
-
-
-def html_pastilles(dossier):
+def html_liste_sections(dossier):
     courante = donnees.section_courante(dossier)
     progression = dossier.get("progression", {})
     morceaux = []
     for code, nom in donnees.SECTIONS:
         etat = progression.get(code, "a_faire")
         if etat == "fait":
-            classe, mot = "etape fait", "Fait"
+            classe = "fait"
         elif code == courante:
-            classe, mot = "etape encours", "En cours"
+            classe = "encours"
         else:
-            classe, mot = "etape", "À faire"
+            classe = ""
         morceaux.append(
-            f"<div class='{classe}'><div class='code'>{code}</div>"
-            f"<div class='nom'>{nom}</div><div class='mot'>{mot}</div></div>")
-    return "<div class='etapes'>" + "".join(morceaux) + "</div>"
+            f"<li class='{classe}'><span class='case'></span>"
+            f"<span class='nom'>{code} · {nom}</span></li>")
+    return "".join(morceaux)
+
+
+def html_porte_accueil(compte, dossier, profil):
+    """La porte de frigo de l'accueil, remplie avec les vraies données
+    de l'élève : son solde, sa paie, son coloc, ses sections."""
+    coloc = profil["coloc"]
+    solde = float(dossier.get("solde", profil["epargne_depart"]))
+    paie = (float(profil["revenu_net_mensuel"])
+            + float(profil["aide_parents_mensuelle"])
+            + float(profil["autre_revenu_mensuel"]))
+    lettres = "".join(
+        f"<span class='pf-lettre pf-l{i}'>{c}</span>"
+        for i, c in enumerate("APPART!", start=1))
+    croquis = (
+        "<svg viewBox='0 0 320 168' width='100%' height='auto' aria-label='Croquis de l appartement'>"
+        "<g fill='none' stroke='#2A2620' stroke-width='3'>"
+        "<rect x='4' y='4' width='312' height='160'/><rect x='4' y='4' width='150' height='82'/>"
+        "<rect x='154' y='4' width='162' height='82'/><rect x='4' y='86' width='66' height='78'/>"
+        "<rect x='70' y='86' width='118' height='78'/><rect x='188' y='86' width='128' height='40'/>"
+        "<rect x='188' y='126' width='128' height='38'/></g>"
+        "<g font-family='Caveat, cursive' font-size='19' fill='#2A2620' text-anchor='middle'>"
+        "<text x='79' y='50'>ma chambre</text>"
+        f"<text x='235' y='50'>{coloc['prenom']}</text>"
+        "<text x='37' y='130'>bain</text><text x='129' y='130'>cuisine</text>"
+        "<text x='252' y='111'>entrée</text><text x='252' y='150'>salon</text></g></svg>")
+    return (
+        "<div class='pf-porte'>"
+        "<div class='pf-congelo'><div class='pf-marque'>ARCTIQUE</div>"
+        f"<div><div class='pf-lettres'>{lettres}</div>"
+        f"<div style='margin-top:9px;'><span class='pf-plaque'>BIENVENUE CHEZ {profil['prenom'].upper()}</span></div></div>"
+        f"<div class='pf-polaroid'>{SVG_POLAROID}<div class='legende'>Le jour des clés!</div></div>"
+        f"<div class='pf-clezone'><div class='pf-crochet'></div>{SVG_CLE}"
+        "<div class='pf-cle-legende'>Ta clé arrive<br>à la fin de la S2</div></div>"
+        "</div>"
+        "<div class='pf-principale'><div class='pf-grille'>"
+
+        "<div class='pf-papier pf-solde pf-balA'><div class='pf-aimant pf-arouge'></div>"
+        "<div class='main'>Il te reste</div>"
+        f"<div class='montant'>{fmt_montant(solde)}</div>"
+        "<div class='detail'>C'est ton épargne de départ. Prochain mouvement : "
+        "<b>jour 1, paie et loyer</b>, quand le calendrier va commencer.</div></div>"
+
+        "<div class='pf-papier pf-cal pf-balB'><div class='pf-aimant pf-ableu'></div>"
+        "<div class='titre'><span>TON MOIS</span><span class='mois'>PAS ENCORE COMMENCÉ</span></div>"
+        "<table>"
+        f"<tr><td class='jour'><span class='cercle'>J1</span></td><td>Paie</td>"
+        f"<td class='plus'>+{fmt_montant(paie)}</td><td>Loyer, ta part</td>"
+        "<td class='avenir'>à la S2</td></tr>"
+        "<tr><td class='jour'>J5</td><td>Épicerie du mois, ta part</td>"
+        "<td class='avenir'>à la S5</td><td></td><td></td></tr>"
+        "<tr><td class='jour'>J10</td><td>Hydro et internet, ta part</td>"
+        "<td class='avenir'>à la S4</td><td></td><td></td></tr>"
+        "<tr><td class='jour'>J15</td><td>Cellulaire, assurance, transport</td>"
+        "<td class='avenir'>à la S5</td><td></td><td></td></tr>"
+        "</table></div>"
+
+        "<div class='pf-papier pf-croquis pf-balC'><div class='pf-ruban'></div>"
+        "<div class='titre'>L'appart, vu d'en haut</div>"
+        f"{croquis}"
+        "<div class='note'>S3, meubler : vise le niveau <b>MOYEN</b> dans chaque "
+        "pièce. La liste complète des articles possibles est dans la section.</div>"
+        "<div class='pf-autocollant'><div class='gros'>BAC VERT</div>"
+        "<div class='petit'>MARDI</div></div></div>"
+
+        "<div class='pf-papier pf-liste pf-balD'><div class='pf-aimant pf-ajaune'></div>"
+        "<div class='titre'>Mon déménagement</div>"
+        f"<ul>{html_liste_sections(dossier)}</ul>"
+        "<div class='consigne'>Coche au crayon, comme pour vrai. Ton enseignant "
+        "lance le calendrier quand la classe est prête.</div></div>"
+
+        "<div class='pf-papier pf-coloc pf-balE'><div class='pf-aimant pf-ableu'></div>"
+        f"<div class='main'>{coloc['description']}</div>"
+        f"<div class='sig'>- {coloc['prenom']}, ton coloc</div></div>"
+
+        "<div class='pf-papier pf-epicerie pf-balB'><div class='pf-aimant pf-avert'></div>"
+        "<div class='titre'>Épicerie de la semaine</div>"
+        "<div class='txt'>Ta première liste apparaîtra ici, à la S5.</div></div>"
+
+        "<div class='pf-papier pf-energuide pf-balC'><div class='pf-aimant pf-ajaune'></div>"
+        "<div class='bloc-noir'>SCORE<br>DE VIE</div>"
+        "<div class='echelle'>"
+        "<div class='rangee'><span>Ton niveau, comparé aux élèves du même cas que toi :</span></div>"
+        "<div class='rangee'><div class='barres-wrap'><div class='barres'>"
+        "<i class='b1'></i><i class='b2'></i><i class='b3'></i><i class='b4'></i><i class='b5'></i>"
+        "</div></div><span class='niveau'>?</span></div>"
+        "<div class='explication'>Comme l'étiquette ÉnerGuide d'un vrai frigo : "
+        "A est le meilleur niveau, E le plus faible. Ton niveau arrive avec tes "
+        "premiers choix.</div></div></div>"
+
+        "<div class='pf-vide pf-balD'><div class='pf-aimant pf-arouge'></div>"
+        "<div class='titre'>MOTS DE TON PROF ET IMPRÉVUS</div>"
+        "<div class='txt'>Ils apparaîtront ici, épinglés sur ta porte, quand ils "
+        "arriveront dans ta vie d'appart.</div></div>"
+
+        "</div>"
+        "<div class='pf-mots'><span class='pf-mot pf-m1'>PAYER</span>"
+        "<span class='pf-mot pf-m2'>LE</span><span class='pf-mot pf-m3'>LOYER</span>"
+        "<span class='pf-mot pf-m4'>LE 1ER !</span></div>"
+        "</div></div>")
 
 
 def page_accueil(compte, dossier, profil):
-    solde = float(dossier.get("solde", profil["epargne_depart"]))
-    st.markdown(
-        "<div class='bandeau'>"
-        "<section class='solde'><div class='etiquette'>Il me reste</div>"
-        f"<div class='montant'>{fmt_montant(solde)}</div>"
-        "<div class='precision'>C'est ton épargne de départ. Elle bougera quand "
-        "le calendrier de vie commencera.</div></section>"
-        "<section class='prochain'><div class='etiquette'>Prochain mouvement</div>"
-        "<div class='quoi'>Le calendrier de vie n'a <b>pas encore commencé</b></div>"
-        "<div class='precision'>Ton enseignant va le lancer en classe. "
-        "En attendant, lis ton profil dans la section S1.</div></section>"
-        "</div>",
-        unsafe_allow_html=True)
-
-    st.markdown(
-        "<section class='carte'><h2>Mon appartement</h2>"
-        "<div class='aide'>Tes six pièces. Une pièce se remplit quand tu la "
-        "meubles, dans la section S3.</div>"
-        + html_pieces(profil, dossier) + "</section>",
-        unsafe_allow_html=True)
+    st.markdown(html_porte_accueil(compte, dossier, profil), unsafe_allow_html=True)
 
     courante = donnees.section_courante(dossier)
     if courante:
@@ -369,8 +602,6 @@ def page_accueil(compte, dossier, profil):
             aller("s1" if courante == "S1" else "sections")
     else:
         st.success("Tu as terminé toutes tes sections. Beau travail!")
-
-    st.markdown(html_pastilles(dossier), unsafe_allow_html=True)
 
 
 def rang(label, valeur):
