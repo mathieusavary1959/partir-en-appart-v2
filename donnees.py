@@ -1205,7 +1205,7 @@ def vie_par_defaut():
     return {"mouvements": [], "mois_appliques": 0, "completions": {},
             "decisions": {}, "bilans": {}, "connexions": [],
             "installation_payee": False, "annonces": [],
-            "a_appliquer": [], "gele": False}
+            "a_appliquer": [], "gele": False, "reglages": {}}
 
 
 def obtenir_vie(dossier):
@@ -1445,6 +1445,33 @@ def facteur_section(code, date_completion, params):
     return max(0.60, 1.0 - 0.25 * retard)
 
 
+# --- Les réglages du prochain mois (« Prépare ton prochain mois ») ---
+# Pendant le mois en cours, l'élève règle trois leviers tirés de ses
+# propres chiffres ; ils s'appliquent au mois suivant, jamais
+# rétroactivement. Heures : écart d'heures par semaine (converti en
+# paie nette au prorata du profil). Épicerie et électricité : facteur
+# appliqué au montant du mois (le sien ou la référence).
+REGLAGES_HEURES = {"garder": 0, "plus": 4, "moins": -4}
+REGLAGES_FACTEURS = {
+    "epicerie": {"serrer": 0.90, "normal": 1.0, "mieux": 1.10},
+    "electricite": {"econome": 0.90, "normal": 1.0, "confort": 1.10},
+}
+
+
+def _delta_heures(profil, code):
+    """L'effet mensuel net d'un réglage d'heures, au prorata du
+    profil : taux horaire x écart hebdomadaire x 4,33 semaines,
+    converti en net avec le ratio net/brut du profil."""
+    ecart = REGLAGES_HEURES.get(code, 0)
+    if not ecart:
+        return 0.0
+    brut = float(profil.get("revenu_brut_mensuel") or 0)
+    net = float(profil.get("revenu_net_mensuel") or 0)
+    ratio = (net / brut) if brut else 0.85
+    return _arrondir2(float(profil.get("taux_horaire") or 0)
+                      * ecart * 4.33 * ratio)
+
+
 # --- Génération et application des mouvements ---
 
 def _montant_pour(dossier, code, cle, fermeture):
@@ -1488,6 +1515,11 @@ def generer_mouvements_mois(dossier, profil, params, mois, identifiant=""):
 
     ajoute(1, "Paie du mois (revenu net, autres revenus et aide des "
               "parents)", paie)
+    # Les réglages préparés le mois passé s'appliquent à ce mois-ci.
+    reglages = (vie.get("reglages") or {}).get(str(mois)) or {}
+    delta_h = _delta_heures(profil, reglages.get("heures", "garder"))
+    if delta_h:
+        ajoute(1, "Heures de travail ajustées (ton réglage)", delta_h)
     if mois == 1:
         ajoute(1, "Premier loyer (mois complet, à l'entrée)",
                -_montant_pour(dossier, "S2", "loyer_total", fermeture))
@@ -1504,10 +1536,22 @@ def generer_mouvements_mois(dossier, profil, params, mois, identifiant=""):
                     ajoute(1, "Installation dans l'appartement "
                               "(ameublement et électroménagers)", -inst)
                     vie["installation_payee"] = True
-    ajoute(5, "Épicerie du mois (ta part de la semaine type)",
-           -_montant_pour(dossier, "S5", "epicerie_mois_part", fermeture))
-    ajoute(10, "Électricité, ta part (50 %)",
-           -_montant_pour(dossier, "S4", "elec_part", fermeture))
+    facteur_epi = REGLAGES_FACTEURS["epicerie"].get(
+        reglages.get("epicerie", "normal"), 1.0)
+    lib_epi = "Épicerie du mois (ta part de la semaine type)"
+    if facteur_epi != 1.0:
+        lib_epi += ", ajustée selon ton réglage"
+    ajoute(5, lib_epi,
+           -_montant_pour(dossier, "S5", "epicerie_mois_part", fermeture)
+           * facteur_epi)
+    facteur_elec = REGLAGES_FACTEURS["electricite"].get(
+        reglages.get("electricite", "normal"), 1.0)
+    lib_elec = "Électricité, ta part (50 %)"
+    if facteur_elec != 1.0:
+        lib_elec += ", ajustée selon ton réglage"
+    ajoute(10, lib_elec,
+           -_montant_pour(dossier, "S4", "elec_part", fermeture)
+           * facteur_elec)
     ajoute(10, "Internet, ta part (50 %)",
            -_montant_pour(dossier, "S4", "internet_part", fermeture))
     ajoute(15, "Cellulaire",
@@ -1633,6 +1677,50 @@ def enregistrer_bilan(magasin, identifiant, mois, reponse_choix,
         "date": _date.today().isoformat()}
     magasin.sauvegarder_dossier(identifiant, dossier)
     return dossier
+
+
+def enregistrer_reglages(magasin, identifiant, mois_courant, heures,
+                         epicerie, electricite, aujourdhui=None):
+    """Le plan du mois suivant, préparé pendant le mois en cours.
+    Ajustable tant que le mois en cours n'est pas fermé ; les effets
+    tombent à la génération du mois visé, jamais avant."""
+    aujourdhui = _vers_date(aujourdhui) if aujourdhui else _date.today()
+    if not (1 <= int(mois_courant) < MOIS_MAX):
+        raise ValueError("Il n'y a pas de mois suivant à préparer.")
+    if heures not in REGLAGES_HEURES:
+        raise ValueError("Réglage d'heures inconnu.")
+    if epicerie not in REGLAGES_FACTEURS["epicerie"]:
+        raise ValueError("Réglage d'épicerie inconnu.")
+    if electricite not in REGLAGES_FACTEURS["electricite"]:
+        raise ValueError("Réglage d'électricité inconnu.")
+    dossier = magasin.charger_dossier(identifiant)
+    if dossier is None:
+        raise ValueError(f"Dossier introuvable : {identifiant}")
+    vie = obtenir_vie(dossier)
+    vie.setdefault("reglages", {})[str(int(mois_courant) + 1)] = {
+        "heures": heures, "epicerie": epicerie,
+        "electricite": electricite, "date": aujourdhui.isoformat()}
+    magasin.sauvegarder_dossier(identifiant, dossier)
+    return dossier
+
+
+def projeter_mois(dossier, profil, params, mois_cible, reglages=None):
+    """Projection d'un mois de vie : les mouvements qu'il donnerait
+    avec les réglages fournis (ou ceux déjà notés si reglages=None),
+    sans la décision par défaut. Renvoie (mouvements, total). Sert à
+    montrer à l'élève l'effet de son plan avant de le garder."""
+    import copy as _copy
+    copie = _copy.deepcopy(dossier)
+    vie = obtenir_vie(copie)
+    if reglages is not None:
+        vie.setdefault("reglages", {})[str(mois_cible)] = reglages
+    mouvements = generer_mouvements_mois(
+        copie, profil, params, int(mois_cible), "")
+    mouvements = [m for m in mouvements
+                  if not str(m.get("libelle", "")).startswith(
+                      "Décision manquée")]
+    total = _arrondir2(sum(m["montant"] for m in mouvements))
+    return mouvements, total
 
 
 def position_dans_mois(params, aujourdhui=None):

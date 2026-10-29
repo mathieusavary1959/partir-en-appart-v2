@@ -32,7 +32,8 @@ except Exception:
 # Cloud), on force son rechargement avant d'aller plus loin.
 if not hasattr(donnees, "PIECE_COLOC") or not hasattr(donnees, "nouveau_jeton_session") \
         or not hasattr(donnees, "calculer_electricite") \
-        or not hasattr(donnees, "appliquer_vie"):
+        or not hasattr(donnees, "appliquer_vie") \
+        or not hasattr(donnees, "enregistrer_reglages"):
     import importlib
     importlib.reload(donnees)
 
@@ -739,6 +740,131 @@ p, li, label{ color:var(--texte); }
 .s5-alerte{ font-family:"Special Elite",monospace; font-size:13.5px;
   color:#8A5A00; margin-top:8px; }
 
+/* Ma vie : le journal de bord reste sur la porte, mais chaque rendez-vous
+   devient un objet différent. La décision est un post-it jaune à trancher ;
+   le bilan s'écrit dans un cahier ligné ; le journal tombe en reçus. */
+.vie-bandeau{ position:relative; margin-top:18px; padding:28px 30px 22px;
+  border-radius:6px; color:var(--encre); transform:rotate(-.25deg);
+  background:linear-gradient(168deg,#FAF5E8,#E9DFC6);
+  box-shadow:0 20px 44px rgba(0,0,0,.55); }
+.vie-bandeau::before{ content:""; position:absolute; top:-9px; left:50%;
+  margin-left:-10px; width:20px; height:20px; border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.85),rgba(255,255,255,0) 46%),#D93A2B;
+  box-shadow:0 3px 6px rgba(0,0,0,.45), inset 0 -2px 3px rgba(0,0,0,.25); }
+.vie-bandeau .mention{ font-family:"Special Elite",monospace; font-size:12px;
+  letter-spacing:.3em; color:#6B6257; text-align:center; }
+.vie-bandeau h2{ font-family:"Bebas Neue",sans-serif; font-weight:400;
+  font-size:clamp(34px,4vw,52px); letter-spacing:.03em; line-height:1;
+  color:var(--encre); text-align:center; margin:7px 0 8px; }
+.vie-bandeau .phrase{ max-width:720px; margin:0 auto; color:#3A352B;
+  font-size:15.5px; }
+.vie-etats{ display:flex; gap:8px; flex-wrap:wrap; justify-content:center;
+  margin-top:15px; }
+.vie-etat{ border:1.5px solid #B9AE94; background:rgba(255,255,255,.58);
+  padding:7px 11px; border-radius:999px; font-size:13px; font-weight:700;
+  color:var(--encre); }
+.vie-etat b{ color:#A93226; }
+.vie-etat.fait b{ color:var(--vert); }
+.st-key-vie_decision{ position:relative; margin-top:26px; padding:30px 28px 20px;
+  border-radius:3px; color:var(--encre); transform:rotate(-.65deg);
+  background:linear-gradient(180deg,#FFF3A6,#FFE873);
+  box-shadow:0 18px 38px rgba(0,0,0,.5); }
+.st-key-vie_decision::before{ content:""; position:absolute; top:-9px; left:50%;
+  margin-left:-10px; width:20px; height:20px; border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.85),rgba(255,255,255,0) 46%),#2E7CD6;
+  box-shadow:0 3px 6px rgba(0,0,0,.45), inset 0 -2px 3px rgba(0,0,0,.25); }
+.st-key-vie_decision [data-testid="stMarkdownContainer"] p,
+.st-key-vie_decision [data-testid="stMarkdownContainer"] li,
+.st-key-vie_decision [data-testid="stWidgetLabel"] p,
+.st-key-vie_decision .stRadio label span{ color:var(--encre) !important; }
+.st-key-vie_decision .stButton > button[kind="primary"]{
+  background:#1C1F27; border-color:#1C1F27; color:var(--jaune);
+  box-shadow:0 10px 22px rgba(28,31,39,.28); }
+.st-key-vie_decision .stButton > button[kind="primary"]:hover{
+  color:var(--jaune); opacity:.92; }
+.st-key-vie_decision .stButton > button[kind="primary"] p{ color:var(--jaune); }
+.st-key-vie_decision .stButton > button[kind="primary"] *,
+.st-key-vie_decision .stButton > button[kind="primary"] [data-testid="stMarkdownContainer"],
+.st-key-vie_decision .stButton > button[kind="primary"] [data-testid="stMarkdownContainer"] p{
+  color:var(--jaune) !important; }
+.vie-objet-mention{ font-family:"Special Elite",monospace; font-size:11.5px;
+  letter-spacing:.26em; color:#6B6257; text-transform:uppercase; }
+.vie-objet-titre{ font-family:"Bebas Neue",sans-serif; font-size:32px;
+  letter-spacing:.03em; line-height:1.05; color:var(--encre); margin-top:3px; }
+.vie-scenario{ font-family:"Caveat",cursive; font-size:29px; font-weight:700;
+  line-height:1.08; color:var(--encre); margin-top:12px; }
+.vie-texte{ font-size:15px; color:#3A352B; margin-top:6px; }
+.vie-tampon{ display:inline-block; transform:rotate(-8deg);
+  font-family:"Special Elite",monospace; font-weight:700; font-size:14px;
+  letter-spacing:.18em; color:#2E7D32; border:3px double #2E7D32;
+  border-radius:4px; padding:3px 10px; background:rgba(255,255,255,.35);
+  margin-top:12px; }
+.vie-fait-ligne{ border-top:2px dashed rgba(42,38,32,.28); margin-top:11px;
+  padding-top:9px; font-size:15px; color:var(--encre); }
+.st-key-vie_bilan{ position:relative; margin-top:28px; color:var(--encre);
+  border-radius:4px; box-shadow:0 18px 38px rgba(0,0,0,.5);
+  padding:28px 28px 20px 74px;
+  background:
+   linear-gradient(90deg, transparent 0 52px, rgba(200,60,50,.55) 52px 54px, transparent 54px),
+   repeating-linear-gradient(#FFFDF6 0 33px, #DCD2B8 33px 34px); }
+.st-key-vie_bilan [data-testid="stMarkdownContainer"] p,
+.st-key-vie_bilan [data-testid="stMarkdownContainer"] li,
+.st-key-vie_bilan [data-testid="stWidgetLabel"] p,
+.st-key-vie_bilan .stRadio label span{ color:var(--encre) !important; }
+.st-key-vie_bilan .stTextInput input{
+  background:rgba(255,255,255,.6) !important; border:none !important;
+  border-bottom:2px solid #8A7B5C !important; border-radius:6px 6px 0 0 !important;
+  box-shadow:none !important; color:var(--encre) !important; }
+.vie-recu{ position:relative; margin-top:20px; color:var(--encre);
+  border-radius:4px 4px 0 0; padding:24px 26px 20px;
+  background:linear-gradient(175deg,#F7F1E3,#EEE4CE);
+  filter:drop-shadow(0 16px 18px rgba(0,0,0,.5)); }
+.vie-recu::after{ content:""; position:absolute; left:0; right:0; bottom:-10px;
+  height:10px;
+  background:linear-gradient(45deg, transparent 33.333%, #EEE4CE 33.333%, #EEE4CE 66.667%, transparent 66.667%),
+  linear-gradient(-45deg, transparent 33.333%, #EEE4CE 33.333%, #EEE4CE 66.667%, transparent 66.667%);
+  background-size:20px 40px; background-position:0 -20px; }
+.vie-recu h2{ font-family:"Special Elite",monospace; font-weight:400;
+  font-size:22px; letter-spacing:.12em; color:var(--encre);
+  text-align:center; margin:0 0 8px; }
+.vie-attente{ background:#FFFFFF; color:var(--encre); padding:19px 21px;
+  border-left:6px solid var(--jaune); border-radius:4px; margin-top:18px;
+  box-shadow:0 14px 30px rgba(0,0,0,.45); font-size:15px; }
+.vie-suite{ background:#2B2F3A; border:1.5px solid #454B5C;
+  border-left:6px solid var(--jaune); color:var(--texte);
+  padding:21px 23px; margin-top:26px; border-radius:6px;
+  box-shadow:0 16px 34px rgba(0,0,0,.4); }
+.vie-suite h2{ font-family:"Bebas Neue",sans-serif; font-weight:400;
+  font-size:29px; letter-spacing:.04em; color:var(--texte); margin:0; }
+.vie-suite div{ color:#E7EAF0; margin-top:4px; font-size:15px; }
+.note-crayon{ font-family:"Caveat",cursive; font-size:21px; font-weight:600;
+  color:#EDE4C8; text-align:center; margin:24px 0 4px;
+  transform:rotate(-1deg); }
+/* Le cadran : panneau de contrôle du frigo, sombre et émaillé, où
+   l'élève règle son prochain mois (heures, épicerie, électricité). */
+.st-key-vie_reglages{ position:relative; margin-top:28px;
+  padding:52px 28px 20px; border-radius:14px; color:#E8EEF2;
+  background:linear-gradient(150deg,#2E3442,#171B23);
+  border:1.5px solid #454B5C;
+  box-shadow:0 18px 38px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.12); }
+.st-key-vie_reglages::before{ content:"ARCTIQUE · PANNEAU DE CONTRÔLE";
+  position:absolute; top:0; left:0; right:0; height:30px;
+  border-radius:14px 14px 0 0; background:#0D1114;
+  font-family:"Special Elite",monospace; font-size:11.5px;
+  letter-spacing:.26em; color:#9FB6C4; line-height:30px;
+  padding-left:18px; }
+.st-key-vie_reglages .vie-objet-mention{ color:#9FB6C4; }
+.st-key-vie_reglages .vie-objet-titre{ color:#F5F2EA; }
+.st-key-vie_reglages .vie-texte{ color:#C9CEDA; }
+.st-key-vie_reglages [data-testid="stWidgetLabel"] p{
+  color:var(--jaune) !important; font-family:"Special Elite",monospace;
+  letter-spacing:.1em; }
+.st-key-vie_reglages .stRadio label span{ color:#E8EEF2 !important; }
+.vie-projection{ background:var(--jaune); color:var(--encre);
+  border-radius:8px; padding:12px 16px; margin-top:14px; font-size:15px;
+  box-shadow:0 8px 18px rgba(0,0,0,.3); }
+.vie-projection div, .vie-projection b{ color:var(--encre); }
+
 @media (max-width:980px){
   .pf-grille{ grid-template-columns:1fr; grid-template-areas:"solde" "calendrier" "croquis" "liste" "coloc" "epicerie" "energuide" "vide"; }
   .pf-congelo{ flex-wrap:wrap; }
@@ -1239,8 +1365,55 @@ def page_accueil(compte, dossier, profil):
         "<div class='pf-reflet'></div><div class='pf-plancher'></div></div>",
         unsafe_allow_html=True)
 
+    params = donnees.obtenir_parametres(MAGASIN, compte["groupe"])
+    mois_courant, _ = donnees.position_dans_mois(params)
+    vie = donnees.obtenir_vie(dossier)
+    cle_mois = str(min(mois_courant, donnees.MOIS_MAX)) \
+        if mois_courant >= 1 else ""
+    decision = (vie.get("decisions") or {}).get(cle_mois) \
+        if cle_mois else None
+    bilan = (vie.get("bilans") or {}).get(cle_mois) if cle_mois else None
     courante = donnees.section_courante(dossier)
-    if courante:
+    if params.get("lance_le") and mois_courant >= 1 and not decision:
+        st.markdown(
+            "<div class='etape-titre'>TON RÔLE DU MOIS</div>"
+            "<div class='etape-aide'>Ta décision du mois t'attend dans "
+            "Ma vie. C'est un vrai choix, avec un effet sur ton solde, "
+            "et il sera définitif.</div>",
+            unsafe_allow_html=True)
+        with st.container(key="etape_bar"):
+            if st.button("Aller décider dans Ma vie →", type="primary",
+                         use_container_width=True):
+                aller("vie")
+    elif params.get("lance_le") and mois_courant >= 1 and not bilan:
+        st.markdown(
+            "<div class='etape-titre'>TON RÔLE DU MOIS</div>"
+            "<div class='etape-aide'>Ta décision est prise. Il te reste "
+            "ton bilan éclair : deux minutes pour regarder ton mois en "
+            "face et laisser une trace pour ta S6 et ta S7.</div>",
+            unsafe_allow_html=True)
+        with st.container(key="etape_bar"):
+            if st.button("Faire mon bilan éclair →", type="primary",
+                         use_container_width=True):
+                aller("vie")
+    elif params.get("lance_le") and mois_courant >= 1 \
+            and min(mois_courant, donnees.MOIS_MAX) < donnees.MOIS_MAX \
+            and decision and bilan \
+            and not (vie.get("reglages") or {}).get(
+                str(min(mois_courant, donnees.MOIS_MAX) + 1)):
+        mois_suivant = min(mois_courant, donnees.MOIS_MAX) + 1
+        st.markdown(
+            "<div class='etape-titre'>PRÉPARE TON PROCHAIN MOIS</div>"
+            "<div class='etape-aide'>Ta décision et ton bilan sont "
+            "faits. Il te reste un geste concret : régler tes heures, "
+            "ton épicerie et ton électricité pour le mois suivant, et "
+            "voir ce que ça donne avant de garder ton plan.</div>",
+            unsafe_allow_html=True)
+        with st.container(key="etape_bar"):
+            if st.button(f"Préparer mon mois {mois_suivant} →",
+                         type="primary", use_container_width=True):
+                aller("vie")
+    elif courante:
         nom = donnees.nom_section(courante)
         st.markdown(
             "<div class='etape-titre'>MA PROCHAINE ÉTAPE</div>"
@@ -1250,6 +1423,31 @@ def page_accueil(compte, dossier, profil):
             if st.button(f"{courante} · {nom} →", type="primary",
                          use_container_width=True):
                 aller(courante.lower() if courante in ("S1", "S2", "S3") else "sections")
+    elif params.get("lance_le") and mois_courant >= 1:
+        mois_affiche = min(mois_courant, donnees.MOIS_MAX)
+        fermeture = donnees.date_fermeture_mois(params, mois_affiche)
+        if mois_courant > donnees.MOIS_MAX:
+            aide = ("Tes sections et tes rendez-vous sont faits. Les "
+                    "neuf mois de vie sont passés : ton journal garde "
+                    "toute l'histoire de ton projet.")
+        elif fermeture:
+            aide = ("Tes sections et tes rendez-vous du mois sont "
+                    f"faits. Le mois {mois_affiche} se ferme le "
+                    f"{fermeture.strftime('%d/%m')} ; ensuite, un "
+                    "nouveau mois commence avec une nouvelle décision "
+                    "et un nouveau bilan.")
+        else:
+            aide = ("Tes sections et tes rendez-vous du mois sont "
+                    "faits. Le prochain mois commencera avec une "
+                    "nouvelle décision et un nouveau bilan.")
+        st.markdown(
+            "<div class='etape-titre'>TON MOIS EST BOUCLÉ</div>"
+            f"<div class='etape-aide'>{aide}</div>",
+            unsafe_allow_html=True)
+        with st.container(key="etape_bar"):
+            if st.button("Voir mon journal dans Ma vie →", type="primary",
+                         use_container_width=True):
+                aller("vie")
     else:
         st.success("Tu as terminé toutes tes sections. Beau travail!")
 
@@ -2633,6 +2831,12 @@ def _bloc_ton_mois(compte, dossier, profil, params, mois_courant,
     mouvements = donnees.generer_mouvements_mois(
         dossier_copie, profil, params, min(mois_courant, donnees.MOIS_MAX),
         compte["identifiant"])
+    # La décision par défaut ne s'applique qu'à la fermeture du mois :
+    # tant que l'élève peut encore décider, on ne l'affiche pas comme
+    # une « décision manquée » dans les mouvements à venir.
+    mouvements = [m for m in mouvements
+                  if not str(m.get("libelle", "")).startswith(
+                      "Décision manquée")]
     par_jour = {}
     for m in mouvements:
         par_jour.setdefault(m["jour"], []).append(m)
@@ -2659,13 +2863,18 @@ def _bloc_ton_mois(compte, dossier, profil, params, mois_courant,
     bilan = (vie.get("bilans") or {}).get(cle)
     txt_decision = "prise ✓" if decision else "à prendre dans Ma vie"
     txt_bilan = "fait ✓" if bilan else "à faire dans Ma vie"
+    if decision and bilan:
+        txt_rdv = ("Mois bouclé de ton bord : <b>décision prise</b> et "
+                   "<b>bilan fait</b>.")
+    else:
+        txt_rdv = (f"Ta décision du mois : <b>{txt_decision}</b> · "
+                   f"Ton bilan éclair : <b>{txt_bilan}</b>")
     bloc = (
         "<div class='pf-papier pf-cal'><div class='pf-aimant pf-ableu'></div>"
         f"<div class='titre'><span>TON MOIS</span><span class='mois'>MOIS "
         f"{min(mois_courant, donnees.MOIS_MAX)} DE {donnees.MOIS_MAX}</span></div>"
         "<table>" + "".join(lignes) + "</table>"
-        f"<div class='rdv'>Ta décision du mois : <b>{txt_decision}</b> · "
-        f"Ton bilan éclair : <b>{txt_bilan}</b></div></div>")
+        f"<div class='rdv'>{txt_rdv}</div></div>")
     if prochain is not None:
         detail = (f"Prochain mouvement : <b>jour {prochain['jour']}, "
                   f"{_court(prochain['libelle']).lower()}</b> "
@@ -2678,7 +2887,6 @@ def _bloc_ton_mois(compte, dossier, profil, params, mois_courant,
 def page_vie(compte, dossier, profil):
     if st.button("Retour à l'accueil"):
         aller("accueil")
-    st.markdown("## Ma vie")
     params = donnees.obtenir_parametres(MAGASIN, compte["groupe"])
     vie = donnees.obtenir_vie(dossier)
     mois_courant, _ = donnees.position_dans_mois(params)
@@ -2694,80 +2902,237 @@ def page_vie(compte, dossier, profil):
         st.info("Le calendrier est sur pause (ton enseignant l'a mis en "
                 "attente). La vie reprendra bientôt.")
     mois_courant = min(mois_courant, donnees.MOIS_MAX)
+    cle = str(mois_courant)
+    decision = (vie.get("decisions") or {}).get(cle) \
+        if mois_courant >= 1 else None
+    bilan = (vie.get("bilans") or {}).get(cle) \
+        if mois_courant >= 1 else None
+    nb_connexions = len(vie.get("connexions") or [])
+    if mois_courant >= 1:
+        etats = (
+            f"<span class='vie-etat {'fait' if decision else ''}'>"
+            f"Décision : <b>{'tranchée' if decision else 'à trancher'}</b></span>"
+            f"<span class='vie-etat {'fait' if bilan else ''}'>"
+            f"Bilan éclair : <b>{'fait' if bilan else 'à faire'}</b></span>"
+            f"<span class='vie-etat'>Connexions : <b>{nb_connexions} "
+            f"jour{'s' if nb_connexions > 1 else ''}</b></span>")
+        titre_vie = f"Ma vie · Mois {mois_courant}"
+    else:
+        etats = ("<span class='vie-etat'>Premier mois : "
+                 "<b>pas encore commencé</b></span>")
+        titre_vie = "Ma vie · Avant le premier mois"
+    st.markdown(
+        "<section class='vie-bandeau'>"
+        "<div class='mention'>LE JOURNAL DE BORD · ÉPINGLÉ SUR LA PORTE</div>"
+        f"<h2>{titre_vie}</h2>"
+        "<div class='phrase'>Ici, tu ne fais pas que regarder tes frais "
+        "passer. Tu tranches, tu laisses une trace, puis tu vois ce que "
+        "ton mois devient.</div>"
+        f"<div class='vie-etats'>{etats}</div></section>",
+        unsafe_allow_html=True)
 
     # --- Les deux rendez-vous du mois en cours ---
     if mois_courant >= 1:
-        st.markdown("<section class='carte bloc-accent'><h2>Tes deux "
-                    "rendez-vous du mois</h2>"
-                    "<div class='aide'>Chaque mois de vie, tu as un rôle "
-                    "à jouer deux fois : décider, puis regarder ton mois "
-                    "en face. C'est ça, vivre le projet.</div></section>",
+        with st.container(key="vie_decision"):
+            st.markdown(
+                "<div class='vie-objet-mention'>Premier rendez-vous · "
+                "milieu de semaine</div>"
+                f"<div class='vie-objet-titre'>1. Ta décision du mois "
+                f"{mois_courant}</div>",
+                unsafe_allow_html=True)
+            if decision:
+                choix = next((c for c in donnees.BANQUE_CHOIX_VIE
+                              if c["id"] == decision["choix_id"]), None)
+                if choix:
+                    opt = choix["options"][decision["option"]]
+                    mention = ("La vie a choisi à ta place parce que tu "
+                               "n'avais pas décidé avant la fermeture."
+                               if decision.get("defaut") else
+                               "C'est définitif : pas de retour en arrière.")
+                    st.markdown(
+                        "<div class='vie-tampon'>TRANCHÉ</div>"
+                        "<div class='vie-fait-ligne'><b>Décidé :</b> "
+                        f"{opt['libelle']}</div>"
+                        "<div class='vie-fait-ligne'><b>Effet sur ton "
+                        "solde :</b> "
+                        f"{fmt_montant(decision['montant'], signe=True)}"
+                        "</div>"
+                        f"<div class='vie-texte'>{mention}</div>",
+                        unsafe_allow_html=True)
+            else:
+                choix = donnees.choix_pour_mois(compte["identifiant"],
+                                                mois_courant)
+                st.markdown(
+                    f"<div class='vie-scenario'>{choix['titre']}</div>"
+                    f"<div class='vie-texte'>{choix['texte']}</div>",
                     unsafe_allow_html=True)
-        cle = str(mois_courant)
-        decision = (vie.get("decisions") or {}).get(cle)
-        st.markdown(f"### 1. Ta décision du mois {mois_courant}")
-        if decision:
-            choix = next((c for c in donnees.BANQUE_CHOIX_VIE
-                          if c["id"] == decision["choix_id"]), None)
-            if choix:
-                opt = choix["options"][decision["option"]]
-                mention = " (choix par défaut : tu n'avais pas décidé)" \
-                    if decision.get("defaut") else ""
-                st.success(f"Décidé : {opt['libelle']} "
-                           f"({fmt_montant(decision['montant'], signe=True)})"
-                           f"{mention}")
-        else:
-            choix = donnees.choix_pour_mois(compte["identifiant"],
-                                            mois_courant)
-            st.markdown(f"**{choix['titre']}**")
-            st.write(choix["texte"])
-            choix_idx = st.radio(
-                "Tu fais quoi ?",
-                options=list(range(len(choix["options"]))),
-                format_func=lambda i: (
-                    f"{choix['options'][i]['libelle']} "
-                    f"({fmt_montant(choix['options'][i]['montant'], signe=True)})"),
-                key=f"decision_radio_{mois_courant}")
-            if st.button("Je décide", type="primary"):
-                try:
-                    donnees.enregistrer_decision(
+                choix_idx = st.radio(
+                    "Tu fais quoi ?",
+                    options=list(range(len(choix["options"]))),
+                    format_func=lambda i: choix["options"][i]["libelle"],
+                    key=f"decision_radio_{mois_courant}")
+                st.markdown(
+                    "<div class='vie-texte'>Les montants ne sont pas "
+                    "écrits à côté des choix. Tu verras l'effet de ton "
+                    "choix seulement après l'avoir tranché.</div>",
+                    unsafe_allow_html=True)
+                if st.button("Je décide, sans retour en arrière",
+                             type="primary"):
+                    try:
+                        donnees.enregistrer_decision(
+                            MAGASIN, compte["identifiant"], mois_courant,
+                            int(choix_idx))
+                        st.rerun()
+                    except ValueError as erreur:
+                        st.error(str(erreur))
+        with st.container(key="vie_bilan"):
+            st.markdown(
+                "<div class='vie-objet-mention'>Deuxième rendez-vous · "
+                "fin de semaine</div>"
+                f"<div class='vie-objet-titre'>2. Ton bilan éclair du "
+                f"mois {mois_courant}</div>",
+                unsafe_allow_html=True)
+            if bilan:
+                st.markdown(
+                    f"<div class='vie-texte'><b>Question :</b> "
+                    f"{bilan['question']}</div>"
+                    "<div class='vie-fait-ligne'>Ta réponse : "
+                    f"{bilan['choix']}"
+                    + (f" · {bilan['phrase']}" if bilan["phrase"] else "")
+                    + "</div>"
+                    "<div class='vie-texte'>Ce bilan reste dans ton "
+                    "journal. Il te servira pour ta S6 et ta S7.</div>",
+                    unsafe_allow_html=True)
+            else:
+                question = donnees.BANQUE_BILANS[
+                    (mois_courant - 1) % len(donnees.BANQUE_BILANS)]
+                st.write(f"**{question}**")
+                reponse = st.radio(
+                    "En un mot :",
+                    ["Ça s'est bien passé", "C'était serré",
+                     "C'était difficile"],
+                    key=f"bilan_radio_{mois_courant}")
+                phrase = st.text_input(
+                    "En une phrase, pourquoi ?",
+                    key=f"bilan_phrase_{mois_courant}")
+                if st.button("Je note mon bilan"):
+                    donnees.enregistrer_bilan(
                         MAGASIN, compte["identifiant"], mois_courant,
-                        int(choix_idx))
-                    st.success("Décision prise et notée dans ton journal.")
+                        reponse, phrase.strip())
                     st.rerun()
-                except ValueError as erreur:
-                    st.error(str(erreur))
-        st.markdown(f"### 2. Ton bilan éclair du mois {mois_courant}")
-        bilan = (vie.get("bilans") or {}).get(cle)
-        if bilan:
-            st.success(f"Question : {bilan['question']}")
-            st.write(f"Ta réponse : {bilan['choix']}"
-                     + (f" — {bilan['phrase']}" if bilan["phrase"] else ""))
-        else:
-            question = donnees.BANQUE_BILANS[
-                (mois_courant - 1) % len(donnees.BANQUE_BILANS)]
-            st.write(f"**{question}**")
-            reponse = st.radio(
-                "En un mot :",
-                ["Ça s'est bien passé", "C'était serré",
-                 "C'était difficile"],
-                key=f"bilan_radio_{mois_courant}")
-            phrase = st.text_input(
-                "En une phrase, pourquoi ?",
-                key=f"bilan_phrase_{mois_courant}")
-            if st.button("Je note mon bilan"):
-                donnees.enregistrer_bilan(
-                    MAGASIN, compte["identifiant"], mois_courant,
-                    reponse, phrase.strip())
-                st.success("Bilan noté. Il te servira pour ta S6 et ta S7.")
-                st.rerun()
+        if decision and bilan:
+            fermeture = donnees.date_fermeture_mois(params, mois_courant)
+            texte_fermeture = (
+                f" Le mois se ferme le {fermeture.strftime('%d/%m')}."
+                if fermeture else "")
+            courante = donnees.section_courante(dossier)
+            if courante:
+                texte_suite = (
+                    "Ta décision est prise et ton bilan est noté."
+                    f"{texte_fermeture} La prochaine chose concrète à "
+                    f"faire, c'est ta {courante}.")
+            else:
+                texte_suite = (
+                    "Ta décision est prise et ton bilan est noté."
+                    f"{texte_fermeture} Tes sections sont faites : il "
+                    "te reste à surveiller ton solde, tes imprévus et "
+                    "le prochain mois.")
+            st.markdown(
+                "<section class='vie-suite'><h2>Mois bouclé de ton "
+                f"bord</h2><div>{texte_suite}</div></section>",
+                unsafe_allow_html=True)
+            if courante:
+                if st.button(f"Continuer avec la {courante}"):
+                    aller(courante.lower()
+                          if courante in ("S1", "S2", "S3")
+                          else "sections")
+            else:
+                if st.button("Retourner à ma porte"):
+                    aller("accueil")
+        if mois_courant < donnees.MOIS_MAX:
+            plan = (vie.get("reglages") or {}).get(str(mois_courant + 1))
+            with st.container(key="vie_reglages"):
+                st.markdown(
+                    "<div class='vie-objet-mention'>Troisième geste · "
+                    "préparer la suite</div>"
+                    f"<div class='vie-objet-titre'>3. Prépare ton mois "
+                    f"{mois_courant + 1}</div>"
+                    "<div class='vie-texte'>Trois réglages, tirés de "
+                    "tes propres chiffres. Ils s'appliqueront le mois "
+                    "prochain, jamais à rebours. Tu peux ajuster ton "
+                    "plan tant que le mois en cours n'est pas fermé."
+                    "</div>",
+                    unsafe_allow_html=True)
+                heures = st.radio(
+                    "Tes heures de travail",
+                    options=["garder", "plus", "moins"],
+                    format_func=lambda c: {
+                        "garder": "Garder mes heures",
+                        "plus": "Demander 4 h de plus par semaine",
+                        "moins": "Réduire de 4 h par semaine, "
+                                 "pour étudier"}[c],
+                    horizontal=True, key=f"reg_heures_{mois_courant}",
+                    index=["garder", "plus", "moins"].index(
+                        plan["heures"]) if plan else 0)
+                epicerie = st.radio(
+                    "Ton épicerie",
+                    options=["normal", "serrer", "mieux"],
+                    format_func=lambda c: {
+                        "normal": "Comme d'habitude",
+                        "serrer": "Serrer un peu (-10 %)",
+                        "mieux": "Mieux manger (+10 %)"}[c],
+                    horizontal=True, key=f"reg_epicerie_{mois_courant}",
+                    index=["normal", "serrer", "mieux"].index(
+                        plan["epicerie"]) if plan else 0)
+                electricite = st.radio(
+                    "Ton électricité",
+                    options=["normal", "econome", "confort"],
+                    format_func=lambda c: {
+                        "normal": "Comme d'habitude",
+                        "econome": "Économe (-10 %)",
+                        "confort": "Confort (+10 %)"}[c],
+                    horizontal=True,
+                    key=f"reg_electricite_{mois_courant}",
+                    index=["normal", "econome", "confort"].index(
+                        plan["electricite"]) if plan else 0)
+                candidat = {"heures": heures, "epicerie": epicerie,
+                            "electricite": electricite}
+                _, total_plan = donnees.projeter_mois(
+                    dossier, profil, params, mois_courant + 1, candidat)
+                _, total_base = donnees.projeter_mois(
+                    dossier, profil, params, mois_courant + 1,
+                    {"heures": "garder", "epicerie": "normal",
+                     "electricite": "normal"})
+                delta_plan = round(total_plan - total_base, 2)
+                st.markdown(
+                    f"<div class='vie-projection'><div>Avec ce plan, "
+                    f"ton mois {mois_courant + 1} donnerait "
+                    f"<b>{fmt_montant(total_plan, signe=True)}</b> au "
+                    f"total, soit <b>{fmt_montant(delta_plan, signe=True)}"
+                    "</b> par rapport à ne rien changer.</div></div>",
+                    unsafe_allow_html=True)
+                if plan:
+                    st.markdown(
+                        "<div class='vie-texte'>Plan déjà noté pour "
+                        "ce mois-là : tu peux encore l'ajuster.</div>",
+                        unsafe_allow_html=True)
+                if st.button("Je garde ce plan", type="primary"):
+                    donnees.enregistrer_reglages(
+                        MAGASIN, compte["identifiant"], mois_courant,
+                        heures, epicerie, electricite)
+                    st.rerun()
 
     # --- Le journal des mouvements, mois par mois ---
     st.markdown("### Ton journal, mois par mois")
     mouvements = vie.get("mouvements") or []
     if not mouvements:
-        st.write("Rien pour l'instant : le premier mois n'est pas encore "
-                 "terminé. Reviens après la première semaine.")
+        st.markdown(
+            "<section class='vie-attente'><b>Rien pour l'instant : le "
+            "premier mois n'est pas encore terminé.</b> Reviens après "
+            "la première semaine. À la fermeture, la paie, le loyer et "
+            "les frais du mois 1 vont tomber ici d'un coup, avec le "
+            "total du mois.</section>",
+            unsafe_allow_html=True)
     par_mois = {}
     for m in mouvements:
         par_mois.setdefault(m.get("mois") or 0, []).append(m)
@@ -2780,7 +3145,7 @@ def page_vie(compte, dossier, profil):
             f"<div class='valeur'>{fmt_montant(m['montant'], signe=True)}</div></div>"
             for m in groupe)
         st.markdown(
-            f"<section class='carte'><h2>{titre}</h2>" + lignes
+            f"<section class='vie-recu'><h2>{titre}</h2>" + lignes
             + "<div class='ligne total'><div>Solde du mois</div>"
             f"<div class='valeur'>{fmt_montant(total, signe=True)}</div></div>"
             "</section>", unsafe_allow_html=True)
@@ -2788,7 +3153,8 @@ def page_vie(compte, dossier, profil):
         f"<div class='note-crayon'>Tu t'es connecté "
         f"{len(vie.get('connexions') or [])} jour"
         f"{'s' if len(vie.get('connexions') or []) > 1 else ''} "
-        f"depuis le début du projet.</div>")
+        f"depuis le début du projet.</div>",
+        unsafe_allow_html=True)
 
 
 CODE_PROF = "1959"
@@ -3011,7 +3377,7 @@ def page_console(compte):
                 mois=min(mois_courant, donnees.MOIS_MAX) or None)
         donnees.consigner_prof(
             MAGASIN, f"Correction en lot groupe {groupe} : "
-            f"{fmt_montant(montant_corr, signe=True)} — {motif}.")
+            f"{fmt_montant(montant_corr, signe=True)} : {motif}.")
         st.success("Correction appliquée à tout le groupe.")
 
     st.markdown("### Mot de passe oublié")
@@ -3036,7 +3402,7 @@ def page_console(compte):
     entrees = donnees.lire_journal_prof(MAGASIN)
     if entrees:
         for entree in entrees[-30:][::-1]:
-            st.write(f"{entree['date']} — {entree['texte']}")
+            st.write(f"{entree['date']} · {entree['texte']}")
     else:
         st.write("Rien pour l'instant : tout ce que tu injecteras "
                  "paraîtra ici.")
