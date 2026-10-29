@@ -31,7 +31,8 @@ except Exception:
 # ancienne version du module donnees (rechargement partiel de Streamlit
 # Cloud), on force son rechargement avant d'aller plus loin.
 if not hasattr(donnees, "PIECE_COLOC") or not hasattr(donnees, "nouveau_jeton_session") \
-        or not hasattr(donnees, "calculer_electricite"):
+        or not hasattr(donnees, "calculer_electricite") \
+        or not hasattr(donnees, "appliquer_vie"):
     import importlib
     importlib.reload(donnees)
 
