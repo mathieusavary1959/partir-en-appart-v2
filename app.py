@@ -73,12 +73,19 @@ p, li, label{ color:var(--texte); }
 .pf-lampe .ampoule{ width:24px; height:24px; border-radius:50%; margin:-14px auto 0;
   background:radial-gradient(circle at 50% 42%,#FFF6D8,#FFD98A 60%,rgba(255,217,138,0));
   box-shadow:0 0 40px 18px rgba(255,224,150,.32); }
-/* La barre de navigation : un contrôle segmenté, comme les pastilles de la maquette */
-[data-testid="stSegmentedControl"]{ background:#2B2F3A; border:1.5px solid #454B5C; border-radius:999px; padding:4px; width:fit-content; }
-[data-testid="stSegmentedControl"] button{ border-radius:999px !important; border:none !important; background:transparent !important;
-  font-family:"Bebas Neue",sans-serif; font-size:17px; letter-spacing:.07em; color:var(--gris) !important; padding:5px 16px !important; box-shadow:none !important; }
-[data-testid="stSegmentedControl"] button[aria-checked="true"]{ background:var(--texte) !important; color:#1C1F27 !important; }
-[data-testid="stSegmentedControl"] button p{ color:inherit !important; font-family:inherit; font-size:inherit; letter-spacing:inherit; }
+/* Les barres de boutons du haut (navigation et choix d'accès) :
+   une piste sombre, des pastilles ; l'actif est blanc à texte foncé. */
+.st-key-nav_bar [data-testid="stHorizontalBlock"], .st-key-acces_bar [data-testid="stHorizontalBlock"]{
+  background:#2B2F3A; border:1.5px solid #454B5C; border-radius:999px; padding:6px; gap:6px; align-items:center; }
+.st-key-nav_bar .stButton > button, .st-key-acces_bar .stButton > button{
+  width:100%; border:none !important; background:transparent; color:#C9CEDA; border-radius:999px;
+  font-family:"Bebas Neue",sans-serif; font-size:17px; letter-spacing:.07em; padding:6px 4px; box-shadow:none; }
+.st-key-nav_bar .stButton > button:hover, .st-key-acces_bar .stButton > button:hover{ color:var(--texte); }
+.st-key-nav_bar .stButton > button[kind="primary"], .st-key-acces_bar .stButton > button[kind="primary"]{
+  background:var(--texte); color:#1C1F27; box-shadow:none; }
+.st-key-nav_bar .stButton > button[kind="primary"]:hover, .st-key-acces_bar .stButton > button[kind="primary"]:hover{ color:#1C1F27; opacity:.92; }
+.st-key-nav_bar .stButton > button p, .st-key-acces_bar .stButton > button p{
+  font-family:inherit; font-size:inherit; letter-spacing:inherit; color:inherit; }
 /* Le mur : titre et identité */
 .marque{ font-family:"Bebas Neue",sans-serif; font-size:56px; letter-spacing:.03em; line-height:.95; text-shadow:0 4px 0 rgba(0,0,0,.4); }
 .marque span{ color:var(--jaune); }
@@ -183,6 +190,8 @@ p, li, label{ color:var(--texte); }
 .pf-papier::before{ content:""; position:absolute; inset:0; border-radius:3px; pointer-events:none; opacity:.05; z-index:0;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E"); }
 .pf-papier > *{ position:relative; z-index:1; }
+.pf-papier, .pf-papier div, .pf-papier span, .pf-papier td, .pf-papier li, .pf-papier p{ color:var(--encre); }
+.pf-papier .pf-autocollant, .pf-papier .pf-autocollant div{ color:#FFFFFF; }
 .pf-aimant{ position:absolute; top:-8px; left:50%; margin-left:-8px; width:16px; height:16px; border-radius:50%; z-index:3;
   box-shadow:0 2px 4px rgba(0,0,0,.4), inset 0 -2px 3px rgba(0,0,0,.25); }
 .pf-arouge{background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.8),rgba(255,255,255,0) 45%),#D93A2B;}
@@ -215,6 +224,8 @@ p, li, label{ color:var(--texte); }
 .pf-cal .avenir{ color:#4A453C; text-align:right; font-size:13px; font-weight:600; }
 
 .pf-croquis{ grid-area:croquis; background:#FFFFFF; }
+.pf-croquis svg{ width:100%; height:auto; display:block; }
+.pf-polaroid svg{ width:100%; height:auto; display:block; }
 .pf-croquis .titre{ font-family:"Caveat",cursive; font-size:26px; line-height:1; }
 .pf-croquis .note{ font-size:13px; margin-top:5px; }
 .pf-croquis .note b{ color:var(--crayon); }
@@ -232,7 +243,7 @@ p, li, label{ color:var(--texte); }
 .pf-liste li{ font-family:"Caveat",cursive; font-size:22px; line-height:30px; display:flex; gap:9px; align-items:baseline; }
 .pf-liste .case{ flex:none; width:14px; height:14px; border:2px solid #6E6759; border-radius:3px; position:relative; top:1px; transform:rotate(-1.5deg); }
 .pf-liste li.fait .case::after{ content:"✓"; position:absolute; left:0; top:-10px; font-size:19px; color:var(--vert); font-weight:700; transform:rotate(-6deg); }
-.pf-liste li.fait{ color:#6E6759; text-decoration:line-through; text-decoration-color:var(--vert); }
+.pf-liste li.fait{ color:#4A453C; text-decoration:line-through; text-decoration-color:var(--vert); }
 .pf-liste li.encours span.nom{ box-shadow:inset 0 -8px 0 rgba(255,210,63,.55); }
 .pf-liste .consigne{ font-family:"Work Sans",sans-serif; font-size:12.5px; color:#4A453C; margin-top:7px; line-height:1.45; }
 
@@ -408,11 +419,22 @@ def ecran_acces():
     entete_marque("Ton premier appartement, pour vrai. Trois-Rivières, en colocation.")
     bandeau_frigo("BIENVENUE · TON PREMIER APPART",
                   "Ta clé arrive<br>à la fin de la S2")
-    ecran = st.segmented_control(
-        "Que veux-tu faire?",
-        ["Je me connecte", "Je m'inscris (première fois)"],
-        default="Je me connecte", key="ecran_acces")
-    if ecran == "Je m'inscris (première fois)":
+    choix = st.session_state.get("ecran_acces", "connexion")
+    with st.container(key="acces_bar"):
+        col_conn, col_insc = st.columns(2)
+        with col_conn:
+            if st.button("Je me connecte", key="acces_conn",
+                         type="primary" if choix == "connexion" else "secondary",
+                         use_container_width=True):
+                st.session_state["ecran_acces"] = "connexion"
+                st.rerun()
+        with col_insc:
+            if st.button("Je m'inscris (première fois)", key="acces_insc",
+                         type="primary" if choix == "inscription" else "secondary",
+                         use_container_width=True):
+                st.session_state["ecran_acces"] = "inscription"
+                st.rerun()
+    if choix == "inscription":
         formulaire_inscription()
     else:
         formulaire_connexion()
@@ -482,17 +504,20 @@ def formulaire_connexion():
 def barre_navigation(page):
     onglets = [("accueil", "Accueil"), ("vie", "Ma vie"), ("score", "Mon score"),
                ("imprevus", "Mes imprévus"), ("sections", "Mes sections S1 à S7")]
-    noms = dict(onglets)
     actif = "sections" if page == "s1" else page
-    if st.session_state.get("_nav_page") != actif:
-        st.session_state["nav_seg"] = noms[actif]
-        st.session_state["_nav_page"] = actif
-    choix = st.segmented_control(
-        "Navigation", [nom for _, nom in onglets],
-        key="nav_seg", label_visibility="collapsed")
-    if choix and choix != noms[actif]:
-        code = [c for c, n in onglets if n == choix][0]
-        aller(code)
+    with st.container(key="nav_bar"):
+        cols = st.columns([1.1, 1, 1.2, 1.4, 2.2, 1.5])
+        for col, (code, nom) in zip(cols, onglets):
+            with col:
+                if st.button(nom, key=f"nav_{code}",
+                             type="primary" if code == actif else "secondary",
+                             use_container_width=True):
+                    if code != actif:
+                        aller(code)
+        with cols[5]:
+            if st.button("Me déconnecter", key="nav_deco",
+                         use_container_width=True):
+                deconnecter()
 
 
 def entete_eleve(compte, profil):
@@ -768,12 +793,7 @@ def main():
 
     entete_eleve(compte, profil)
     page = st.session_state.get("page", "accueil")
-    col_nav, col_deco = st.columns([6, 1])
-    with col_nav:
-        barre_navigation(page)
-    with col_deco:
-        if st.button("Me déconnecter", use_container_width=True):
-            deconnecter()
+    barre_navigation(page)
 
     if page == "accueil":
         page_accueil(compte, dossier, profil)
