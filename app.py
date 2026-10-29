@@ -601,10 +601,18 @@ def fmt_montant(valeur):
 
 def aller(page):
     st.session_state["page"] = page
+    # La page est aussi préparée pour le cookie « appart2_page » : après
+    # un rafraîchissement, l'élève revient sur la page où il était, pas
+    # à l'accueil (demande de Mathieu, 28 oct. 2026). Dépôt différé au
+    # début de l'exécution suivante, comme le jeton de session.
+    st.session_state["_page_a_deposer"] = page
     st.rerun()
 
 
 NOM_COOKIE_JETON = "appart2_jeton"
+NOM_COOKIE_PAGE = "appart2_page"
+PAGES_CONNUES = {"accueil", "vie", "score", "imprevus", "sections",
+                 "s1", "s2", "s3"}
 
 
 def deconnecter():
@@ -629,6 +637,10 @@ def ouvrir_session(identifiant):
     l'adresse après un vrai rechargement (vérifié en production)."""
     st.session_state["identifiant"] = identifiant
     st.session_state["page"] = "accueil"
+    # Connexion fraîche par mot de passe : on repart de l'accueil, et le
+    # cookie de page est écrasé pour ne pas restaurer la page d'un autre
+    # compte sur le même navigateur.
+    st.session_state["_page_a_deposer"] = "accueil"
     jeton = donnees.nouveau_jeton_session(MAGASIN, identifiant)
     if jeton:
         st.session_state["_jeton_a_deposer"] = jeton
@@ -641,14 +653,24 @@ def _traiter_cookie_en_attente(cm):
     if cm is None:
         return
     if st.session_state.pop("_cookie_a_supprimer", False):
-        try:
-            cm.delete(NOM_COOKIE_JETON)
-        except Exception:
-            pass
+        for nom_cookie in (NOM_COOKIE_JETON, NOM_COOKIE_PAGE):
+            try:
+                cm.delete(nom_cookie)
+            except Exception:
+                pass
     jeton = st.session_state.pop("_jeton_a_deposer", None)
     if jeton:
         try:
             cm.set(NOM_COOKIE_JETON, jeton,
+                   expires_at=datetime.datetime.now()
+                   + datetime.timedelta(days=90),
+                   max_age=90 * 24 * 3600)
+        except Exception:
+            pass
+    page = st.session_state.pop("_page_a_deposer", None)
+    if page in PAGES_CONNUES:
+        try:
+            cm.set(NOM_COOKIE_PAGE, page,
                    expires_at=datetime.datetime.now()
                    + datetime.timedelta(days=90),
                    max_age=90 * 24 * 3600)
@@ -673,7 +695,15 @@ def restaurer_session(cm):
         identifiant = donnees.identifiant_par_jeton(MAGASIN, jeton)
         if identifiant:
             st.session_state["identifiant"] = identifiant
-            st.session_state["page"] = "accueil"
+            # Restaurer aussi la page où l'élève était (cookie de page),
+            # pas seulement sa session : un rafraîchissement le ramène
+            # à sa section, jamais à l'accueil par défaut.
+            page = None
+            try:
+                page = cm.get(NOM_COOKIE_PAGE)
+            except Exception:
+                page = None
+            st.session_state["page"] = page if page in PAGES_CONNUES else "accueil"
 
 
 def entete_marque(sous_titre):
