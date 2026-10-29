@@ -255,6 +255,10 @@ p, li, label{ color:var(--texte); }
 .pf-cal table{ width:100%; border-collapse:collapse; margin-top:5px; font-size:14px; }
 .pf-cal td{ padding:4px 2px; border-bottom:1px dashed #C9C2AE; }
 .pf-cal tr:last-child td{ border-bottom:none; }
+.pf-cal tr.passe td{ opacity:.5; text-decoration:line-through; }
+.pf-cal td.moins{ color:#A93226; font-weight:700; text-align:right; white-space:nowrap; }
+.pf-cal td.plus{ text-align:right; white-space:nowrap; }
+.pf-cal .rdv{ font-family:"Caveat",cursive; font-size:16.5px; color:#4A4234; margin-top:7px; border-top:1px dashed #C9C2AE; padding-top:5px; }
 .pf-cal .jour{ font-family:"Bebas Neue",sans-serif; font-size:16px; width:44px; }
 .pf-cal .cercle{ display:inline-block; border:2.5px solid var(--crayon); padding:0 7px; transform:rotate(-3deg);
   border-radius:52% 48% 55% 45%/48% 55% 45% 52%; }
@@ -780,9 +784,12 @@ MAGASIN = obtenir_magasin()
 PROFILS = {int(p["numero"]): p for p in donnees.charger_profils()}
 
 # ------------------------------------------------------------------- utilitaires
-def fmt_montant(valeur):
-    """2 100,00 $ : format français simple."""
-    return f"{float(valeur):,.2f}".replace(",", " ").replace(".", ",") + " $"
+def fmt_montant(valeur, signe=False):
+    """2 100,00 $ : format français simple. Avec signe : +2 100,00 $."""
+    texte = f"{abs(float(valeur)):,.2f}".replace(",", " ").replace(".", ",") + " $"
+    if signe:
+        return ("+" if float(valeur) >= 0 else "−") + texte
+    return texte
 
 
 def aller(page):
@@ -797,7 +804,7 @@ def aller(page):
 
 NOM_COOKIE_JETON = "appart2_jeton"
 NOM_COOKIE_PAGE = "appart2_page"
-PAGES_CONNUES = {"accueil", "vie", "score", "imprevus", "sections",
+PAGES_CONNUES = {"accueil", "vie", "score", "imprevus", "sections", "console",
                  "s1", "s2", "s3", "s4", "s5"}
 
 
@@ -806,7 +813,8 @@ def deconnecter():
     identifiant = st.session_state.get("identifiant")
     if identifiant:
         donnees.revoquer_jeton_session(MAGASIN, identifiant)
-    for cle in ("identifiant", "compte", "page"):
+    for cle in ("identifiant", "compte", "page", "console_ok",
+                "_annonces_montre", "_nouveaux_mouvements"):
         st.session_state.pop(cle, None)
     st.rerun()
 
@@ -1049,7 +1057,7 @@ def formulaire_connexion():
 def barre_navigation(page):
     onglets = [("accueil", "Accueil"), ("vie", "Ma vie"), ("score", "Mon score"),
                ("imprevus", "Mes imprévus"), ("sections", "Mes sections S1 à S7")]
-    actif = "sections" if page in ("s1", "s2", "s3") else page
+    actif = "sections" if page in ("s1", "s2", "s3", "s4", "s5") else page
     with st.container(key="nav_bar"):
         cols = st.columns([1.1, 1, 1.2, 1.4, 2.2, 1.5])
         for col, (code, nom) in zip(cols, onglets):
@@ -1068,11 +1076,19 @@ def barre_navigation(page):
 def entete_eleve(compte, profil):
     entete_marque("Ton premier appartement, pour vrai. "
                   f"Trois-Rivières, en colocation avec {profil['coloc']['prenom']}.")
+    params = donnees.obtenir_parametres(MAGASIN, compte["groupe"])
+    mois, _ = donnees.position_dans_mois(params)
+    if donnees.calendrier_en_pause(params):
+        texte_mois = "en pause"
+    elif mois >= 1:
+        texte_mois = f"mois {min(mois, donnees.MOIS_MAX)} de {donnees.MOIS_MAX}"
+    else:
+        texte_mois = "pas encore commencé"
     st.markdown(
         "<div class='puces'>"
         f"<div class='puce'>{compte['nom_affiche']} · <b>Cas {compte['cas_numero']} : {profil['prenom']}</b></div>"
         f"<div class='puce'>Groupe {compte['groupe']}</div>"
-        "<div class='puce'>Mois de vie : <b>pas encore commencé</b></div>"
+        f"<div class='puce'>Mois de vie : <b>{texte_mois}</b></div>"
         "</div>",
         unsafe_allow_html=True)
 
@@ -1106,6 +1122,10 @@ def html_porte_accueil(compte, dossier, profil):
     lettres = "".join(
         f"<span class='pf-lettre pf-l{i}'>{c}</span>"
         for i, c in enumerate("APPART!", start=1))
+    params = donnees.obtenir_parametres(MAGASIN, compte["groupe"])
+    mois_courant, jour_vie = donnees.position_dans_mois(params)
+    bloc_mois, detail_solde = _bloc_ton_mois(
+        compte, dossier, profil, params, mois_courant, jour_vie, paie)
     croquis = (
         "<svg viewBox='0 0 320 168' width='100%' height='auto' aria-label='Croquis de l appartement'>"
         "<g fill='none' stroke='#2A2620' stroke-width='3'>"
@@ -1136,23 +1156,9 @@ def html_porte_accueil(compte, dossier, profil):
         "<div class='pf-papier pf-solde pf-balA'><div class='pf-aimant pf-arouge'></div>"
         "<div class='main'>Il te reste</div>"
         f"<div class='montant'>{fmt_montant(solde)}</div>"
-        "<div class='detail'>C'est ton épargne de départ. Prochain mouvement : "
-        "<b>jour 1, paie et loyer</b>, quand le calendrier va commencer.</div></div>"
+        f"<div class='detail'>{detail_solde}</div></div>"
 
-        "<div class='pf-papier pf-cal'><div class='pf-aimant pf-ableu'></div>"
-        "<div class='titre'><span>TON MOIS</span><span class='mois'>PAS ENCORE COMMENCÉ</span></div>"
-        "<table>"
-        f"<tr><td class='jour'><span class='cercle'>J1</span></td><td>Paie</td>"
-        f"<td class='plus'>+{fmt_montant(paie)}</td><td>Loyer, ta part</td>"
-        "<td class='avenir'>à la S2</td></tr>"
-        "<tr><td class='jour'>J5</td><td>Épicerie du mois, ta part</td>"
-        "<td class='avenir'>à la S5</td><td></td><td></td></tr>"
-        "<tr><td class='jour'>J10</td><td>Hydro et internet, ta part</td>"
-        "<td class='avenir'>à la S4</td><td></td><td></td></tr>"
-        "<tr><td class='jour'>J15</td><td>Cellulaire, assurance, transport</td>"
-        "<td class='avenir'>à la S5</td><td></td><td></td></tr>"
-        "</table></div>"
-
+        + bloc_mois +
         "<div class='pf-papier pf-croquis'><div class='pf-ruban'></div>"
         "<div class='titre'>L'appart, vu d'en haut</div>"
         f"{croquis}"
@@ -1199,6 +1205,26 @@ def html_porte_accueil(compte, dossier, profil):
 
 
 def page_accueil(compte, dossier, profil):
+    nouveaux = st.session_state.get("_nouveaux_mouvements")
+    if nouveaux:
+        total = sum(m["montant"] for m in nouveaux)
+        lignes = "".join(
+            f"<div class='ligne'><div>{_court(m['libelle'])} "
+            f"(mois {m['mois']})</div><div class='valeur'>"
+            f"{fmt_montant(m['montant'], signe=True)}</div></div>"
+            for m in nouveaux)
+        st.markdown(
+            "<section class='carte bloc-accent'><h2>Pendant ton absence</h2>"
+            "<div class='aide'>La vie a continué pendant que tu n'étais "
+            "pas là. Voici ce qui s'est passé, en toute transparence : "
+            "rien n'est caché, tout est dans Ma vie.</div>"
+            + lignes
+            + "<div class='ligne total'><div>En tout</div>"
+            f"<div class='valeur'>{fmt_montant(total, signe=True)}</div></div>"
+            "</section>", unsafe_allow_html=True)
+        if st.button("J'ai vu, merci"):
+            st.session_state.pop("_nouveaux_mouvements", None)
+            st.rerun()
     st.markdown(html_porte_accueil(compte, dossier, profil), unsafe_allow_html=True)
     st.markdown(
         "<div class='pf-plinthe'></div><div class='pf-sol'>"
@@ -1288,7 +1314,7 @@ def page_s1(compte, dossier, profil):
     if deja_fait:
         st.success("Tu as déjà lu et compris ton profil. La S1 est terminée.")
     elif st.button("J'ai lu et je comprends mon profil", type="primary"):
-        donnees.definir_progression(MAGASIN, compte["identifiant"], "S1", "fait")
+        donnees.marquer_section_faite(MAGASIN, compte["identifiant"], "S1")
         st.success("S1 terminée. Bienvenue dans ton appart!")
         aller("accueil")
 
@@ -1424,8 +1450,7 @@ def page_s2(compte, dossier, profil):
                 for manque in manques:
                     st.error(manque)
             else:
-                donnees.definir_progression(MAGASIN, compte["identifiant"],
-                                            "S2", "fait")
+                donnees.marquer_section_faite(MAGASIN, compte["identifiant"], "S2")
                 st.success("S2 terminée. Ta clé est arrivée, bienvenue chez toi!")
                 aller("accueil")
 
@@ -1844,8 +1869,7 @@ def page_s3(compte, dossier, profil):
                 for manque in manques:
                     st.error(manque)
             else:
-                donnees.definir_progression(MAGASIN, compte["identifiant"],
-                                            "S3", "fait")
+                donnees.marquer_section_faite(MAGASIN, compte["identifiant"], "S3")
                 st.success("S3 terminée. Ton appart est meublé, bon emménagement!")
                 aller("accueil")
 
@@ -2104,8 +2128,7 @@ def page_s4(compte, dossier, profil):
                 for manque in manques:
                     st.error(manque)
             else:
-                donnees.definir_progression(MAGASIN, compte["identifiant"],
-                                            "S4", "fait")
+                donnees.marquer_section_faite(MAGASIN, compte["identifiant"], "S4")
                 st.success("S4 terminée. Toutes tes factures sont sur le pic!")
                 aller("accueil")
 
@@ -2508,6 +2531,16 @@ def main():
         return
     profil = PROFILS[int(compte["cas_numero"])]
 
+    nouveaux = donnees.appliquer_vie(MAGASIN, identifiant,
+                                      compte["groupe"], profil)
+    if nouveaux:
+        st.session_state["_nouveaux_mouvements"] = nouveaux
+        dossier = MAGASIN.charger_dossier(identifiant)
+    non_vues = donnees.annonces_non_vues(dossier)
+    if non_vues and st.session_state.get("_annonces_montre") != len(non_vues):
+        st.session_state["_annonces_montre"] = len(non_vues)
+        dialogue_annonces(identifiant, non_vues)
+
     entete_eleve(compte, profil)
     page = st.session_state.get("page", "accueil")
     barre_navigation(page)
@@ -2527,12 +2560,9 @@ def main():
     elif page == "sections":
         page_sections(compte, dossier, profil)
     elif page == "vie":
-        page_attente(
-            "Ma vie",
-            "Ici, tu verras le calendrier de ta vie en appart : ta paie, "
-            "ton loyer, tes factures, mois après mois. Le calendrier "
-            "commence quand ton enseignant le lance en classe.",
-            "phase P3")
+        page_vie(compte, dossier, profil)
+    elif page == "console":
+        page_console(compte)
     elif page == "score":
         page_attente(
             "Mon score",
@@ -2548,11 +2578,460 @@ def main():
             "surprises de ton enseignant.",
             "phase P3")
 
+    with st.container(key="acces_bar"):
+        if st.button("Console du prof", key="vers_console"):
+            aller("console")
+
     if MAGASIN.mode == "memoire":
         st.markdown(
             "<div class='pied'>Mode test local : les données sont gardées "
             "en mémoire seulement, le temps de la session.</div>",
             unsafe_allow_html=True)
+
+
+
+def _court(libelle):
+    """Version courte d'un libellé de mouvement, pour la porte."""
+    texte = libelle.split("(")[0].strip().rstrip(",")
+    return texte[:1].upper() + texte[1:] if texte else libelle
+
+
+def _bloc_ton_mois(compte, dossier, profil, params, mois_courant,
+                   jour_vie, paie):
+    """Le papier TON MOIS de la porte, vivant : avant le lancement,
+    l'aperçu des jours repères ; après, les mouvements du mois en
+    cours, les passés rayés au crayon, le prochain encerclé en rouge,
+    et l'état des deux rendez-vous du mois."""
+    if not params.get("lance_le") or mois_courant < 1:
+        bloc = (
+            "<div class='pf-papier pf-cal'><div class='pf-aimant pf-ableu'></div>"
+            "<div class='titre'><span>TON MOIS</span><span class='mois'>PAS ENCORE COMMENCÉ</span></div>"
+            "<table>"
+            f"<tr><td class='jour'><span class='cercle'>J1</span></td><td>Paie</td>"
+            f"<td class='plus'>+{fmt_montant(paie)}</td><td>Loyer, ta part</td>"
+            "<td class='avenir'>à la S2</td></tr>"
+            "<tr><td class='jour'>J5</td><td>Épicerie du mois, ta part</td>"
+            "<td class='avenir'>à la S5</td><td></td><td></td></tr>"
+            "<tr><td class='jour'>J10</td><td>Hydro et internet, ta part</td>"
+            "<td class='avenir'>à la S4</td><td></td><td></td></tr>"
+            "<tr><td class='jour'>J15</td><td>Cellulaire, assurance, transport</td>"
+            "<td class='avenir'>à la S5</td><td></td><td></td></tr>"
+            "</table></div>")
+        return bloc, ("C'est ton épargne de départ. Prochain mouvement : "
+                      "<b>jour 1, paie et loyer</b>, quand le calendrier "
+                      "va commencer.")
+    import copy as _copy
+    dossier_copie = _copy.deepcopy(dossier)
+    mouvements = donnees.generer_mouvements_mois(
+        dossier_copie, profil, params, min(mois_courant, donnees.MOIS_MAX),
+        compte["identifiant"])
+    par_jour = {}
+    for m in mouvements:
+        par_jour.setdefault(m["jour"], []).append(m)
+    lignes = []
+    prochain = None
+    for jour in sorted(par_jour):
+        groupe = par_jour[jour]
+        passe = jour < jour_vie
+        if not passe and prochain is None:
+            prochain = groupe[0]
+        cellule_jour = (f"<span class='cercle'>J{jour}</span>"
+                        if not passe and prochain is groupe[0]
+                        else f"J{jour}")
+        for i, m in enumerate(groupe):
+            signe = "plus" if m["montant"] > 0 else "moins"
+            lignes.append(
+                f"<tr class='{'passe' if passe else ''}'>"
+                f"<td class='jour'>{cellule_jour if i == 0 else ''}</td>"
+                f"<td>{_court(m['libelle'])}</td>"
+                f"<td class='{signe}'>{fmt_montant(abs(m['montant']))}</td></tr>")
+    vie = donnees.obtenir_vie(dossier)
+    cle = str(min(mois_courant, donnees.MOIS_MAX))
+    decision = (vie.get("decisions") or {}).get(cle)
+    bilan = (vie.get("bilans") or {}).get(cle)
+    txt_decision = "prise ✓" if decision else "à prendre dans Ma vie"
+    txt_bilan = "fait ✓" if bilan else "à faire dans Ma vie"
+    bloc = (
+        "<div class='pf-papier pf-cal'><div class='pf-aimant pf-ableu'></div>"
+        f"<div class='titre'><span>TON MOIS</span><span class='mois'>MOIS "
+        f"{min(mois_courant, donnees.MOIS_MAX)} DE {donnees.MOIS_MAX}</span></div>"
+        "<table>" + "".join(lignes) + "</table>"
+        f"<div class='rdv'>Ta décision du mois : <b>{txt_decision}</b> · "
+        f"Ton bilan éclair : <b>{txt_bilan}</b></div></div>")
+    if prochain is not None:
+        detail = (f"Prochain mouvement : <b>jour {prochain['jour']}, "
+                  f"{_court(prochain['libelle']).lower()}</b> "
+                  f"({fmt_montant(prochain['montant'], signe=True)}).")
+    else:
+        detail = "Tous les mouvements du mois sont passés. Le prochain mois s'en vient."
+    return bloc, detail
+
+
+def page_vie(compte, dossier, profil):
+    if st.button("Retour à l'accueil"):
+        aller("accueil")
+    st.markdown("## Ma vie")
+    params = donnees.obtenir_parametres(MAGASIN, compte["groupe"])
+    vie = donnees.obtenir_vie(dossier)
+    mois_courant, _ = donnees.position_dans_mois(params)
+    if not params.get("lance_le"):
+        st.markdown(
+            "<section class='carte'><h2>Le calendrier n'a pas commencé</h2>"
+            "<div>Ton enseignant le lancera en classe. D'ici là, avance "
+            "tes sections : quand la vie va commencer, tes montants "
+            "seront déjà les tiens.</div></section>",
+            unsafe_allow_html=True)
+        return
+    if donnees.calendrier_en_pause(params):
+        st.info("Le calendrier est sur pause (ton enseignant l'a mis en "
+                "attente). La vie reprendra bientôt.")
+    mois_courant = min(mois_courant, donnees.MOIS_MAX)
+
+    # --- Les deux rendez-vous du mois en cours ---
+    if mois_courant >= 1:
+        st.markdown("<section class='carte bloc-accent'><h2>Tes deux "
+                    "rendez-vous du mois</h2>"
+                    "<div class='aide'>Chaque mois de vie, tu as un rôle "
+                    "à jouer deux fois : décider, puis regarder ton mois "
+                    "en face. C'est ça, vivre le projet.</div></section>",
+                    unsafe_allow_html=True)
+        cle = str(mois_courant)
+        decision = (vie.get("decisions") or {}).get(cle)
+        st.markdown(f"### 1. Ta décision du mois {mois_courant}")
+        if decision:
+            choix = next((c for c in donnees.BANQUE_CHOIX_VIE
+                          if c["id"] == decision["choix_id"]), None)
+            if choix:
+                opt = choix["options"][decision["option"]]
+                mention = " (choix par défaut : tu n'avais pas décidé)" \
+                    if decision.get("defaut") else ""
+                st.success(f"Décidé : {opt['libelle']} "
+                           f"({fmt_montant(decision['montant'], signe=True)})"
+                           f"{mention}")
+        else:
+            choix = donnees.choix_pour_mois(compte["identifiant"],
+                                            mois_courant)
+            st.markdown(f"**{choix['titre']}**")
+            st.write(choix["texte"])
+            choix_idx = st.radio(
+                "Tu fais quoi ?",
+                options=list(range(len(choix["options"]))),
+                format_func=lambda i: (
+                    f"{choix['options'][i]['libelle']} "
+                    f"({fmt_montant(choix['options'][i]['montant'], signe=True)})"),
+                key=f"decision_radio_{mois_courant}")
+            if st.button("Je décide", type="primary"):
+                try:
+                    donnees.enregistrer_decision(
+                        MAGASIN, compte["identifiant"], mois_courant,
+                        int(choix_idx))
+                    st.success("Décision prise et notée dans ton journal.")
+                    st.rerun()
+                except ValueError as erreur:
+                    st.error(str(erreur))
+        st.markdown(f"### 2. Ton bilan éclair du mois {mois_courant}")
+        bilan = (vie.get("bilans") or {}).get(cle)
+        if bilan:
+            st.success(f"Question : {bilan['question']}")
+            st.write(f"Ta réponse : {bilan['choix']}"
+                     + (f" — {bilan['phrase']}" if bilan["phrase"] else ""))
+        else:
+            question = donnees.BANQUE_BILANS[
+                (mois_courant - 1) % len(donnees.BANQUE_BILANS)]
+            st.write(f"**{question}**")
+            reponse = st.radio(
+                "En un mot :",
+                ["Ça s'est bien passé", "C'était serré",
+                 "C'était difficile"],
+                key=f"bilan_radio_{mois_courant}")
+            phrase = st.text_input(
+                "En une phrase, pourquoi ?",
+                key=f"bilan_phrase_{mois_courant}")
+            if st.button("Je note mon bilan"):
+                donnees.enregistrer_bilan(
+                    MAGASIN, compte["identifiant"], mois_courant,
+                    reponse, phrase.strip())
+                st.success("Bilan noté. Il te servira pour ta S6 et ta S7.")
+                st.rerun()
+
+    # --- Le journal des mouvements, mois par mois ---
+    st.markdown("### Ton journal, mois par mois")
+    mouvements = vie.get("mouvements") or []
+    if not mouvements:
+        st.write("Rien pour l'instant : le premier mois n'est pas encore "
+                 "terminé. Reviens après la première semaine.")
+    par_mois = {}
+    for m in mouvements:
+        par_mois.setdefault(m.get("mois") or 0, []).append(m)
+    for mois in sorted(par_mois, reverse=True):
+        groupe = par_mois[mois]
+        total = sum(m["montant"] for m in groupe)
+        titre = f"Mois {mois}" if mois else "Hors calendrier"
+        lignes = "".join(
+            f"<div class='ligne'><div>{_court(m['libelle'])}</div>"
+            f"<div class='valeur'>{fmt_montant(m['montant'], signe=True)}</div></div>"
+            for m in groupe)
+        st.markdown(
+            f"<section class='carte'><h2>{titre}</h2>" + lignes
+            + "<div class='ligne total'><div>Solde du mois</div>"
+            f"<div class='valeur'>{fmt_montant(total, signe=True)}</div></div>"
+            "</section>", unsafe_allow_html=True)
+    st.markdown(
+        f"<div class='note-crayon'>Tu t'es connecté "
+        f"{len(vie.get('connexions') or [])} jour"
+        f"{'s' if len(vie.get('connexions') or []) > 1 else ''} "
+        f"depuis le début du projet.</div>")
+
+
+CODE_PROF = "1959"
+
+
+@st.dialog("Un mot de ton enseignant")
+def dialogue_annonces(identifiant, annonces):
+    for annonce in annonces:
+        st.write(annonce["texte"])
+    if st.button("J'ai compris"):
+        donnees.marquer_annonces_vues(MAGASIN, identifiant)
+        st.rerun()
+
+
+def _etat_groupe(groupe):
+    params = donnees.obtenir_parametres(MAGASIN, groupe)
+    if not params.get("lance_le"):
+        return params, "non lancé"
+    mois, _ = donnees.position_dans_mois(params)
+    if donnees.calendrier_en_pause(params):
+        return params, f"en pause (mois {min(mois, donnees.MOIS_MAX)})"
+    return params, f"mois {min(mois, donnees.MOIS_MAX)} de {donnees.MOIS_MAX}"
+
+
+def page_console(compte):
+    if st.button("Retour à l'accueil"):
+        aller("accueil")
+    st.markdown("## Console du prof")
+    if not st.session_state.get("console_ok"):
+        code = st.text_input("Code du prof", type="password",
+                             key="console_code")
+        if st.button("Ouvrir la console"):
+            if code == CODE_PROF:
+                st.session_state["console_ok"] = True
+                st.rerun()
+            else:
+                st.error("Code incorrect.")
+        return
+
+    st.markdown("### Le temps, par groupe")
+    for groupe in donnees.GROUPES:
+        params, etat = _etat_groupe(groupe)
+        cols = st.columns([1, 2, 2, 2])
+        cols[0].markdown(f"**Groupe {groupe}**")
+        cols[1].write(etat)
+        if not params.get("lance_le"):
+            with cols[2]:
+                jour = st.date_input("Lancement", key=f"lancer_{groupe}")
+            with cols[3]:
+                if st.button("Lancer le calendrier", key=f"go_{groupe}"):
+                    donnees.lancer_calendrier(MAGASIN, groupe, jour)
+                    donnees.consigner_prof(
+                        MAGASIN, f"Calendrier lancé pour le groupe "
+                        f"{groupe} le {jour}.")
+                    st.rerun()
+        else:
+            with cols[3]:
+                en_pause = donnees.calendrier_en_pause(params)
+                if st.button("Reprendre" if en_pause else "Mettre en pause",
+                             key=f"pause_{groupe}"):
+                    donnees.basculer_pause(
+                        MAGASIN, groupe,
+                        __import__('datetime').date.today())
+                    donnees.consigner_prof(
+                        MAGASIN, f"Calendrier du groupe {groupe} : "
+                        f"{'repris' if en_pause else 'mis en pause'}.")
+                    st.rerun()
+
+    st.markdown("### La classe")
+    groupe = st.selectbox("Groupe", donnees.GROUPES, key="console_groupe")
+    params, _ = _etat_groupe(groupe)
+    mois_courant, _ = donnees.position_dans_mois(params)
+    lignes = []
+    for c in MAGASIN.comptes_du_groupe(groupe):
+        d = MAGASIN.charger_dossier(c["identifiant"]) or {}
+        vie = donnees.obtenir_vie(d)
+        faites = sum(1 for v in (d.get("progression") or {}).values()
+                     if v == "fait")
+        retards = []
+        for code, comp in (vie.get("completions") or {}).items():
+            f = donnees.facteur_section(code, comp.get("date"), params)
+            if f < 1.0:
+                retards.append(f"{code} ({int(f * 100)} %)")
+        cle = str(min(mois_courant, donnees.MOIS_MAX))
+        lignes.append({
+            "Élève": c["nom_affiche"], "Cas": c["cas_numero"],
+            "Sections": f"{faites}/7",
+            "Solde": fmt_montant(d.get("solde") or 0),
+            "Mois atteint": vie.get("mois_appliques") or 0,
+            "Décision": "faite" if cle in (vie.get("decisions") or {})
+                        else "à faire",
+            "Bilan": "fait" if cle in (vie.get("bilans") or {})
+                     else "à faire",
+            "Retards": ", ".join(retards) or "-",
+            "Connexions": len(vie.get("connexions") or []),
+            "Gelé": "oui" if vie.get("gele") else "-",
+        })
+    if lignes:
+        st.dataframe(lignes, use_container_width=True, hide_index=True)
+    else:
+        st.write("Aucun compte dans ce groupe pour l'instant.")
+
+    comptes_groupe = MAGASIN.comptes_du_groupe(groupe)
+    noms = {c["identifiant"]: c["nom_affiche"] for c in comptes_groupe}
+
+    if comptes_groupe:
+        st.markdown("**Pause individuelle** : geler un élève arrête SON "
+                    "calendrier (aucun mois ne s'applique à son dossier) "
+                    "sans toucher au groupe. Au dégel, les mois dus "
+                    "s'appliquent d'un coup, comme après une absence.")
+        cols_gel = st.columns([3, 1])
+        with cols_gel[0]:
+            eleve_gel = st.selectbox("Élève", list(noms),
+                                     format_func=lambda i: noms[i],
+                                     key="gel_eleve")
+        with cols_gel[1]:
+            d_gel = MAGASIN.charger_dossier(eleve_gel) or {}
+            est_gele = donnees.obtenir_vie(d_gel).get("gele")
+            if st.button("Dégeler" if est_gele else "Geler",
+                         key="gel_bouton"):
+                donnees.basculer_gel(MAGASIN, eleve_gel)
+                donnees.consigner_prof(
+                    MAGASIN, f"Calendrier {'gelé' if not est_gele else 'dégelé'} "
+                    f"pour {noms[eleve_gel]} (groupe {groupe}).")
+                st.rerun()
+
+    st.markdown("### Imprévu ciblé")
+    choix_imp = st.selectbox(
+        "Imprévu", [i["titre"] for i in donnees.BANQUE_IMPREVUS]
+        + ["Personnalisé…"], key="imp_choix")
+    cible = st.radio("Cible", ["Un élève", "Tout le groupe"],
+                     key="imp_cible", horizontal=True)
+    identifiant_cible = None
+    if cible == "Un élève" and comptes_groupe:
+        identifiant_cible = st.selectbox(
+            "Élève", list(noms), format_func=lambda i: noms[i],
+            key="imp_eleve")
+    montant_perso = None
+    libelle_perso = None
+    if choix_imp == "Personnalisé…":
+        libelle_perso = st.text_input("Libellé (vu par l'élève)",
+                                      key="imp_libelle")
+        montant_perso = st.number_input(
+            "Montant (négatif = un coût, positif = un gain)",
+            value=0.0, step=10.0, key="imp_montant")
+    if st.button("Appliquer l'imprévu", type="primary"):
+        imp = next((i for i in donnees.BANQUE_IMPREVUS
+                    if i["titre"] == choix_imp), None)
+        cibles = [identifiant_cible] if cible == "Un élève"             else list(noms)
+        for ident in [c for c in cibles if c]:
+            c = MAGASIN.compte_par_identifiant(ident)
+            profil_e = PROFILS[int(c["cas_numero"])]
+            d = MAGASIN.charger_dossier(ident) or {}
+            mois_e = min(mois_courant, donnees.MOIS_MAX) or None
+            if imp and imp.get("special") == "heures_coupees":
+                paie_e = (float(profil_e["revenu_net_mensuel"])
+                          + float(profil_e["autre_revenu_mensuel"])
+                          + float(profil_e["aide_parents_mensuelle"]))
+                montant = -round(paie_e * 0.20, 2)
+                libelle = ("Heures coupées au travail : ta paie du mois "
+                           "est réduite de 20 %")
+            elif imp and imp.get("special") == "coloc_retard":
+                fermeture = donnees.date_fermeture_mois(params, mois_e or 1)
+                part = donnees._montant_pour(d, "S2", "loyer_part",
+                                             fermeture)
+                montant = -part
+                libelle = ("Tu avances la part de loyer de ton coloc "
+                           "(il te remboursera le mois prochain)")
+                donnees.programmer_mouvement(
+                    MAGASIN, ident, (mois_e or 1) + 1,
+                    "Remboursement de ton coloc : sa part de loyer",
+                    part)
+            elif imp:
+                montant = imp["montant"]
+                libelle = imp["titre"]
+            else:
+                montant = float(montant_perso or 0)
+                libelle = libelle_perso or "Imprévu"
+            donnees.ajouter_mouvement(MAGASIN, ident, libelle, montant,
+                                      source="imprevu", mois=mois_e)
+            donnees.poser_annonce(
+                MAGASIN, ident,
+                f"Surprise de ton enseignant : {libelle} "
+                f"({fmt_montant(montant, signe=True)}). C'est déjà dans "
+                f"ton journal, dans Ma vie.")
+        donnees.consigner_prof(
+            MAGASIN, f"Imprévu « {choix_imp} » appliqué à "
+            f"{cible.lower()} du groupe {groupe}.")
+        st.success("Imprévu appliqué et annoncé aux élèves concernés.")
+
+    st.markdown("### Événement et annonce pour un groupe")
+    texte_annonce = st.text_area("Texte de l'annonce", key="evt_texte")
+    montant_evt = st.number_input(
+        "Effet en argent pour chaque élève (0 = annonce simple)",
+        value=0.0, step=10.0, key="evt_montant")
+    if st.button("Envoyer au groupe"):
+        for ident in noms:
+            if montant_evt:
+                donnees.ajouter_mouvement(
+                    MAGASIN, ident, texte_annonce or "Événement de classe",
+                    float(montant_evt), source="evenement",
+                    mois=min(mois_courant, donnees.MOIS_MAX) or None)
+            if texte_annonce:
+                donnees.poser_annonce(MAGASIN, ident, texte_annonce)
+        donnees.consigner_prof(
+            MAGASIN, f"Événement/annonce au groupe {groupe} : "
+            f"« {texte_annonce} » ({fmt_montant(montant_evt, signe=True)}).")
+        st.success("C'est envoyé.")
+
+    st.markdown("### Correction en lot")
+    montant_corr = st.number_input("Montant pour chaque élève du groupe",
+                                   value=0.0, step=10.0, key="corr_montant")
+    motif = st.text_input("Motif (il paraît dans leur journal)",
+                          key="corr_motif")
+    if st.button("Appliquer la correction"):
+        for ident in noms:
+            donnees.ajouter_mouvement(
+                MAGASIN, ident, f"Correction : {motif or 'ajustement'}",
+                float(montant_corr), source="correction",
+                mois=min(mois_courant, donnees.MOIS_MAX) or None)
+        donnees.consigner_prof(
+            MAGASIN, f"Correction en lot groupe {groupe} : "
+            f"{fmt_montant(montant_corr, signe=True)} — {motif}.")
+        st.success("Correction appliquée à tout le groupe.")
+
+    st.markdown("### Mot de passe oublié")
+    if comptes_groupe:
+        eleve_mdp = st.selectbox("Élève", list(noms),
+                                 format_func=lambda i: noms[i],
+                                 key="mdp_eleve")
+        nouveau = st.text_input("Nouveau mot de passe (à lui remettre "
+                                "en classe)", key="mdp_nouveau")
+        if st.button("Réinitialiser le mot de passe"):
+            if len(nouveau or "") >= 6:
+                donnees.reinitialiser_mot_de_passe(
+                    MAGASIN, eleve_mdp, nouveau)
+                donnees.consigner_prof(
+                    MAGASIN, f"Mot de passe réinitialisé pour "
+                    f"{noms[eleve_mdp]} (groupe {groupe}).")
+                st.success("Mot de passe réinitialisé.")
+            else:
+                st.error("Six caractères minimum.")
+
+    st.markdown("### Journal du prof")
+    entrees = donnees.lire_journal_prof(MAGASIN)
+    if entrees:
+        for entree in entrees[-30:][::-1]:
+            st.write(f"{entree['date']} — {entree['texte']}")
+    else:
+        st.write("Rien pour l'instant : tout ce que tu injecteras "
+                 "paraîtra ici.")
 
 
 main()

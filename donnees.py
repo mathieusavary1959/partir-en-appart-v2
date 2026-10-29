@@ -184,6 +184,10 @@ class MagasinMemoire:
         return any(c["groupe"] == groupe and int(c["cas_numero"]) == int(cas_numero)
                    for c in self.comptes.values())
 
+    def comptes_du_groupe(self, groupe):
+        return [dict(c) for c in self.comptes.values()
+                if c["groupe"] == str(groupe)]
+
     def sauvegarder_dossier(self, identifiant, donnees):
         # Copie profonde par JSON : imite la sérialisation de Supabase et
         # évite que l'appelant modifie le dossier stocké par référence.
@@ -255,6 +259,11 @@ class MagasinSupabase:
                          + urllib.parse.quote(str(groupe))
                          + f"&cas_numero=eq.{int(cas_numero)}&select=identifiant")
         return bool(rows)
+
+    def comptes_du_groupe(self, groupe):
+        return self._req("GET", "/rest/v1/appart2_comptes?groupe=eq."
+                         + urllib.parse.quote(str(groupe))
+                         + "&select=*&order=nom_affiche") or []
 
     def sauvegarder_dossier(self, identifiant, donnees):
         self._req("POST", "/rest/v1/appart2_dossiers",
@@ -345,6 +354,7 @@ def nouveau_dossier(profil):
         "s3": s3_par_defaut(),
         "s4": s4_par_defaut(),
         "s5": s5_par_defaut(),
+        "vie": vie_par_defaut(),
     }
 
 
@@ -1099,3 +1109,636 @@ def s5_manquants(s5):
         manques.append("Portions à vérifier : " + " ; ".join(portions[:3])
                        + (" ; ..." if len(portions) > 3 else ""))
     return manques
+
+
+# ---------------------------------------------------------------- vie
+# P3 : le calendrier de vie et la console. Une semaine réelle (dimanche
+# au samedi, décalée par les pauses du prof) vaut un mois de vie.
+# Application paresseuse : à la connexion, on applique les mois dus
+# avec les montants en vigueur à la fermeture de chaque mois (les
+# instantanés pris à la complétion des sections, sinon les montants
+# de référence : « la vie n'attend pas »).
+
+from datetime import date as _date, timedelta as _timedelta
+
+MOIS_MAX = 9
+
+REFERENCES_VIE = {
+    "loyer_total": 1075.0,
+    "loyer_part": 537.50,
+    "epicerie_mois_part": 335.58,   # 155 $ x 4,33 / 2
+    "elec_part": 66.31,             # taille moyenne 1 350 kWh
+    "internet_part": 35.0,          # 70 $ / 2
+    "cellulaire": 47.50,
+    "assurance": 27.50,
+    "transport": 81.0,              # repère STTR
+}
+
+# Mois de vie d'échéance par section (jalons traduits : fin mars = mois
+# 4, mi-avril = mois 6, début mai = mois 9).
+ECHEANCES_VIE = {"S1": 4, "S2": 4, "S3": 6, "S4": 6, "S5": 6,
+                 "S6": 9, "S7": 9}
+
+BANQUE_CHOIX_VIE = [
+    {"id": "frigo-bruit", "titre": "Le frigo fait un drôle de bruit",
+     "texte": "Depuis deux jours, le frigo ronfle comme un tracteur. "
+              "Ton coloc dit que ce n'est rien. Tu fais quoi ?",
+     "options": [
+         {"libelle": "Appeler un réparateur tout de suite", "montant": -120.0},
+         {"libelle": "Acheter un frigo usagé et revendre l'ancien", "montant": -200.0},
+         {"libelle": "Attendre, ça va peut-être passer", "montant": -260.0}],
+     "defaut": 2},
+    {"id": "heures-sup", "titre": "Des heures supplémentaires offertes",
+     "texte": "Ton employeur cherche quelqu'un pour des quarts de plus "
+              "ce mois-ci. C'est fatigant, mais ça paie.",
+     "options": [
+         {"libelle": "Accepter les heures supplémentaires", "montant": 180.0},
+         {"libelle": "Refuser et garder tes soirées", "montant": 0.0}],
+     "defaut": 1},
+    {"id": "ecran-fissure", "titre": "L'écran de ton cellulaire est fissuré",
+     "texte": "Il fonctionne encore, mais la fissure traverse l'écran. "
+              "Tu fais quoi ?",
+     "options": [
+         {"libelle": "Faire réparer l'écran", "montant": -110.0},
+         {"libelle": "Acheter un appareil usagé", "montant": -240.0},
+         {"libelle": "Endurer la fissure", "montant": -180.0}],
+     "defaut": 2},
+    {"id": "sortie-vendredi", "titre": "Une sortie s'organise vendredi",
+     "texte": "Des amis (et ton coloc) sortent vendredi soir : souper "
+              "et activité. Ça coûte de l'argent, mais la vie sociale "
+              "compte aussi.",
+     "options": [
+         {"libelle": "Participer à la sortie", "montant": -60.0},
+         {"libelle": "Rester à l'appartement cette fois", "montant": 0.0}],
+     "defaut": 1},
+    {"id": "dent-douleur", "titre": "Une dent te fait mal",
+     "texte": "Une rage de dent commence. Elle ne partira pas toute "
+              "seule, la question c'est quand tu t'en occupes.",
+     "options": [
+         {"libelle": "Aller chez le dentiste maintenant", "montant": -140.0},
+         {"libelle": "Attendre que ça passe", "montant": -230.0}],
+     "defaut": 1},
+    {"id": "coloc-cuisine", "titre": "Ton coloc cuisine en grosses quantités",
+     "texte": "Ton coloc propose de cuisiner de grosses quantités pour "
+              "la semaine et de partager les ingrédients. Ta part des "
+              "courses baisse ce mois-ci si tu embarques.",
+     "options": [
+         {"libelle": "Embarquer et payer ta part des ingrédients", "montant": -30.0},
+         {"libelle": "Continuer chacun de votre bord", "montant": 0.0}],
+     "defaut": 1},
+]
+
+BANQUE_BILANS = [
+    "Qu'est-ce qui t'a coûté le plus cher ce mois-ci ?",
+    "Ta décision de ce mois-ci : tu la referais ?",
+    "Ton solde te surprend-il, en bien ou en mal ?",
+    "Quel montant t'a semblé le plus injuste ce mois-ci ?",
+    "Si tu pouvais changer UNE décision de ce mois-ci, ce serait laquelle ?",
+    "Te sens-tu plus en contrôle que le mois passé ?",
+    "Quel imprévu t'a le plus appris ce mois-ci ?",
+    "Ton coloc et toi : les comptes sont-ils justes ?",
+    "En un mot : ce mois-ci, ton argent a travaillé pour toi ou contre toi ?",
+]
+
+
+def vie_par_defaut():
+    return {"mouvements": [], "mois_appliques": 0, "completions": {},
+            "decisions": {}, "bilans": {}, "connexions": [],
+            "installation_payee": False, "annonces": [],
+            "a_appliquer": [], "gele": False}
+
+
+def obtenir_vie(dossier):
+    vie = dossier.get("vie")
+    if not isinstance(vie, dict):
+        vie = vie_par_defaut()
+        dossier["vie"] = vie
+        return vie
+    for cle, defaut in vie_par_defaut().items():
+        vie.setdefault(cle, defaut)
+    return vie
+
+
+# --- Paramètres de temps par groupe (rangés dans un pseudo-dossier) ---
+
+def _identifiant_parametres(groupe):
+    return "__groupe_" + str(groupe)
+
+
+def parametres_par_defaut(groupe):
+    return {"type": "parametres_groupe", "groupe": str(groupe),
+            "lance_le": None, "pauses": []}
+
+
+def obtenir_parametres(magasin, groupe):
+    params = magasin.charger_dossier(_identifiant_parametres(groupe))
+    if not isinstance(params, dict) or params.get("type") != "parametres_groupe":
+        return parametres_par_defaut(groupe)
+    params.setdefault("lance_le", None)
+    params.setdefault("pauses", [])
+    return params
+
+
+def _sauver_parametres(magasin, params):
+    magasin.sauvegarder_dossier(
+        _identifiant_parametres(params["groupe"]), params)
+
+
+def lancer_calendrier(magasin, groupe, date_lancement):
+    """Lance (ou relance à une nouvelle date) le calendrier du groupe."""
+    params = obtenir_parametres(magasin, groupe)
+    params["lance_le"] = _vers_str(date_lancement)
+    _sauver_parametres(magasin, params)
+    return params
+
+
+def basculer_pause(magasin, groupe, aujourdhui):
+    """Ouvre une pause aujourd'hui, ou ferme la pause ouverte.
+    Renvoie True si le calendrier est maintenant en pause."""
+    params = obtenir_parametres(magasin, groupe)
+    pauses = params.setdefault("pauses", [])
+    if pauses and pauses[-1].get("fin") is None:
+        pauses[-1]["fin"] = _vers_str(aujourdhui)
+        _sauver_parametres(magasin, params)
+        return False
+    pauses.append({"debut": _vers_str(aujourdhui), "fin": None})
+    _sauver_parametres(magasin, params)
+    return True
+
+
+def _vers_date(valeur):
+    if isinstance(valeur, _date):
+        return valeur
+    return _date.fromisoformat(str(valeur)[:10])
+
+
+def _vers_str(valeur):
+    return _vers_date(valeur).isoformat()
+
+
+def _ancre(params):
+    """Dimanche de la semaine de lancement : le jour 1 du mois 1."""
+    lance = _vers_date(params["lance_le"])
+    return lance - _timedelta(days=(lance.weekday() + 1) % 7)
+
+
+def _en_pause(params, jour):
+    for pause in params.get("pauses", []):
+        debut = _vers_date(pause["debut"])
+        fin = pause.get("fin")
+        if fin is None:
+            if jour >= debut:
+                return True
+        elif debut <= jour < _vers_date(fin):
+            return True
+    return False
+
+
+def calendrier_en_pause(params, aujourdhui=None):
+    aujourdhui = _vers_date(aujourdhui) if aujourdhui else _date.today()
+    return bool(params.get("lance_le")) and _en_pause(params, aujourdhui)
+
+
+def _jours_effectifs(params, jour):
+    """Nombre de jours non en pause entre l'ancre (incluse) et la
+    veille du jour donné : c'est l'horloge du calendrier de vie."""
+    if not params.get("lance_le"):
+        return 0
+    ancre = _ancre(params)
+    jour = _vers_date(jour)
+    if jour <= ancre:
+        return 0
+    total = 0
+    courant = ancre
+    while courant < jour:
+        if not _en_pause(params, courant):
+            total += 1
+        courant += _timedelta(days=1)
+    return total
+
+
+def mois_de_vie(params, aujourdhui=None):
+    """Mois de vie en cours (1 à 9+) à la date donnée ; 0 si le
+    calendrier n'est pas lancé ou pas encore commencé."""
+    if not params.get("lance_le"):
+        return 0
+    aujourdhui = _vers_date(aujourdhui) if aujourdhui else _date.today()
+    if aujourdhui < _ancre(params):
+        return 0
+    return _jours_effectifs(params, aujourdhui) // 7 + 1
+
+
+def mois_fermes(params, aujourdhui=None):
+    """Nombre de mois de vie complètement écoulés (fermés) à la date
+    donnée : c'est eux, et eux seuls, que l'application paresseuse
+    applique. Le mois en cours se vit, il ne se comptabilise pas
+    encore."""
+    if not params.get("lance_le"):
+        return 0
+    aujourdhui = _vers_date(aujourdhui) if aujourdhui else _date.today()
+    if aujourdhui < _ancre(params):
+        return 0
+    return _jours_effectifs(params, aujourdhui) // 7
+
+
+def date_fermeture_mois(params, mois):
+    """Date réelle du dernier jour du mois de vie donné (le samedi de
+    sa semaine), en tenant compte des pauses. None si une pause
+    ouverte empêche de la connaître."""
+    if not params.get("lance_le") or mois < 1:
+        return None
+    if any(p.get("fin") is None for p in params.get("pauses", [])):
+        # Une pause ouverte décale la fermeture d'une durée inconnue.
+        if _en_pause(params, _date.today()):
+            return None
+    ancre = _ancre(params)
+    cible = 7 * mois
+    compte = 0
+    courant = ancre
+    for _ in range(800):
+        if not _en_pause(params, courant):
+            compte += 1
+            if compte == cible:
+                return courant
+        courant += _timedelta(days=1)
+    return None
+
+
+# --- Complétions datées et instantanés de montants ---
+
+def _montants_section(dossier, code):
+    """Les montants mensuels qu'une section alimente, calculés sur son
+    contenu actuel. Sert d'instantané à la complétion."""
+    try:
+        if code == "S2":
+            s2 = obtenir_s2(dossier)
+            choix = s2.get("choix")
+            annonces = s2.get("annonces") or []
+            if choix is not None and 0 <= int(choix) < len(annonces):
+                loyer = float(annonces[int(choix)].get("loyer") or 0)
+                if loyer > 0:
+                    return {"loyer_total": loyer,
+                            "loyer_part": _arrondir2(loyer / 2)}
+            return {}
+        if code == "S3":
+            t = totaux_s3(dossier.get("s3") or s3_par_defaut())
+            return {"installation": float(t["total"])}
+        if code == "S4":
+            t = totaux_s4(obtenir_s4(dossier))
+            return {"elec_part": t["electricite_part"],
+                    "internet_part": t["internet_part"],
+                    "cellulaire": t["cellulaire"],
+                    "assurance": t["assurance"]}
+        if code == "S5":
+            s5 = obtenir_s5(dossier)
+            t = calculer_epicerie(s5["menus"])
+            cout = s5["transport"].get("cout")
+            return {"epicerie_mois_part": t["mois_part"],
+                    "transport": float(cout) if cout else 0.0}
+    except Exception:
+        return {}
+    return {}
+
+
+def marquer_section_faite(magasin, identifiant, code_section):
+    """Marque la section terminée ET consigne sa complétion : la date
+    réelle et un instantané de ses montants. La première date reste
+    la référence pour les retards ; l'instantané se rafraîchit si
+    l'élève refait la section."""
+    if code_section not in [c for c, _ in SECTIONS]:
+        raise ValueError(f"Section inconnue : {code_section}")
+    dossier = magasin.charger_dossier(identifiant)
+    if dossier is None:
+        raise ValueError(f"Dossier introuvable : {identifiant}")
+    dossier.setdefault("progression", {})[code_section] = "fait"
+    vie = obtenir_vie(dossier)
+    completions = vie.setdefault("completions", {})
+    precedente = completions.get(code_section) or {}
+    completions[code_section] = {
+        "date": precedente.get("date") or _date.today().isoformat(),
+        "montants": _montants_section(dossier, code_section),
+    }
+    magasin.sauvegarder_dossier(identifiant, dossier)
+    return dossier
+
+
+def retard_section(code, date_completion, params):
+    """Mois de retard d'une section terminée à la date donnée
+    (0 = dans sa fenêtre). Compare la date de complétion à la
+    fermeture du mois d'échéance du groupe."""
+    echeance = ECHEANCES_VIE.get(code)
+    if echeance is None or not date_completion:
+        return 0
+    fermeture = date_fermeture_mois(params, echeance)
+    if fermeture is None:
+        return 0
+    if _vers_date(date_completion) <= fermeture:
+        return 0
+    mois_completion = mois_de_vie(params, _vers_date(date_completion))
+    return max(0, mois_completion - echeance)
+
+
+def facteur_section(code, date_completion, params):
+    """Facteur de la fenêtre notée : 1,0 à temps, moins 25 % par mois
+    de retard entamé, plancher à 60 %."""
+    retard = retard_section(code, date_completion, params)
+    return max(0.60, 1.0 - 0.25 * retard)
+
+
+# --- Génération et application des mouvements ---
+
+def _montant_pour(dossier, code, cle, fermeture):
+    """Le montant d'une section pour un mois qui ferme à la date
+    donnée : son instantané si elle était terminée à temps pour ce
+    mois, sinon le montant de référence (« la vie n'attend pas »)."""
+    vie = obtenir_vie(dossier)
+    completion = (vie.get("completions") or {}).get(code) or {}
+    if completion.get("date") and fermeture is not None:
+        if _vers_date(completion["date"]) <= fermeture:
+            montants = completion.get("montants") or {}
+            if cle in montants:
+                return float(montants[cle])
+    return REFERENCES_VIE[cle]
+
+
+def choix_pour_mois(identifiant, mois):
+    """Le choix de vie d'un mois, tiré de la banque de façon stable
+    pour un élève donné (même élève + même mois = même choix)."""
+    base = sum(ord(c) for c in str(identifiant)) + int(mois) * 7
+    return BANQUE_CHOIX_VIE[base % len(BANQUE_CHOIX_VIE)]
+
+
+def generer_mouvements_mois(dossier, profil, params, mois, identifiant=""):
+    """Les mouvements automatiques d'un mois de vie, calculés avec ce
+    qui était en vigueur à sa fermeture. Renvoie (mouvements, vie
+    modifiée ou non) ; ne sauvegarde rien."""
+    vie = obtenir_vie(dossier)
+    fermeture = date_fermeture_mois(params, mois)
+    paie = (float(profil.get("revenu_net_mensuel") or 0)
+            + float(profil.get("autre_revenu_mensuel") or 0)
+            + float(profil.get("aide_parents_mensuelle") or 0))
+    mouvements = []
+
+    def ajoute(jour, libelle, montant, source="auto"):
+        if montant:
+            mouvements.append({
+                "mois": mois, "jour": jour, "libelle": libelle,
+                "montant": _arrondir2(montant), "source": source,
+                "date_reelle": _date.today().isoformat()})
+
+    ajoute(1, "Paie du mois (revenu net, autres revenus et aide des "
+              "parents)", paie)
+    if mois == 1:
+        ajoute(1, "Premier loyer (mois complet, à l'entrée)",
+               -_montant_pour(dossier, "S2", "loyer_total", fermeture))
+    else:
+        ajoute(1, "Loyer, ta part (50 %)",
+               -_montant_pour(dossier, "S2", "loyer_part", fermeture))
+    if not vie.get("installation_payee"):
+        completion_s3 = (vie.get("completions") or {}).get("S3") or {}
+        if completion_s3.get("date") and fermeture is not None:
+            if _vers_date(completion_s3["date"]) <= fermeture:
+                inst = (completion_s3.get("montants") or {}).get(
+                    "installation")
+                if inst:
+                    ajoute(1, "Installation dans l'appartement "
+                              "(ameublement et électroménagers)", -inst)
+                    vie["installation_payee"] = True
+    ajoute(5, "Épicerie du mois (ta part de la semaine type)",
+           -_montant_pour(dossier, "S5", "epicerie_mois_part", fermeture))
+    ajoute(10, "Électricité, ta part (50 %)",
+           -_montant_pour(dossier, "S4", "elec_part", fermeture))
+    ajoute(10, "Internet, ta part (50 %)",
+           -_montant_pour(dossier, "S4", "internet_part", fermeture))
+    ajoute(15, "Cellulaire",
+           -_montant_pour(dossier, "S4", "cellulaire", fermeture))
+    ajoute(15, "Assurance habitation",
+           -_montant_pour(dossier, "S4", "assurance", fermeture))
+    ajoute(15, "Transport",
+           -_montant_pour(dossier, "S5", "transport", fermeture))
+    # Décision du mois jamais prise : l'option par défaut s'applique.
+    decisions = vie.setdefault("decisions", {})
+    if str(mois) not in decisions:
+        choix = choix_pour_mois(identifiant, mois)
+        option = choix["options"][choix["defaut"]]
+        ajoute(14, f"Décision manquée : {choix['titre']} "
+                   f"({option['libelle']})", option["montant"],
+               source="decision")
+        decisions[str(mois)] = {"choix_id": choix["id"],
+                                "option": choix["defaut"],
+                                "defaut": True,
+                                "montant": option["montant"]}
+    return mouvements
+
+
+def appliquer_vie(magasin, identifiant, groupe, profil, aujourdhui=None):
+    """Applique les mois de vie dus (application paresseuse, à la
+    connexion) et consigne la connexion. Renvoie la liste des
+    mouvements nouvellement appliqués."""
+    aujourdhui = _vers_date(aujourdhui) if aujourdhui else _date.today()
+    dossier = magasin.charger_dossier(identifiant)
+    if dossier is None:
+        return []
+    vie = obtenir_vie(dossier)
+    params = obtenir_parametres(magasin, groupe)
+    nouveaux = []
+    if params.get("lance_le") and not vie.get("gele"):
+        cible = min(mois_fermes(params, aujourdhui), MOIS_MAX)
+        for mois in range(int(vie.get("mois_appliques") or 0) + 1,
+                          cible + 1):
+            mouvements = generer_mouvements_mois(
+                dossier, profil, params, mois, identifiant)
+            programmes = vie.setdefault("a_appliquer", [])
+            dus = [a for a in programmes
+                   if int(a.get("mois") or 0) <= mois]
+            vie["a_appliquer"] = [a for a in programmes
+                                  if int(a.get("mois") or 0) > mois]
+            for a in dus:
+                mouvements.append({
+                    "mois": mois, "jour": None,
+                    "libelle": a["libelle"],
+                    "montant": _arrondir2(a["montant"]),
+                    "source": a.get("source", "imprevu"),
+                    "date_reelle": _date.today().isoformat()})
+            for m in mouvements:
+                vie["mouvements"].append(m)
+                dossier["solde"] = _arrondir2(
+                    float(dossier.get("solde") or 0) + m["montant"])
+                nouveaux.append(m)
+            vie["mois_appliques"] = mois
+    jour_str = aujourdhui.isoformat()
+    connexions = vie.setdefault("connexions", [])
+    if jour_str not in connexions:
+        connexions.append(jour_str)
+    magasin.sauvegarder_dossier(identifiant, dossier)
+    return nouveaux
+
+
+def ajouter_mouvement(magasin, identifiant, libelle, montant,
+                      source="correction", mois=None, aujourdhui=None):
+    """Un mouvement manuel au journal (imprévu du prof, événement,
+    correction) : il bouge le solde tout de suite."""
+    aujourdhui = _vers_date(aujourdhui) if aujourdhui else _date.today()
+    dossier = magasin.charger_dossier(identifiant)
+    if dossier is None:
+        raise ValueError(f"Dossier introuvable : {identifiant}")
+    vie = obtenir_vie(dossier)
+    mouvement = {"mois": mois, "jour": None, "libelle": libelle,
+                 "montant": _arrondir2(montant), "source": source,
+                 "date_reelle": aujourdhui.isoformat()}
+    vie["mouvements"].append(mouvement)
+    dossier["solde"] = _arrondir2(
+        float(dossier.get("solde") or 0) + mouvement["montant"])
+    magasin.sauvegarder_dossier(identifiant, dossier)
+    return mouvement
+
+
+def enregistrer_decision(magasin, identifiant, mois, index_option,
+                         aujourdhui=None):
+    """L'élève tranche le choix de vie du mois en cours : l'effet
+    s'applique tout de suite au journal et au solde."""
+    aujourdhui = _vers_date(aujourdhui) if aujourdhui else _date.today()
+    dossier = magasin.charger_dossier(identifiant)
+    if dossier is None:
+        raise ValueError(f"Dossier introuvable : {identifiant}")
+    vie = obtenir_vie(dossier)
+    if str(mois) in (vie.get("decisions") or {}):
+        raise ValueError("Décision déjà prise pour ce mois.")
+    choix = choix_pour_mois(identifiant, mois)
+    if not (0 <= index_option < len(choix["options"])):
+        raise ValueError("Option inconnue.")
+    option = choix["options"][index_option]
+    vie.setdefault("decisions", {})[str(mois)] = {
+        "choix_id": choix["id"], "option": index_option,
+        "defaut": False, "montant": option["montant"]}
+    magasin.sauvegarder_dossier(identifiant, dossier)
+    return ajouter_mouvement(
+        magasin, identifiant,
+        f"Ta décision : {choix['titre']} ({option['libelle']})",
+        option["montant"], source="decision", mois=mois,
+        aujourdhui=aujourdhui)
+
+
+def enregistrer_bilan(magasin, identifiant, mois, reponse_choix,
+                      phrase):
+    """Le bilan éclair du mois : un choix + une phrase, gardés pour
+    nourrir la S6 et la S7."""
+    dossier = magasin.charger_dossier(identifiant)
+    if dossier is None:
+        raise ValueError(f"Dossier introuvable : {identifiant}")
+    vie = obtenir_vie(dossier)
+    vie.setdefault("bilans", {})[str(mois)] = {
+        "question": BANQUE_BILANS[(int(mois) - 1) % len(BANQUE_BILANS)],
+        "choix": reponse_choix, "phrase": phrase or "",
+        "date": _date.today().isoformat()}
+    magasin.sauvegarder_dossier(identifiant, dossier)
+    return dossier
+
+
+def position_dans_mois(params, aujourdhui=None):
+    """(mois en cours, jour de vie 1 à 30) : où on est rendu dans le
+    mois de vie, pour encercler le prochain mouvement sur la porte."""
+    if not params.get("lance_le"):
+        return (0, 0)
+    aujourdhui = _vers_date(aujourdhui) if aujourdhui else _date.today()
+    if aujourdhui < _ancre(params):
+        return (0, 0)
+    jours = _jours_effectifs(params, aujourdhui)
+    return (jours // 7 + 1, (jours % 7 + 1) * 30 // 7)
+
+
+# --- Banque d'imprévus du prof et annonces ---
+
+BANQUE_IMPREVUS = [
+    {"id": "frigo", "titre": "Le frigo lâche", "montant": -175.0},
+    {"id": "degat-eau", "titre": "Dégât d'eau : franchise d'assurance",
+     "montant": -250.0},
+    {"id": "dentiste", "titre": "Dentiste en urgence", "montant": -140.0},
+    {"id": "cell-fracasse", "titre": "Cellulaire fracassé",
+     "montant": -120.0},
+    {"id": "portable", "titre": "L'ordinateur portable lâche",
+     "montant": -300.0},
+    {"id": "contravention", "titre": "Contravention", "montant": -100.0},
+    {"id": "heures-coupees", "titre": "Heures coupées au travail "
+     "(paie réduite de 20 % pour un mois)", "special": "heures_coupees"},
+    {"id": "coloc-retard", "titre": "Le coloc paie son loyer en retard "
+     "(tu avances sa part, remboursée le mois suivant)",
+     "special": "coloc_retard"},
+    {"id": "heures-sup", "titre": "Heures supplémentaires payées",
+     "montant": 180.0},
+    {"id": "impot", "titre": "Remboursement d'impôt", "montant": 220.0},
+    {"id": "coloc-cuisine", "titre": "Le coloc cuisine de grosses "
+     "quantités (crédit d'épicerie)", "montant": 90.0},
+]
+
+
+def poser_annonce(magasin, identifiant, texte, aujourdhui=None):
+    """Une fenêtre d'annonce que l'élève verra à sa prochaine
+    connexion (patron des avis de la simulation boursière)."""
+    aujourdhui = _vers_date(aujourdhui) if aujourdhui else _date.today()
+    dossier = magasin.charger_dossier(identifiant)
+    if dossier is None:
+        return
+    vie = obtenir_vie(dossier)
+    vie.setdefault("annonces", []).append(
+        {"texte": texte, "date": aujourdhui.isoformat(), "vu": False})
+    magasin.sauvegarder_dossier(identifiant, dossier)
+
+
+def annonces_non_vues(dossier):
+    vie = obtenir_vie(dossier)
+    return [a for a in vie.get("annonces") or [] if not a.get("vu")]
+
+
+def marquer_annonces_vues(magasin, identifiant):
+    dossier = magasin.charger_dossier(identifiant)
+    if dossier is None:
+        return
+    vie = obtenir_vie(dossier)
+    for annonce in vie.get("annonces") or []:
+        annonce["vu"] = True
+    magasin.sauvegarder_dossier(identifiant, dossier)
+
+
+def programmer_mouvement(magasin, identifiant, mois, libelle, montant,
+                         source="imprevu"):
+    """Un montant qui tombera à l'application du mois donné (par
+    exemple le remboursement de la part du coloc)."""
+    dossier = magasin.charger_dossier(identifiant)
+    if dossier is None:
+        return
+    vie = obtenir_vie(dossier)
+    vie.setdefault("a_appliquer", []).append(
+        {"mois": int(mois), "libelle": libelle,
+         "montant": _arrondir2(montant), "source": source})
+    magasin.sauvegarder_dossier(identifiant, dossier)
+
+
+# --- Journal du prof : tout le chaos est consigné ---
+
+def consigner_prof(magasin, texte, aujourdhui=None):
+    aujourdhui = _vers_date(aujourdhui) if aujourdhui else _date.today()
+    journal = magasin.charger_dossier("__journal_prof") or \
+        {"type": "journal_prof", "entrees": []}
+    journal.setdefault("entrees", []).append(
+        {"date": aujourdhui.isoformat(), "texte": texte})
+    magasin.sauvegarder_dossier("__journal_prof", journal)
+
+
+def lire_journal_prof(magasin):
+    journal = magasin.charger_dossier("__journal_prof") or {}
+    return list(journal.get("entrees") or [])
+
+
+def basculer_gel(magasin, identifiant):
+    """Gèle ou dégèle le calendrier d'UN élève (pause individuelle) :
+    pendant le gel, aucun mois ne s'applique à son dossier ; au
+    dégel, les mois dus s'appliquent d'un coup, comme une absence.
+    Renvoie True si le dossier est maintenant gelé."""
+    dossier = magasin.charger_dossier(identifiant)
+    if dossier is None:
+        raise ValueError(f"Dossier introuvable : {identifiant}")
+    vie = obtenir_vie(dossier)
+    vie["gele"] = not vie.get("gele")
+    magasin.sauvegarder_dossier(identifiant, dossier)
+    return vie["gele"]
