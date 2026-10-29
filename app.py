@@ -61,6 +61,24 @@ p, li, label{ color:var(--texte); }
 .stButton > button:disabled{ opacity:.45; }
 .stCheckbox label span, .stRadio label span{ color:var(--texte); }
 
+/* La lampe suspendue et son cône de lumière */
+.stApp::before{ content:""; position:fixed; top:0; left:50%; transform:translateX(-50%); width:980px; height:720px; z-index:0;
+  background:linear-gradient(180deg,rgba(255,240,200,.16),rgba(255,240,200,.04) 55%,transparent 78%);
+  clip-path:polygon(43% 0,57% 0,100% 100%,0 100%); pointer-events:none; }
+.block-container{ position:relative; z-index:1; }
+.pf-lampe{ text-align:center; height:74px; }
+.pf-lampe .fil{ width:3px; height:28px; background:#0E0F13; margin:0 auto; }
+.pf-lampe .abat{ width:138px; height:46px; margin:-2px auto 0; background:linear-gradient(180deg,#2E3442,#1A1E28);
+  clip-path:polygon(32% 0,68% 0,100% 100%,0 100%); }
+.pf-lampe .ampoule{ width:24px; height:24px; border-radius:50%; margin:-14px auto 0;
+  background:radial-gradient(circle at 50% 42%,#FFF6D8,#FFD98A 60%,rgba(255,217,138,0));
+  box-shadow:0 0 40px 18px rgba(255,224,150,.32); }
+/* La barre de navigation : un contrôle segmenté, comme les pastilles de la maquette */
+[data-testid="stSegmentedControl"]{ background:#2B2F3A; border:1.5px solid #454B5C; border-radius:999px; padding:4px; width:fit-content; }
+[data-testid="stSegmentedControl"] button{ border-radius:999px !important; border:none !important; background:transparent !important;
+  font-family:"Bebas Neue",sans-serif; font-size:17px; letter-spacing:.07em; color:var(--gris) !important; padding:5px 16px !important; box-shadow:none !important; }
+[data-testid="stSegmentedControl"] button[aria-checked="true"]{ background:var(--texte) !important; color:#1C1F27 !important; }
+[data-testid="stSegmentedControl"] button p{ color:inherit !important; font-family:inherit; font-size:inherit; letter-spacing:inherit; }
 /* Le mur : titre et identité */
 .marque{ font-family:"Bebas Neue",sans-serif; font-size:56px; letter-spacing:.03em; line-height:.95; text-shadow:0 4px 0 rgba(0,0,0,.4); }
 .marque span{ color:var(--jaune); }
@@ -77,7 +95,7 @@ p, li, label{ color:var(--texte); }
 .carte h2{ font-family:"Bebas Neue",sans-serif; font-weight:400; font-size:27px;
   letter-spacing:.05em; margin:0; color:var(--encre); }
 .carte p, .carte div, .carte li{ color:var(--encre); }
-.carte .aide{ color:#6E6759; font-size:13.5px; margin:3px 0 14px; }
+.carte .aide{ color:#4A453C; font-size:13.5px; margin:3px 0 14px; }
 .ligne{ display:flex; justify-content:space-between; gap:16px; padding:8px 0;
   border-bottom:1px dashed #C9C2AE; font-size:15px; color:var(--encre); }
 .ligne .valeur{ font-weight:700; font-variant-numeric:tabular-nums; text-align:right; }
@@ -115,9 +133,25 @@ p, li, label{ color:var(--texte); }
   background:linear-gradient(158deg,#F6F2E7 0%,#E9E3D2 48%,#D8D1BA 82%,#CFC7AC 100%);
   box-shadow:0 40px 90px rgba(0,0,0,.65), inset 0 2px 0 rgba(255,255,255,.95), inset 0 -5px 12px rgba(0,0,0,.18); }
 .pf-porte::after{ content:""; position:absolute; top:0; bottom:0; width:30%; left:0; pointer-events:none; z-index:6;
-  background:linear-gradient(100deg,transparent,rgba(255,255,255,.30),transparent); animation:plumiere 9.5s ease-in-out infinite; }
+  background:linear-gradient(100deg,transparent,rgba(255,255,255,.18),transparent); animation:plumiere 11s ease-in-out infinite; }
 .pf-congelo{ position:relative; padding:18px 28px 16px; border-bottom:3px solid rgba(42,38,32,.25);
   display:flex; gap:26px; align-items:center; box-shadow:0 3px 5px rgba(42,38,32,.18); }
+.pf-congelo::after{ content:""; position:absolute; right:16px; top:50%; margin-top:-6px; width:150px; height:12px; border-radius:6px;
+  background:linear-gradient(90deg,#C6BFA9,#8F8875 70%); box-shadow:2px 3px 6px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.6); }
+.pf-charniere{ position:absolute; right:0; width:9px; height:34px; background:linear-gradient(90deg,#6E6759,#4A453C); z-index:5; border-radius:3px 0 0 3px; }
+.pf-ch1{ top:196px; } .pf-ch2{ top:520px; }
+.pf-poignee{ position:absolute; right:14px; top:36px; width:11px; height:210px; border-radius:6px; z-index:4;
+  background:linear-gradient(90deg,#C6BFA9,#8F8875 70%); box-shadow:2px 3px 6px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.6); }
+.pf-plinthe{ height:14px; background:linear-gradient(180deg,#31363F,#22262E); margin-top:36px; border-radius:2px; }
+.pf-sol{ perspective:520px; overflow:hidden; }
+.pf-reflet{ height:46px; background:linear-gradient(180deg,rgba(233,227,210,.18),transparent); filter:blur(3px); }
+.pf-plancher{ height:120px; transform:rotateX(57deg); transform-origin:top center; margin-top:-20px;
+  background:repeating-linear-gradient(90deg,rgba(0,0,0,.28) 0 2px,transparent 2px 190px),repeating-linear-gradient(180deg,rgba(0,0,0,.20) 0 2px,transparent 2px 44px),linear-gradient(180deg,#4A3826,#2C2115); border-radius:4px; }
+.pf-coloc .cafe{ position:absolute; right:10px; bottom:6px; width:25px; height:25px; border-radius:50%; opacity:.16; border:3px solid #7A4A21; z-index:1; }
+.pf-energuide .fleche{ position:absolute; top:-1px; left:30%; transform:translateX(-50%); width:0; height:0;
+  border-left:7px solid transparent; border-right:7px solid transparent; border-top:9px solid #191919; }
+.pf-polaroid{ position:relative; }
+.pf-polaroid::after{ content:""; position:absolute; inset:0; background:linear-gradient(200deg,rgba(255,255,255,.20),transparent 45%); pointer-events:none; }
 .pf-lettres{ display:flex; gap:6px; align-items:center; }
 .pf-lettre{ font-family:"Bebas Neue",sans-serif; font-size:34px; line-height:1; width:39px; height:43px; border-radius:8px;
   display:flex; align-items:center; justify-content:center; color:#FFFFFF;
@@ -135,7 +169,7 @@ p, li, label{ color:var(--texte); }
 .pf-polaroid{ background:#FFFFFF; padding:7px 7px 5px; border-radius:3px; width:158px; flex:none;
   box-shadow:0 12px 24px rgba(42,38,32,.4); transform:rotate(2.5deg); }
 .pf-polaroid .legende{ font-family:"Caveat",cursive; font-size:18px; color:var(--encre); text-align:center; line-height:1.15; margin-top:2px; }
-.pf-clezone{ margin-left:auto; text-align:center; flex:none; }
+.pf-clezone{ margin-left:auto; text-align:center; flex:none; padding-right:186px; }
 .pf-crochet{ width:17px; height:17px; border-radius:50%; margin:0 auto;
   background:radial-gradient(circle at 35% 30%,#F2EDE0,#8F8875 75%); box-shadow:0 2px 4px rgba(0,0,0,.35); }
 .pf-cle{ transform-origin:50% 0; animation:pbalCle 5.5s ease-in-out infinite alternate; filter:drop-shadow(2px 3px 3px rgba(0,0,0,.35)); }
@@ -146,8 +180,9 @@ p, li, label{ color:var(--texte); }
   grid-template-areas:"solde calendrier calendrier" "croquis croquis liste" "coloc epicerie liste" "energuide energuide vide"; }
 .pf-papier{ position:relative; border-radius:3px; padding:15px 17px 13px; color:var(--encre);
   box-shadow:0 12px 24px rgba(42,38,32,.35); }
-.pf-papier::before{ content:""; position:absolute; inset:0; border-radius:3px; pointer-events:none; opacity:.05;
+.pf-papier::before{ content:""; position:absolute; inset:0; border-radius:3px; pointer-events:none; opacity:.05; z-index:0;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E"); }
+.pf-papier > *{ position:relative; z-index:1; }
 .pf-aimant{ position:absolute; top:-8px; left:50%; margin-left:-8px; width:16px; height:16px; border-radius:50%; z-index:3;
   box-shadow:0 2px 4px rgba(0,0,0,.4), inset 0 -2px 3px rgba(0,0,0,.25); }
 .pf-arouge{background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.8),rgba(255,255,255,0) 45%),#D93A2B;}
@@ -177,7 +212,7 @@ p, li, label{ color:var(--texte); }
 .pf-cal .cercle{ display:inline-block; border:2.5px solid var(--crayon); padding:0 7px; transform:rotate(-3deg);
   border-radius:52% 48% 55% 45%/48% 55% 45% 52%; }
 .pf-cal .plus{ color:var(--vert); font-weight:700; text-align:right; }
-.pf-cal .avenir{ color:#8A8172; text-align:right; font-size:13px; }
+.pf-cal .avenir{ color:#4A453C; text-align:right; font-size:13px; font-weight:600; }
 
 .pf-croquis{ grid-area:croquis; background:#FFFFFF; }
 .pf-croquis .titre{ font-family:"Caveat",cursive; font-size:26px; line-height:1; }
@@ -199,7 +234,7 @@ p, li, label{ color:var(--texte); }
 .pf-liste li.fait .case::after{ content:"✓"; position:absolute; left:0; top:-10px; font-size:19px; color:var(--vert); font-weight:700; transform:rotate(-6deg); }
 .pf-liste li.fait{ color:#6E6759; text-decoration:line-through; text-decoration-color:var(--vert); }
 .pf-liste li.encours span.nom{ box-shadow:inset 0 -8px 0 rgba(255,210,63,.55); }
-.pf-liste .consigne{ font-family:"Work Sans",sans-serif; font-size:12px; color:#6E6759; margin-top:7px; line-height:1.45; }
+.pf-liste .consigne{ font-family:"Work Sans",sans-serif; font-size:12.5px; color:#4A453C; margin-top:7px; line-height:1.45; }
 
 .pf-coloc{ grid-area:coloc; background:linear-gradient(180deg,#DCEBF7,#C9DDF2); }
 .pf-coloc .main{ font-family:"Caveat",cursive; font-size:22px; line-height:1.18; }
@@ -208,13 +243,13 @@ p, li, label{ color:var(--texte); }
 .pf-epicerie{ grid-area:epicerie; color:var(--encre); padding-top:10px;
   background:repeating-linear-gradient(180deg,#FFFDF4 0 27px,#E4DCC4 27px 28px); }
 .pf-epicerie .titre{ font-family:"Caveat",cursive; font-size:25px; line-height:1; }
-.pf-epicerie .txt{ font-family:"Caveat",cursive; font-size:20px; line-height:1.3; margin-top:4px; color:#5A5344; }
+.pf-epicerie .txt{ font-family:"Caveat",cursive; font-size:20px; line-height:1.3; margin-top:4px; color:#4A453C; }
 
 .pf-energuide{ grid-area:energuide; background:#FFFFFF; display:flex; gap:15px; align-items:center; padding:11px 17px; }
 .pf-energuide .bloc-noir{ background:#191919; color:#FFFFFF; font-family:"Bebas Neue",sans-serif; font-size:18px;
   letter-spacing:.14em; padding:8px 12px 6px; border-radius:3px; text-align:center; line-height:1.05; }
 .pf-energuide .echelle{ flex:1; }
-.pf-energuide .rangee{ display:flex; align-items:center; gap:8px; font-size:12.5px; color:#6E6759; margin-top:3px; }
+.pf-energuide .rangee{ display:flex; align-items:center; gap:8px; font-size:12.5px; color:#4A453C; margin-top:3px; }
 .pf-energuide .barres-wrap{ flex:1; position:relative; padding-top:9px; }
 .pf-energuide .fleche{ position:absolute; top:-1px; left:30%; transform:translateX(-50%); width:0; height:0;
   border-left:7px solid transparent; border-right:7px solid transparent; border-top:9px solid #191919; }
@@ -223,11 +258,11 @@ p, li, label{ color:var(--texte); }
 .pf-energuide .b1{background:#2FA84F;} .pf-energuide .b2{background:#7CC24A;} .pf-energuide .b3{background:#E3B505;}
 .pf-energuide .b4{background:#FF7A45;} .pf-energuide .b5{background:#D93A2B;}
 .pf-energuide .niveau{ font-family:"Bebas Neue",sans-serif; font-size:29px; color:var(--vert); }
-.pf-energuide .explication{ font-size:12.5px; color:#6E6759; line-height:1.4; }
+.pf-energuide .explication{ font-size:12.5px; color:#4A453C; line-height:1.4; }
 
-.pf-vide{ grid-area:vide; border:2.5px dashed #A79E8E; border-radius:6px; display:flex; flex-direction:column;
-  align-items:center; justify-content:center; color:#8A8172; text-align:center; padding:14px; position:relative;
-  background:rgba(255,255,255,.25); }
+.pf-vide{ grid-area:vide; border:2.5px dashed #8A8172; border-radius:6px; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; color:#5A5344; text-align:center; padding:14px; position:relative;
+  background:rgba(255,255,255,.45); }
 .pf-vide .titre{ font-family:"Bebas Neue",sans-serif; font-size:15px; letter-spacing:.16em; }
 .pf-vide .txt{ font-size:12.5px; margin-top:4px; line-height:1.45; }
 
@@ -240,6 +275,7 @@ p, li, label{ color:var(--texte); }
 @media (max-width:980px){
   .pf-grille{ grid-template-columns:1fr; grid-template-areas:"solde" "calendrier" "croquis" "liste" "coloc" "epicerie" "energuide" "vide"; }
   .pf-congelo{ flex-wrap:wrap; }
+  .pf-clezone{ padding-right:0; }
 }
 </style>
 """
@@ -300,6 +336,8 @@ def deconnecter():
 
 def entete_marque(sous_titre):
     st.markdown(
+        "<div class='pf-lampe'><div class='fil'></div><div class='abat'></div>"
+        "<div class='ampoule'></div></div>"
         f"<div class='marque'>PARTIR EN <span>APPART!</span></div>"
         f"<div class='sous'>{sous_titre}</div>",
         unsafe_allow_html=True)
@@ -370,9 +408,10 @@ def ecran_acces():
     entete_marque("Ton premier appartement, pour vrai. Trois-Rivières, en colocation.")
     bandeau_frigo("BIENVENUE · TON PREMIER APPART",
                   "Ta clé arrive<br>à la fin de la S2")
-    ecran = st.radio("Que veux-tu faire?",
-                     ["Je me connecte", "Je m'inscris (première fois)"],
-                     horizontal=True, key="ecran_acces")
+    ecran = st.segmented_control(
+        "Que veux-tu faire?",
+        ["Je me connecte", "Je m'inscris (première fois)"],
+        default="Je me connecte", key="ecran_acces")
     if ecran == "Je m'inscris (première fois)":
         formulaire_inscription()
     else:
@@ -443,31 +482,29 @@ def formulaire_connexion():
 def barre_navigation(page):
     onglets = [("accueil", "Accueil"), ("vie", "Ma vie"), ("score", "Mon score"),
                ("imprevus", "Mes imprévus"), ("sections", "Mes sections S1 à S7")]
+    noms = dict(onglets)
     actif = "sections" if page == "s1" else page
-    cols = st.columns(len(onglets))
-    for col, (code, nom) in zip(cols, onglets):
-        with col:
-            if st.button(nom, key=f"nav_{code}",
-                         type="primary" if code == actif else "secondary",
-                         use_container_width=True):
-                aller(code)
+    if st.session_state.get("_nav_page") != actif:
+        st.session_state["nav_seg"] = noms[actif]
+        st.session_state["_nav_page"] = actif
+    choix = st.segmented_control(
+        "Navigation", [nom for _, nom in onglets],
+        key="nav_seg", label_visibility="collapsed")
+    if choix and choix != noms[actif]:
+        code = [c for c, n in onglets if n == choix][0]
+        aller(code)
 
 
 def entete_eleve(compte, profil):
-    col_titre, col_bouton = st.columns([5, 1])
-    with col_titre:
-        entete_marque("Ton premier appartement, pour vrai. "
-                      f"Trois-Rivières, en colocation avec {profil['coloc']['prenom']}.")
-        st.markdown(
-            "<div class='puces'>"
-            f"<div class='puce'>{compte['nom_affiche']} · <b>Cas {compte['cas_numero']} : {profil['prenom']}</b></div>"
-            f"<div class='puce'>Groupe {compte['groupe']}</div>"
-            "<div class='puce'>Mois de vie : <b>pas encore commencé</b></div>"
-            "</div>",
-            unsafe_allow_html=True)
-    with col_bouton:
-        if st.button("Me déconnecter"):
-            deconnecter()
+    entete_marque("Ton premier appartement, pour vrai. "
+                  f"Trois-Rivières, en colocation avec {profil['coloc']['prenom']}.")
+    st.markdown(
+        "<div class='puces'>"
+        f"<div class='puce'>{compte['nom_affiche']} · <b>Cas {compte['cas_numero']} : {profil['prenom']}</b></div>"
+        f"<div class='puce'>Groupe {compte['groupe']}</div>"
+        "<div class='puce'>Mois de vie : <b>pas encore commencé</b></div>"
+        "</div>",
+        unsafe_allow_html=True)
 
 
 def html_liste_sections(dossier):
@@ -513,6 +550,7 @@ def html_porte_accueil(compte, dossier, profil):
         "<text x='252' y='111'>entrée</text><text x='252' y='150'>salon</text></g></svg>")
     return (
         "<div class='pf-porte'>"
+        "<div class='pf-charniere pf-ch1'></div><div class='pf-charniere pf-ch2'></div>"
         "<div class='pf-congelo'><div class='pf-marque'>ARCTIQUE</div>"
         f"<div><div class='pf-lettres'>{lettres}</div>"
         f"<div style='margin-top:9px;'><span class='pf-plaque'>BIENVENUE CHEZ {profil['prenom'].upper()}</span></div></div>"
@@ -520,7 +558,7 @@ def html_porte_accueil(compte, dossier, profil):
         f"<div class='pf-clezone'><div class='pf-crochet'></div>{SVG_CLE}"
         "<div class='pf-cle-legende'>Ta clé arrive<br>à la fin de la S2</div></div>"
         "</div>"
-        "<div class='pf-principale'><div class='pf-grille'>"
+        "<div class='pf-principale'><div class='pf-poignee'></div><div class='pf-grille'>"
 
         "<div class='pf-papier pf-solde pf-balA'><div class='pf-aimant pf-arouge'></div>"
         "<div class='main'>Il te reste</div>"
@@ -528,7 +566,7 @@ def html_porte_accueil(compte, dossier, profil):
         "<div class='detail'>C'est ton épargne de départ. Prochain mouvement : "
         "<b>jour 1, paie et loyer</b>, quand le calendrier va commencer.</div></div>"
 
-        "<div class='pf-papier pf-cal pf-balB'><div class='pf-aimant pf-ableu'></div>"
+        "<div class='pf-papier pf-cal'><div class='pf-aimant pf-ableu'></div>"
         "<div class='titre'><span>TON MOIS</span><span class='mois'>PAS ENCORE COMMENCÉ</span></div>"
         "<table>"
         f"<tr><td class='jour'><span class='cercle'>J1</span></td><td>Paie</td>"
@@ -542,7 +580,7 @@ def html_porte_accueil(compte, dossier, profil):
         "<td class='avenir'>à la S5</td><td></td><td></td></tr>"
         "</table></div>"
 
-        "<div class='pf-papier pf-croquis pf-balC'><div class='pf-ruban'></div>"
+        "<div class='pf-papier pf-croquis'><div class='pf-ruban'></div>"
         "<div class='titre'>L'appart, vu d'en haut</div>"
         f"{croquis}"
         "<div class='note'>S3, meubler : vise le niveau <b>MOYEN</b> dans chaque "
@@ -550,32 +588,32 @@ def html_porte_accueil(compte, dossier, profil):
         "<div class='pf-autocollant'><div class='gros'>BAC VERT</div>"
         "<div class='petit'>MARDI</div></div></div>"
 
-        "<div class='pf-papier pf-liste pf-balD'><div class='pf-aimant pf-ajaune'></div>"
+        "<div class='pf-papier pf-liste'><div class='pf-aimant pf-ajaune'></div>"
         "<div class='titre'>Mon déménagement</div>"
         f"<ul>{html_liste_sections(dossier)}</ul>"
         "<div class='consigne'>Coche au crayon, comme pour vrai. Ton enseignant "
         "lance le calendrier quand la classe est prête.</div></div>"
 
-        "<div class='pf-papier pf-coloc pf-balE'><div class='pf-aimant pf-ableu'></div>"
+        "<div class='pf-papier pf-coloc'><div class='pf-aimant pf-ableu'></div>"
         f"<div class='main'>{coloc['description']}</div>"
-        f"<div class='sig'>- {coloc['prenom']}, ton coloc</div></div>"
+        f"<div class='sig'>- {coloc['prenom']}, ton coloc</div><div class='cafe'></div></div>"
 
-        "<div class='pf-papier pf-epicerie pf-balB'><div class='pf-aimant pf-avert'></div>"
+        "<div class='pf-papier pf-epicerie'><div class='pf-aimant pf-avert'></div>"
         "<div class='titre'>Épicerie de la semaine</div>"
         "<div class='txt'>Ta première liste apparaîtra ici, à la S5.</div></div>"
 
-        "<div class='pf-papier pf-energuide pf-balC'><div class='pf-aimant pf-ajaune'></div>"
+        "<div class='pf-papier pf-energuide'><div class='pf-aimant pf-ajaune'></div>"
         "<div class='bloc-noir'>SCORE<br>DE VIE</div>"
         "<div class='echelle'>"
         "<div class='rangee'><span>Ton niveau, comparé aux élèves du même cas que toi :</span></div>"
-        "<div class='rangee'><div class='barres-wrap'><div class='barres'>"
+        "<div class='rangee'><div class='barres-wrap'><div class='fleche'></div><div class='barres'>"
         "<i class='b1'></i><i class='b2'></i><i class='b3'></i><i class='b4'></i><i class='b5'></i>"
         "</div></div><span class='niveau'>?</span></div>"
         "<div class='explication'>Comme l'étiquette ÉnerGuide d'un vrai frigo : "
         "A est le meilleur niveau, E le plus faible. Ton niveau arrive avec tes "
         "premiers choix.</div></div></div>"
 
-        "<div class='pf-vide pf-balD'><div class='pf-aimant pf-arouge'></div>"
+        "<div class='pf-vide'><div class='pf-aimant pf-arouge'></div>"
         "<div class='titre'>MOTS DE TON PROF ET IMPRÉVUS</div>"
         "<div class='txt'>Ils apparaîtront ici, épinglés sur ta porte, quand ils "
         "arriveront dans ta vie d'appart.</div></div>"
@@ -589,6 +627,10 @@ def html_porte_accueil(compte, dossier, profil):
 
 def page_accueil(compte, dossier, profil):
     st.markdown(html_porte_accueil(compte, dossier, profil), unsafe_allow_html=True)
+    st.markdown(
+        "<div class='pf-plinthe'></div><div class='pf-sol'>"
+        "<div class='pf-reflet'></div><div class='pf-plancher'></div></div>",
+        unsafe_allow_html=True)
 
     courante = donnees.section_courante(dossier)
     if courante:
@@ -726,7 +768,12 @@ def main():
 
     entete_eleve(compte, profil)
     page = st.session_state.get("page", "accueil")
-    barre_navigation(page)
+    col_nav, col_deco = st.columns([6, 1])
+    with col_nav:
+        barre_navigation(page)
+    with col_deco:
+        if st.button("Me déconnecter", use_container_width=True):
+            deconnecter()
 
     if page == "accueil":
         page_accueil(compte, dossier, profil)
