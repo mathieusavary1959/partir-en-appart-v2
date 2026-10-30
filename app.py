@@ -956,6 +956,92 @@ p, li, label{ color:var(--texte); }
 .guide-etape p{ font-size:14.5px; color:#3A352B; margin:0;
   max-width:78ch; }
 .guide-etape p b{ color:var(--encre); }
+/* S1 : la fiche du cas épinglée, une carte d'identité du personnage.
+   En-tête officiel à la machine à écrire, champs en formulaire,
+   talon d'argent détachable en pointillés, tampons atout et
+   handicap, et le mot du coloc en papier bleu à côté. */
+.s1-fiche{ position:relative; margin-top:20px; color:var(--encre);
+  border-radius:8px; padding:0 0 18px; overflow:hidden;
+  background:linear-gradient(168deg,#FDFDF8,#EFEAD8);
+  border:2.5px solid #2B3440;
+  box-shadow:0 20px 44px rgba(0,0,0,.55); transform:rotate(-.3deg); }
+.s1-fiche .bande{ background:#2B3440; color:#F5F2EA;
+  font-family:"Special Elite",monospace; font-size:12px;
+  letter-spacing:.22em; padding:10px 18px; display:flex;
+  justify-content:space-between; gap:10px; flex-wrap:wrap; }
+.s1-fiche .corps{ padding:18px 24px 0; display:grid;
+  grid-template-columns:150px 1fr; gap:20px; }
+.s1-photo{ border:2px solid #2B3440; border-radius:4px;
+  background:repeating-linear-gradient(45deg,#E8E2CE 0 10px,
+    #DFD7BE 10px 20px); min-height:170px; display:flex;
+  flex-direction:column; align-items:center; justify-content:center;
+  gap:2px; padding:10px 6px; text-align:center; }
+.s1-photo .initiale{ font-family:"Bebas Neue",sans-serif;
+  font-size:64px; line-height:1; color:#2B3440; }
+.s1-photo .qui{ font-family:"Caveat",cursive; font-size:24px;
+  font-weight:700; color:#2B3440; }
+.s1-photo .num{ font-family:"Special Elite",monospace;
+  font-size:12px; letter-spacing:.14em; color:#6B6257; }
+.s1-champs{ display:grid; grid-template-columns:1fr 1fr;
+  gap:10px 22px; align-content:start; }
+.s1-champ .etiquette{ font-family:"Special Elite",monospace;
+  font-size:11px; letter-spacing:.16em; color:#6B6257; }
+.s1-champ .valeur-champ{ font-size:16.5px; font-weight:600;
+  color:var(--encre); border-bottom:1.5px dotted rgba(42,38,32,.45);
+  padding-bottom:2px; }
+.s1-champ.plein{ grid-column:1 / -1; }
+.s1-champ.plein .valeur-champ{ font-weight:400; font-size:15px; }
+.s1-tampon-pige{ position:absolute; top:52px; right:16px;
+  transform:rotate(9deg); border:3px double #A93226; color:#A93226;
+  font-family:"Special Elite",monospace; font-size:13px;
+  letter-spacing:.18em; padding:5px 10px; border-radius:4px;
+  background:rgba(253,253,248,.55); }
+.s1-tampon-lu{ position:absolute; bottom:16px; right:18px;
+  transform:rotate(-8deg); border:3px double var(--vert);
+  color:var(--vert); font-family:"Special Elite",monospace;
+  font-size:14px; letter-spacing:.16em; padding:5px 12px;
+  border-radius:4px; background:rgba(253,253,248,.6); }
+.s1-talon{ margin:18px 24px 0; border-top:2.5px dashed
+  rgba(42,38,32,.4); padding-top:14px; }
+.s1-talon .titre-talon{ font-family:"Special Elite",monospace;
+  font-size:12px; letter-spacing:.24em; color:#6B6257;
+  text-align:center; margin-bottom:8px; }
+.s1-talon .ligne{ display:flex; justify-content:space-between;
+  gap:14px; padding:5px 0; border-bottom:1px solid
+  rgba(42,38,32,.14); color:#3A352B; font-size:15px; }
+.s1-talon .ligne .valeur{ font-weight:700; color:var(--encre);
+  font-variant-numeric:tabular-nums; }
+.s1-talon .ligne.total{ border-bottom:2.5px solid #A93226;
+  font-size:16.5px; }
+.s1-talon .ligne.total .valeur{ color:#A93226; }
+.s1-tags{ display:grid; grid-template-columns:1fr 1fr; gap:16px;
+  margin:18px 24px 0; }
+.s1-tag{ border-radius:3px; padding:14px 16px 12px;
+  box-shadow:0 10px 24px rgba(0,0,0,.35); font-size:14.5px;
+  color:#2B2620; }
+.s1-tag .titre-tag{ font-family:"Special Elite",monospace;
+  font-size:12px; letter-spacing:.22em; margin-bottom:6px; }
+.s1-tag.atout{ background:linear-gradient(170deg,#DDEBD2,#CBE0BC);
+  transform:rotate(-.8deg); }
+.s1-tag.atout .titre-tag{ color:#2E6B2E; }
+.s1-tag.handicap{ background:linear-gradient(170deg,#F6DCD2,#EFC9B8);
+  transform:rotate(.8deg); }
+.s1-tag.handicap .titre-tag{ color:#A93226; }
+.s1-coloc{ position:relative; margin-top:18px; color:#1E2A38;
+  border-radius:3px; padding:20px 24px 16px;
+  background:linear-gradient(170deg,#DCE9F5,#C4D9EE);
+  box-shadow:0 16px 36px rgba(0,0,0,.5); transform:rotate(.4deg); }
+.s1-coloc::before{ content:""; position:absolute; top:-9px; left:50%;
+  width:20px; height:20px; margin-left:-10px; border-radius:50%;
+  background:#0A0A0E; box-shadow:inset 0 2px 5px rgba(255,255,255,.35); }
+.s1-coloc h3{ font-family:"Caveat",cursive; font-size:32px;
+  font-weight:700; margin:0 0 2px; color:#1E2A38; }
+.s1-coloc .desc{ font-size:14.5px; color:#33475E; }
+.s1-coloc .ligne{ display:flex; justify-content:space-between;
+  gap:14px; padding:5px 0; border-bottom:1px solid
+  rgba(30,42,56,.18); font-size:15px; color:#22334A; }
+.s1-coloc .ligne .valeur{ font-weight:700; color:#1E2A38; }
+.s1-coloc .son-handicap{ margin-top:10px; font-size:14.5px; }
 .vie-attente{ background:#FFFFFF; color:var(--encre); padding:19px 21px;
   border-left:6px solid var(--jaune); border-radius:4px; margin-top:18px;
   box-shadow:0 14px 30px rgba(0,0,0,.45); font-size:15px; }
@@ -1604,15 +1690,31 @@ def page_s1(compte, dossier, profil):
                   + float(profil["aide_parents_mensuelle"])
                   + float(profil["autre_revenu_mensuel"]))
 
-    st.markdown(
-        "<section class='carte'><h2>S1 : Ton cas, " + profil["prenom"] + "</h2>"
-        "<div class='aide'>Cas numéro " + str(profil["numero"]) +
-        ", pigé en classe. Lis tout : c'est ta vie pour les prochains mois.</div>"
-        f"<div>{profil['situation_detail']}</div></section>",
-        unsafe_allow_html=True)
-
+    deja_fait = dossier.get("progression", {}).get("S1") == "fait"
+    esc = html.escape
+    situation_lisible = {"etudes": "Aux études",
+                         "emploi": "En emploi"}.get(
+        profil["situation"], profil["situation"])
+    champs = [
+        ("Personnage", esc(profil["prenom"])),
+        ("Situation", esc(situation_lisible)),
+    ]
+    if profil.get("ecole"):
+        champs.append(("École", esc(profil["ecole"])))
+    if profil.get("programme"):
+        champs.append(("Programme", esc(profil["programme"])))
+    champs += [
+        ("Ville d'origine", esc(profil["ville_origine"])),
+        ("Transport", esc(profil["transport"])),
+        ("Son histoire", esc(profil["situation_detail"])),
+    ]
+    html_champs = "".join(
+        f"<div class='s1-champ{' plein' if etiquette == 'Son histoire' else ''}'>"
+        f"<div class='etiquette'>{etiquette}</div>"
+        f"<div class='valeur-champ'>{valeur}</div></div>"
+        for etiquette, valeur in champs)
     lignes = [
-        rang("Ton travail", profil["employeur"]),
+        rang("Ton travail", esc(profil["employeur"])),
         rang("Ton taux horaire", fmt_montant(profil["taux_horaire"]) + " de l'heure"),
         rang("Tes heures de travail", f"{profil['heures_semaine']} h par semaine"),
         rang("Ton revenu brut par mois", fmt_montant(profil["revenu_brut_mensuel"])),
@@ -1622,40 +1724,45 @@ def page_s1(compte, dossier, profil):
         "<div class='ligne total'><div>Total qui entre chaque mois</div>"
         f"<div class='valeur'>{fmt_montant(total_mois)}</div></div>",
         rang("Ton épargne de départ", fmt_montant(profil["epargne_depart"])),
-        rang("Ta ville d'origine", profil["ville_origine"]),
-        rang("Ton transport", profil["transport"]),
     ]
-    if profil.get("ecole"):
-        lignes.insert(0, rang("Ton école", profil["ecole"]))
-    if profil.get("programme"):
-        lignes.insert(1, rang("Ton programme", profil["programme"]))
     st.markdown(
-        "<section class='carte'><h2>Ton argent et ton départ</h2>"
-        + "".join(lignes) + "</section>",
-        unsafe_allow_html=True)
-
-    st.markdown(
-        "<section class='carte bloc-accent'><h2>Ton atout</h2>"
-        f"<div>{profil['atout']}</div></section>",
-        unsafe_allow_html=True)
-    st.markdown(
-        "<section class='carte bloc-accent'><h2>Ton handicap</h2>"
-        f"<div>{profil['handicap']}</div></section>",
+        "<div class='s1-fiche'>"
+        "<div class='bande'><span>PARTIR EN APPART! · CARTE DU CAS</span>"
+        f"<span>CAS Nº {profil['numero']}</span></div>"
+        "<div class='s1-tampon-pige'>PIGÉ EN CLASSE</div>"
+        "<div class='corps'>"
+        "<div class='s1-photo'>"
+        f"<div class='initiale'>{esc(profil['prenom'][:1])}</div>"
+        f"<div class='qui'>{esc(profil['prenom'])}</div>"
+        f"<div class='num'>CAS Nº {profil['numero']} · S1</div></div>"
+        f"<div class='s1-champs'>{html_champs}</div></div>"
+        "<div class='s1-talon'>"
+        "<div class='titre-talon'>TALON DE L'ARGENT · À CONSERVER</div>"
+        + "".join(lignes) + "</div>"
+        "<div class='s1-tags'>"
+        "<div class='s1-tag atout'><div class='titre-tag'>TON ATOUT</div>"
+        f"<div>{esc(profil['atout'])}</div></div>"
+        "<div class='s1-tag handicap'><div class='titre-tag'>"
+        "TON HANDICAP</div>"
+        f"<div>{esc(profil['handicap'])}</div></div></div>"
+        + ("<div class='s1-tampon-lu'>LU ET COMPRIS</div>"
+           if deja_fait else "")
+        + "</div>",
         unsafe_allow_html=True)
 
     lignes_coloc = [
-        rang("Son travail", coloc["occupation"]),
+        rang("Son travail", esc(coloc["occupation"])),
         rang("Son revenu par mois, environ", fmt_montant(coloc["revenu_mensuel_approx"])),
         rang("Les coûts partagés", "50 % chacun, toujours"),
     ]
     st.markdown(
-        "<section class='carte'><h2>Ton coloc : " + coloc["prenom"] + "</h2>"
-        f"<div class='aide'>{coloc['description']}</div>"
+        "<div class='s1-coloc'>"
+        f"<h3>Ton coloc : {esc(coloc['prenom'])}</h3>"
+        f"<div class='desc'>{esc(coloc['description'])}</div>"
         + "".join(lignes_coloc)
-        + f"<div style='margin-top:10px'>Son handicap : {coloc['handicap']}</div></section>",
+        + f"<div class='son-handicap'>Son handicap : "
+        f"{esc(coloc['handicap'])}</div></div>",
         unsafe_allow_html=True)
-
-    deja_fait = dossier.get("progression", {}).get("S1") == "fait"
     if deja_fait:
         st.success("Tu as déjà lu et compris ton profil. La S1 est terminée.")
     elif st.button("J'ai lu et je comprends mon profil", type="primary"):
@@ -3742,7 +3849,9 @@ def _dossier_resume_md(identifiant, groupe, params, texte=False):
     lignes.append(f"## Dossier résumé : {compte['nom_affiche']}")
     lignes.append(
         f"Groupe {groupe} · Cas {compte['cas_numero']} "
-        f"({profil['prenom']}, {profil['situation']}) · Paie du "
+        f"({profil['prenom']}, "
+        f"{ {'etudes': 'aux études', 'emploi': 'en emploi'}.get(profil['situation'], profil['situation'])}"
+        f") · Paie du "
         f"profil : {fmt_montant(donnees._paie_profil(profil))} par "
         f"mois · Solde actuel : {fmt_montant(dossier.get('solde') or 0)}"
         f" · Mois de vie fermés : {vie.get('mois_appliques') or 0}")
