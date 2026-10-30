@@ -354,6 +354,8 @@ def nouveau_dossier(profil):
         "s3": s3_par_defaut(),
         "s4": s4_par_defaut(),
         "s5": s5_par_defaut(),
+        "s6": s6_par_defaut(),
+        "s7": s7_par_defaut(),
         "vie": vie_par_defaut(),
     }
 
@@ -608,6 +610,16 @@ def total_installation(s3):
             continue
         total += totaux_piece(s3, piece)[1]
     return total
+
+
+def totaux_s3(s3):
+    """Le total de l'installation S3 : la part de l'élève pour les
+    pièces facturables et les électroménagers (achats prouvés
+    seulement). Fonction ajoutée à la P4 : l'instantané de complétion
+    de la S3 l'appelait sans qu'elle existe, et l'erreur avalée par
+    le filet de _montants_section laissait l'instantané vide, donc
+    l'installation n'aurait jamais été chargée au calendrier."""
+    return {"total": _arrondir2(total_installation(s3))}
 
 
 def s3_manquants(s3):
@@ -1144,47 +1156,97 @@ BANQUE_CHOIX_VIE = [
      "texte": "Depuis deux jours, le frigo ronfle comme un tracteur. "
               "Ton coloc dit que ce n'est rien. Tu fais quoi ?",
      "options": [
-         {"libelle": "Appeler un réparateur tout de suite", "montant": -120.0},
-         {"libelle": "Acheter un frigo usagé et revendre l'ancien", "montant": -200.0},
-         {"libelle": "Attendre, ça va peut-être passer", "montant": -260.0}],
+         {"libelle": "Appeler un réparateur tout de suite",
+          "montant": -120.0,
+          "pourquoi": "La visite du réparateur, la pièce qui force et "
+                      "la main-d'œuvre : 120 $. Le frigo repart et ton "
+                      "épicerie est sauvée."},
+         {"libelle": "Acheter un frigo usagé et revendre l'ancien",
+          "montant": -200.0,
+          "pourquoi": "Un frigo usagé fiable, livré chez toi : 200 $. "
+                      "C'est plus cher qu'une réparation, mais tu "
+                      "repars avec un appareil qui fonctionne."},
+         {"libelle": "Attendre, ça va peut-être passer",
+          "montant": -260.0,
+          "pourquoi": "Le frigo finit par lâcher pour de bon. Tu perds "
+                      "l'épicerie qu'il contenait (environ 60 $) et tu "
+                      "dois acheter un remplacement en urgence, sans "
+                      "le temps de magasiner (200 $). Total : 260 $. "
+                      "Attendre t'a coûté plus cher que réparer tout "
+                      "de suite."}],
      "defaut": 2},
     {"id": "heures-sup", "titre": "Des heures supplémentaires offertes",
      "texte": "Ton employeur cherche quelqu'un pour des quarts de plus "
               "ce mois-ci. C'est fatigant, mais ça paie.",
      "options": [
-         {"libelle": "Accepter les heures supplémentaires", "montant": 180.0},
-         {"libelle": "Refuser et garder tes soirées", "montant": 0.0}],
+         {"libelle": "Accepter les heures supplémentaires",
+          "montant": 180.0,
+          "pourquoi": "Les quarts de plus ce mois-ci, à ton taux "
+                      "horaire, paie nette : environ 180 $ de plus "
+                      "dans tes poches."},
+         {"libelle": "Refuser et garder tes soirées", "montant": 0.0,
+          "pourquoi": "Aucun montant : tu gardes tes soirées, et ta "
+                      "paie reste celle de ton profil."}],
      "defaut": 1},
     {"id": "ecran-fissure", "titre": "L'écran de ton cellulaire est fissuré",
      "texte": "Il fonctionne encore, mais la fissure traverse l'écran. "
               "Tu fais quoi ?",
      "options": [
-         {"libelle": "Faire réparer l'écran", "montant": -110.0},
-         {"libelle": "Acheter un appareil usagé", "montant": -240.0},
-         {"libelle": "Endurer la fissure", "montant": -180.0}],
+         {"libelle": "Faire réparer l'écran", "montant": -110.0,
+          "pourquoi": "Changer un écran en atelier : environ 110 $. "
+                      "Ton appareil repart comme avant."},
+         {"libelle": "Acheter un appareil usagé", "montant": -240.0,
+          "pourquoi": "Un appareil usagé correct : environ 240 $. "
+                      "C'est le prix pour repartir avec un autre "
+                      "téléphone tout de suite."},
+         {"libelle": "Endurer la fissure", "montant": -180.0,
+          "pourquoi": "La fissure s'étend, l'écran finit par ne plus "
+                      "répondre et l'appareil devient inutilisable : "
+                      "tu dois le remplacer en catastrophe pour 180 $, "
+                      "sans avoir pu magasiner."}],
      "defaut": 2},
     {"id": "sortie-vendredi", "titre": "Une sortie s'organise vendredi",
      "texte": "Des amis (et ton coloc) sortent vendredi soir : souper "
               "et activité. Ça coûte de l'argent, mais la vie sociale "
               "compte aussi.",
      "options": [
-         {"libelle": "Participer à la sortie", "montant": -60.0},
-         {"libelle": "Rester à l'appartement cette fois", "montant": 0.0}],
+         {"libelle": "Participer à la sortie", "montant": -60.0,
+          "pourquoi": "Souper et activité entre amis : environ 60 $ "
+                      "pour ta part de la soirée."},
+         {"libelle": "Rester à l'appartement cette fois",
+          "montant": 0.0,
+          "pourquoi": "Aucun montant : tu ne dépenses rien ce "
+                      "vendredi, et tu gardes ton argent pour le "
+                      "reste du mois."}],
      "defaut": 1},
     {"id": "dent-douleur", "titre": "Une dent te fait mal",
      "texte": "Une rage de dent commence. Elle ne partira pas toute "
               "seule, la question c'est quand tu t'en occupes.",
      "options": [
-         {"libelle": "Aller chez le dentiste maintenant", "montant": -140.0},
-         {"libelle": "Attendre que ça passe", "montant": -230.0}],
+         {"libelle": "Aller chez le dentiste maintenant",
+          "montant": -140.0,
+          "pourquoi": "Un examen et un traitement tout de suite : "
+                      "environ 140 $. Le problème est réglé avant "
+                      "qu'il grossisse."},
+         {"libelle": "Attendre que ça passe", "montant": -230.0,
+          "pourquoi": "La douleur empire et tu finis chez le "
+                      "dentiste en urgence : le traitement coûte "
+                      "environ 230 $. Attendre a ajouté 90 $ à la "
+                      "facture."}],
      "defaut": 1},
     {"id": "coloc-cuisine", "titre": "Ton coloc cuisine en grosses quantités",
      "texte": "Ton coloc propose de cuisiner de grosses quantités pour "
               "la semaine et de partager les ingrédients. Ta part des "
               "courses baisse ce mois-ci si tu embarques.",
      "options": [
-         {"libelle": "Embarquer et payer ta part des ingrédients", "montant": -30.0},
-         {"libelle": "Continuer chacun de votre bord", "montant": 0.0}],
+         {"libelle": "Embarquer et payer ta part des ingrédients",
+          "montant": -30.0,
+          "pourquoi": "Ta part des ingrédients achetés en grosses "
+                      "quantités pour cuisiner la semaine : 30 $, "
+                      "payés tout de suite. C'est le prix du partage."},
+         {"libelle": "Continuer chacun de votre bord", "montant": 0.0,
+          "pourquoi": "Aucun montant : chacun continue ses courses "
+                      "de son bord, rien ne change."}],
      "defaut": 1},
 ]
 
@@ -1227,7 +1289,7 @@ def _identifiant_parametres(groupe):
 
 def parametres_par_defaut(groupe):
     return {"type": "parametres_groupe", "groupe": str(groupe),
-            "lance_le": None, "pauses": []}
+            "lance_le": None, "pauses": [], "classement_visible": True}
 
 
 def obtenir_parametres(magasin, groupe):
@@ -1236,7 +1298,18 @@ def obtenir_parametres(magasin, groupe):
         return parametres_par_defaut(groupe)
     params.setdefault("lance_le", None)
     params.setdefault("pauses", [])
+    params.setdefault("classement_visible", True)
     return params
+
+
+def basculer_classement(magasin, groupe):
+    """Affiche ou masque le classement du groupe (interrupteur du
+    prof, plan v2 section 7). Renvoie le nouvel état visible."""
+    params = obtenir_parametres(magasin, groupe)
+    params["classement_visible"] = not params.get("classement_visible",
+                                                  True)
+    _sauver_parametres(magasin, params)
+    return params["classement_visible"]
 
 
 def _sauver_parametres(magasin, params):
@@ -1395,6 +1468,9 @@ def _montants_section(dossier, code):
             cout = s5["transport"].get("cout")
             return {"epicerie_mois_part": t["mois_part"],
                     "transport": float(cout) if cout else 0.0}
+        if code == "S6":
+            s6 = obtenir_s6(dossier)
+            return {"categorie_ecart": s6.get("categorie_ecart") or ""}
     except Exception:
         return {}
     return {}
@@ -1506,12 +1582,15 @@ def generer_mouvements_mois(dossier, profil, params, mois, identifiant=""):
             + float(profil.get("aide_parents_mensuelle") or 0))
     mouvements = []
 
-    def ajoute(jour, libelle, montant, source="auto"):
+    def ajoute(jour, libelle, montant, source="auto", pourquoi=None):
         if montant:
-            mouvements.append({
+            mouvement = {
                 "mois": mois, "jour": jour, "libelle": libelle,
                 "montant": _arrondir2(montant), "source": source,
-                "date_reelle": _date.today().isoformat()})
+                "date_reelle": _date.today().isoformat()}
+            if pourquoi:
+                mouvement["pourquoi"] = pourquoi
+            mouvements.append(mouvement)
 
     ajoute(1, "Paie du mois (revenu net, autres revenus et aide des "
               "parents)", paie)
@@ -1567,11 +1646,12 @@ def generer_mouvements_mois(dossier, profil, params, mois, identifiant=""):
         option = choix["options"][choix["defaut"]]
         ajoute(14, f"Décision manquée : {choix['titre']} "
                    f"({option['libelle']})", option["montant"],
-               source="decision")
+               source="decision", pourquoi=option.get("pourquoi"))
         decisions[str(mois)] = {"choix_id": choix["id"],
                                 "option": choix["defaut"],
                                 "defaut": True,
-                                "montant": option["montant"]}
+                                "montant": option["montant"],
+                                "pourquoi": option.get("pourquoi") or ""}
     return mouvements
 
 
@@ -1619,9 +1699,12 @@ def appliquer_vie(magasin, identifiant, groupe, profil, aujourdhui=None):
 
 
 def ajouter_mouvement(magasin, identifiant, libelle, montant,
-                      source="correction", mois=None, aujourdhui=None):
+                      source="correction", mois=None, aujourdhui=None,
+                      pourquoi=None):
     """Un mouvement manuel au journal (imprévu du prof, événement,
-    correction) : il bouge le solde tout de suite."""
+    correction) : il bouge le solde tout de suite. Le pourquoi, quand
+    il y en a un, explique le montant à l'élève dans son journal :
+    aucun retrait d'argent face à un choix sans explication."""
     aujourdhui = _vers_date(aujourdhui) if aujourdhui else _date.today()
     dossier = magasin.charger_dossier(identifiant)
     if dossier is None:
@@ -1630,6 +1713,8 @@ def ajouter_mouvement(magasin, identifiant, libelle, montant,
     mouvement = {"mois": mois, "jour": None, "libelle": libelle,
                  "montant": _arrondir2(montant), "source": source,
                  "date_reelle": aujourdhui.isoformat()}
+    if pourquoi:
+        mouvement["pourquoi"] = pourquoi
     vie["mouvements"].append(mouvement)
     dossier["solde"] = _arrondir2(
         float(dossier.get("solde") or 0) + mouvement["montant"])
@@ -1654,13 +1739,14 @@ def enregistrer_decision(magasin, identifiant, mois, index_option,
     option = choix["options"][index_option]
     vie.setdefault("decisions", {})[str(mois)] = {
         "choix_id": choix["id"], "option": index_option,
-        "defaut": False, "montant": option["montant"]}
+        "defaut": False, "montant": option["montant"],
+        "pourquoi": option.get("pourquoi") or ""}
     magasin.sauvegarder_dossier(identifiant, dossier)
     return ajouter_mouvement(
         magasin, identifiant,
         f"Ta décision : {choix['titre']} ({option['libelle']})",
         option["montant"], source="decision", mois=mois,
-        aujourdhui=aujourdhui)
+        aujourdhui=aujourdhui, pourquoi=option.get("pourquoi"))
 
 
 def enregistrer_bilan(magasin, identifiant, mois, reponse_choix,
@@ -1738,25 +1824,51 @@ def position_dans_mois(params, aujourdhui=None):
 # --- Banque d'imprévus du prof et annonces ---
 
 BANQUE_IMPREVUS = [
-    {"id": "frigo", "titre": "Le frigo lâche", "montant": -175.0},
+    {"id": "frigo", "titre": "Le frigo lâche", "montant": -175.0,
+     "pourquoi": "Un remplacement en urgence par un appareil usagé "
+                 "livré chez toi : 175 $."},
     {"id": "degat-eau", "titre": "Dégât d'eau : franchise d'assurance",
-     "montant": -250.0},
-    {"id": "dentiste", "titre": "Dentiste en urgence", "montant": -140.0},
+     "montant": -250.0,
+     "pourquoi": "C'est la franchise de ton assurance habitation : "
+                 "le montant que tu paies de ta poche avant que "
+                 "l'assurance couvre le reste des dommages."},
+    {"id": "dentiste", "titre": "Dentiste en urgence", "montant": -140.0,
+     "pourquoi": "Un examen et un traitement en urgence : environ "
+                 "140 $."},
     {"id": "cell-fracasse", "titre": "Cellulaire fracassé",
-     "montant": -120.0},
+     "montant": -120.0,
+     "pourquoi": "La réparation de l'écran en atelier : environ "
+                 "120 $."},
     {"id": "portable", "titre": "L'ordinateur portable lâche",
-     "montant": -300.0},
-    {"id": "contravention", "titre": "Contravention", "montant": -100.0},
+     "montant": -300.0,
+     "pourquoi": "Un portable usagé de dépannage pour continuer tes "
+                 "cours : environ 300 $."},
+    {"id": "contravention", "titre": "Contravention", "montant": -100.0,
+     "pourquoi": "Le montant de l'amende : 100 $, à payer tel quel."},
     {"id": "heures-coupees", "titre": "Heures coupées au travail "
-     "(paie réduite de 20 % pour un mois)", "special": "heures_coupees"},
+     "(paie réduite de 20 % pour un mois)", "special": "heures_coupees",
+     "pourquoi": "Ton employeur coupe tes heures ce mois-ci : ta "
+                 "paie baisse de 20 %, et c'est ce montant-là qui "
+                 "manque dans ton compte."},
     {"id": "coloc-retard", "titre": "Le coloc paie son loyer en retard "
      "(tu avances sa part, remboursée le mois suivant)",
-     "special": "coloc_retard"},
+     "special": "coloc_retard",
+     "pourquoi": "Tu avances la part de loyer de ton coloc pour que "
+                 "le loyer complet soit payé à temps au propriétaire. "
+                 "Il te la rembourse le mois suivant : l'argent "
+                 "revient, mais il manque dans ton compte ce mois-ci."},
     {"id": "heures-sup", "titre": "Heures supplémentaires payées",
-     "montant": 180.0},
-    {"id": "impot", "titre": "Remboursement d'impôt", "montant": 220.0},
+     "montant": 180.0,
+     "pourquoi": "Les quarts supplémentaires que tu as faits, paie "
+                 "nette : environ 180 $ de plus dans tes poches."},
+    {"id": "impot", "titre": "Remboursement d'impôt", "montant": 220.0,
+     "pourquoi": "Ton remboursement d'impôt arrive dans ton compte : "
+                 "220 $ de plus."},
     {"id": "coloc-cuisine", "titre": "Le coloc cuisine de grosses "
-     "quantités (crédit d'épicerie)", "montant": 90.0},
+     "quantités (crédit d'épicerie)", "montant": 90.0,
+     "pourquoi": "Cuisiner en grosses quantités avec ton coloc fait "
+                 "baisser ta part d'épicerie : 90 $ d'économisés ce "
+                 "mois-ci, remis dans ton compte."},
 ]
 
 
@@ -1830,3 +1942,548 @@ def basculer_gel(magasin, identifiant):
     vie["gele"] = not vie.get("gele")
     magasin.sauvegarder_dossier(identifiant, dossier)
     return vie["gele"]
+
+
+# --- P4 : score de vie, classement, S6 et S7 ---
+# Le score de vie (plan v2, section 7) est un jeu de motivation :
+# 100 points, 100 % relatifs au profil, jamais de dollars bruts dans
+# le classement, et il ne compte jamais dans la note. Chaque
+# composante rend ses points AVEC les montants et la raison, en
+# langage simple : l'élève sait ce qui lui a coûté des points et
+# pourquoi, comme pour les choix de vie (règle du pourquoi).
+
+CATEGORIES_MOUVEMENTS = [
+    ("paie", "Paie"),
+    ("heures", "Ajustement d'heures (tes réglages)"),
+    ("loyer", "Loyer"),
+    ("installation", "Installation (une seule fois)"),
+    ("epicerie", "Épicerie"),
+    ("electricite", "Électricité"),
+    ("internet", "Internet"),
+    ("cellulaire", "Cellulaire"),
+    ("assurance", "Assurance habitation"),
+    ("transport", "Transport"),
+    ("decisions", "Tes décisions"),
+    ("imprevus", "Imprévus reçus"),
+    ("evenements", "Événements de classe"),
+    ("corrections", "Corrections de ton enseignant"),
+    ("autres", "Autres mouvements"),
+]
+
+_DEPENSES_RECURRENTES = ("loyer", "epicerie", "electricite",
+                         "internet", "cellulaire", "assurance",
+                         "transport")
+
+
+def categoriser_mouvement(mouvement):
+    """La catégorie d'un mouvement du journal, d'après sa source et
+    son libellé. Sert au score, à la S6 et au dossier résumé."""
+    source = mouvement.get("source") or "auto"
+    libelle = mouvement.get("libelle") or ""
+    if source == "imprevu":
+        return "imprevus"
+    if source == "decision":
+        return "decisions"
+    if source == "evenement":
+        return "evenements"
+    if source == "correction":
+        return "corrections"
+    if libelle.startswith("Paie du mois"):
+        return "paie"
+    if libelle.startswith("Heures de travail ajustées"):
+        return "heures"
+    if "loyer" in libelle.lower():
+        return "loyer"
+    if libelle.startswith("Installation"):
+        return "installation"
+    if libelle.startswith("Épicerie"):
+        return "epicerie"
+    if libelle.startswith("Électricité"):
+        return "electricite"
+    if libelle.startswith("Internet"):
+        return "internet"
+    if libelle.startswith("Cellulaire"):
+        return "cellulaire"
+    if libelle.startswith("Assurance"):
+        return "assurance"
+    if libelle.startswith("Transport"):
+        return "transport"
+    return "autres"
+
+
+def _soldes_fin_mois(dossier, profil):
+    """Le solde à la fin de chaque mois fermé, reconstruit depuis
+    l'épargne de départ du profil et le journal : les montants
+    relatifs du score partent toujours de là, jamais du solde brut
+    comparé à d'autres."""
+    vie = obtenir_vie(dossier)
+    n = int(vie.get("mois_appliques") or 0)
+    mouvements = vie.get("mouvements") or []
+    solde = float((profil or {}).get("epargne_depart") or 0)
+    hors = sum(float(m.get("montant") or 0) for m in mouvements
+               if not m.get("mois"))
+    soldes = {}
+    for mois in range(1, n + 1):
+        total = sum(float(m.get("montant") or 0) for m in mouvements
+                    if m.get("mois") == mois)
+        solde += total + (hors if mois == 1 else 0)
+        soldes[mois] = _arrondir2(solde)
+    return soldes
+
+
+def prevu_mensuel(dossier):
+    """Le mois type prévu de l'élève, par clé de montant : ses vrais
+    montants quand la section est terminée, le montant de référence
+    sinon (le même principe que le calendrier : la vie n'attend
+    pas)."""
+    vie = obtenir_vie(dossier)
+    completions = vie.get("completions") or {}
+    cles = {"S2": ("loyer_total", "loyer_part"),
+            "S4": ("elec_part", "internet_part", "cellulaire",
+                   "assurance"),
+            "S5": ("epicerie_mois_part", "transport")}
+    prevu = {}
+    for code, liste in cles.items():
+        completion = completions.get(code) or {}
+        instantane = completion.get("montants") or {}
+        frais = _montants_section(dossier, code)
+        for cle in liste:
+            if cle in instantane:
+                prevu[cle] = float(instantane[cle])
+            elif completion.get("date") and cle in frais:
+                prevu[cle] = float(frais[cle])
+            elif cle in frais and float(frais[cle]) > 0:
+                # Un contenu déjà rempli mais pas encore terminé :
+                # ses vrais montants valent mieux que la référence.
+                # Un zéro d'une section vide, lui, ne remplace
+                # jamais la référence (la vie n'attend pas).
+                prevu[cle] = float(frais[cle])
+            else:
+                prevu[cle] = REFERENCES_VIE[cle]
+    s3 = (completions.get("S3") or {}).get("montants") or {}
+    if "installation" in s3:
+        prevu["installation"] = float(s3["installation"])
+    else:
+        prevu["installation"] = float(
+            _montants_section(dossier, "S3").get("installation") or 0.0)
+    return prevu
+
+
+def _paie_profil(profil):
+    profil = profil or {}
+    return (float(profil.get("revenu_net_mensuel") or 0)
+            + float(profil.get("autre_revenu_mensuel") or 0)
+            + float(profil.get("aide_parents_mensuelle") or 0))
+
+
+def calculer_score_vie(dossier, profil):
+    """Le score de vie complet : total sur 100 et, par composante,
+    les points, le maximum, les montants qui comptent et une
+    explication en langage simple. Aucun montant brut d'un autre
+    élève n'entre jamais ici."""
+    vie = obtenir_vie(dossier)
+    mouvements = vie.get("mouvements") or []
+    n = int(vie.get("mois_appliques") or 0)
+    soldes = _soldes_fin_mois(dossier, profil)
+    solde_actuel = float(dossier.get("solde") or 0)
+
+    # Budget (40) : les mois fermés terminés avec un solde positif.
+    if n > 0:
+        sains = sum(1 for s in soldes.values() if s >= 0)
+        pts_budget = 40.0 * sains / n
+        plus_bas = min(soldes.values())
+        penalite = 0.0
+        texte = (f"Sur tes {n} mois fermés, {sains} se sont terminés "
+                 f"avec un solde positif. Chaque mois terminé dans le "
+                 f"rouge enlève sa part des 40 points. Ton solde le "
+                 f"plus bas à une fin de mois : "
+                 f"{_fmt_montant(plus_bas)}.")
+        if plus_bas < -100.0:
+            penalite = min(10.0, pts_budget)
+            pts_budget -= penalite
+            texte += (" Il est descendu sous -100 $ : 10 points de "
+                      "plus en moins, parce qu'un trou de plus de "
+                      "100 $ est long à remonter.")
+    else:
+        sains, plus_bas, penalite = 0, None, 0.0
+        pts_budget = 0.0
+        texte = ("Aucun mois n'est encore fermé : cette partie du "
+                 "score commencera à la fermeture de ton premier "
+                 "mois. L'objectif : terminer chaque mois avec un "
+                 "solde positif, et ne jamais descendre sous -100 $.")
+    budget = {"points": _arrondir2(pts_budget), "max": 40,
+              "explication": texte,
+              "details": {"mois_fermes": n, "mois_sains": sains,
+                          "plus_bas": plus_bas, "penalite": penalite}}
+
+    # Réserve (20) : le solde actuel comparé à SES dépenses d'un
+    # mois. Un mois complet de dépenses en réserve = le plein score.
+    depenses = 0.0
+    if n > 0:
+        total_dep = sum(-float(m.get("montant") or 0)
+                        for m in mouvements
+                        if float(m.get("montant") or 0) < 0
+                        and categoriser_mouvement(m)
+                        in _DEPENSES_RECURRENTES)
+        depenses = total_dep / n
+    if depenses <= 0:
+        prevu = prevu_mensuel(dossier)
+        depenses = (prevu["loyer_part"] + prevu["epicerie_mois_part"]
+                    + prevu["elec_part"] + prevu["internet_part"]
+                    + prevu["cellulaire"] + prevu["assurance"]
+                    + prevu["transport"])
+    ratio = (solde_actuel / depenses) if depenses > 0 else 0.0
+    pts_reserve = 20.0 * min(1.0, max(0.0, ratio))
+    if ratio >= 1.0:
+        texte_r = (f"Il te reste {_fmt_montant(solde_actuel)}, soit "
+                   f"plus d'un mois complet de tes dépenses "
+                   f"({_fmt_montant(depenses)} par mois) : le plein "
+                   f"score. Ta réserve peut absorber un gros "
+                   f"imprévu sans te mettre dans le rouge.")
+    elif ratio > 0:
+        texte_r = (f"Il te reste {_fmt_montant(solde_actuel)}, soit "
+                   f"{ratio:.1f} mois de tes dépenses "
+                   f"({_fmt_montant(depenses)} par mois). L'objectif "
+                   f"est un mois complet : chaque dollar gardé de "
+                   f"côté te rapproche des 20 points.")
+    else:
+        texte_r = (f"Ton solde est à {_fmt_montant(solde_actuel)} : "
+                   f"aucune réserve pour l'instant. Tes dépenses "
+                   f"courantes sont d'environ "
+                   f"{_fmt_montant(depenses)} par mois, c'est ce "
+                   f"montant-là qu'il faudrait réussir à garder de "
+                   f"côté pour le plein score.")
+    reserve = {"points": _arrondir2(pts_reserve), "max": 20,
+               "explication": texte_r,
+               "details": {"solde": solde_actuel,
+                           "depenses_mois": _arrondir2(depenses),
+                           "ratio": _arrondir2(ratio)}}
+
+    # Appartement (20) : les niveaux de la S3, pièce par pièce, et
+    # le plafond d'installation respecté.
+    s3 = obtenir_s3(dossier)
+    fractions = {"MAXIMAL": 1.0, "MOYEN": 2.0 / 3.0, "MINIMAL": 1.0 / 3.0,
+                 None: 0.0}
+    niveaux = {}
+    somme = 0.0
+    blocs = 0
+    for piece, seuils in SEUILS_S3.items():
+        niveau = niveau_s3(nombre_prouves(
+            (s3.get("pieces") or {}).get(piece, [])), seuils)
+        niveaux[piece] = niveau or "incomplet"
+        somme += fractions[niveau]
+        blocs += 1
+    niveau_e = niveau_s3(nombre_prouves(s3.get("electro") or []),
+                         SEUILS_ELECTRO)
+    niveaux["Électroménagers"] = niveau_e or "incomplet"
+    somme += fractions[niveau_e]
+    blocs += 1
+    installation = total_installation(s3)
+    pts_appart = 20.0 * (somme / blocs if blocs else 0)
+    depasse = installation > PLAFOND_INSTALLATION
+    if depasse:
+        pts_appart = max(0.0, pts_appart - 5.0)
+    morceaux = ", ".join(f"{p} : {niveaux[p]}" for p in niveaux)
+    texte_a = (f"Tes niveaux, pièce par pièce : {morceaux}. Chaque "
+               f"pièce compte pour sa part des 20 points (MINIMAL "
+               f"vaut un tiers, MOYEN deux tiers, MAXIMAL le tout). "
+               f"Ton installation coûte {_fmt_montant(installation)} "
+               f"sur un plafond de {_fmt_montant(PLAFOND_INSTALLATION)}.")
+    if depasse:
+        texte_a += (" Tu dépasses le plafond : 5 points en moins, "
+                    "parce que le plafond fait partie du défi.")
+    appartement = {"points": _arrondir2(pts_appart), "max": 20,
+                   "explication": texte_a,
+                   "details": {"niveaux": niveaux,
+                               "installation": _arrondir2(installation),
+                               "plafond_depasse": depasse}}
+
+    # Imprévus (20) : chaque imprévu négatif reçu doit être absorbé,
+    # c'est-à-dire le solde revenu positif au plus tard à la fin du
+    # mois suivant.
+    recus = [m for m in mouvements
+             if categoriser_mouvement(m) == "imprevus"
+             and float(m.get("montant") or 0) < 0]
+    absorb = 0
+    for m in recus:
+        mois_imp = int(m.get("mois") or 0)
+        if mois_imp >= 1 and n > mois_imp:
+            if soldes.get(mois_imp + 1, -1) >= 0:
+                absorb += 1
+        elif mois_imp >= 1 and n == mois_imp:
+            if solde_actuel >= 0:
+                absorb += 1
+    if recus:
+        pts_imp = 20.0 * absorb / len(recus)
+        cout_total = -sum(float(m.get("montant") or 0) for m in recus)
+        texte_i = (f"Tu as reçu {len(recus)} imprévu"
+                   f"{'s' if len(recus) > 1 else ''} qui coûte de "
+                   f"l'argent, {_fmt_montant(cout_total)} au total. "
+                   f"{absorb} a été absorbé : ton solde était revenu "
+                   f"positif au plus tard le mois suivant. C'est ça, "
+                   f"absorber un imprévu : il te frappe, mais il ne "
+                   f"te traîne pas dans le rouge pendant des mois.")
+    else:
+        pts_imp = 20.0
+        texte_i = ("Aucun imprévu payant reçu pour l'instant : le "
+                   "plein score, provisoirement. Le jour où un "
+                   "imprévu te coûtera de l'argent, il faudra que ton "
+                   "solde soit revenu positif au plus tard le mois "
+                   "suivant pour garder ces points.")
+    imprevus = {"points": _arrondir2(pts_imp), "max": 20,
+                "explication": texte_i,
+                "details": {"recus": len(recus), "absorbes": absorb}}
+
+    total = _arrondir2(pts_budget + pts_reserve + pts_appart
+                       + pts_imp)
+    return {"total": total, "budget": budget, "reserve": reserve,
+            "appartement": appartement, "imprevus": imprevus,
+            "mois_fermes": n}
+
+
+def classement_groupe(magasin, groupe, profils):
+    """Le classement du groupe : les scores de vie, triés, avec le
+    contexte du profil de chacun (jamais de dollars bruts)."""
+    lignes = []
+    for compte in magasin.comptes_du_groupe(groupe):
+        dossier = magasin.charger_dossier(compte["identifiant"])
+        if dossier is None:
+            continue
+        try:
+            profil = profils[int(compte["cas_numero"])]
+        except Exception:
+            continue
+        score = calculer_score_vie(dossier, profil)
+        lignes.append({
+            "identifiant": compte["identifiant"],
+            "nom": compte.get("nom_affiche") or compte["identifiant"],
+            "cas": int(compte["cas_numero"]),
+            "revenu_profil": _arrondir2(_paie_profil(profil)),
+            "score": score,
+        })
+    lignes.sort(key=lambda l: (-l["score"]["total"],
+                               -l["score"]["reserve"]["points"],
+                               l["nom"]))
+    for rang, ligne in enumerate(lignes, start=1):
+        ligne["rang"] = rang
+    return lignes
+
+
+def podiums_categories(classement):
+    """Le premier de chaque composante : plusieurs gagnants, pas un
+    seul champion (plan v2, section 7)."""
+    podiums = {}
+    for cle, nom in (("budget", "Budget le mieux tenu"),
+                     ("reserve", "Meilleure réserve"),
+                     ("appartement", "Appartement le plus complet"),
+                     ("imprevus", "Imprévus le mieux absorbés")):
+        if classement:
+            meilleur = max(
+                classement,
+                key=lambda l: l["score"][cle]["points"])
+            podiums[nom] = {"nom": meilleur["nom"],
+                            "points": meilleur["score"][cle]["points"],
+                            "max": meilleur["score"][cle]["max"]}
+    return podiums
+
+
+# --- S6 : le budget prévu confronté au vécu ---
+
+def s6_par_defaut():
+    return {"categorie_ecart": "", "pourquoi_ecart": "",
+            "changement": ""}
+
+
+def obtenir_s6(dossier):
+    s6 = (dossier or {}).get("s6")
+    if not isinstance(s6, dict):
+        return s6_par_defaut()
+    defaut = s6_par_defaut()
+    for cle, valeur in defaut.items():
+        s6.setdefault(cle, valeur)
+    return s6
+
+
+def enregistrer_s6(magasin, identifiant, s6):
+    dossier = magasin.charger_dossier(identifiant)
+    if dossier is None:
+        raise ValueError(f"Dossier introuvable : {identifiant}")
+    dossier["s6"] = s6
+    magasin.sauvegarder_dossier(identifiant, dossier)
+    return dossier
+
+
+def comparer_prevu_vecu(dossier, profil, params=None):
+    """Le tableau de la S6 : par catégorie, ce qui était prévu (les
+    montants des sections, répétés sur les mois fermés) et ce qui
+    s'est vraiment passé (le journal), avec l'écart. Chaque ligne
+    porte une explication de l'écart, générée depuis les faits du
+    dossier : sections terminées en retard (mois au montant de
+    référence), réglages appliqués, décisions et imprévus. Les
+    paramètres du groupe servent à compter les mois où le montant
+    de référence s'est appliqué."""
+    vie = obtenir_vie(dossier)
+    mouvements = vie.get("mouvements") or []
+    n = int(vie.get("mois_appliques") or 0)
+    prevu = prevu_mensuel(dossier)
+    paie = _paie_profil(profil)
+    reglages = vie.get("reglages") or {}
+    mois_serres = sum(1 for r in reglages.values()
+                      if r.get("epicerie") == "serrer")
+    mois_mieux = sum(1 for r in reglages.values()
+                     if r.get("epicerie") == "mieux")
+    mois_econo = sum(1 for r in reglages.values()
+                     if r.get("electricite") == "econome")
+    mois_confort = sum(1 for r in reglages.values()
+                       if r.get("electricite") == "confort")
+    completions = vie.get("completions") or {}
+
+    def mois_reference(code):
+        """Les mois fermés où le montant de référence s'est appliqué
+        faute de section terminée avant leur fermeture."""
+        completion = completions.get(code) or {}
+        if not completion.get("date"):
+            return n
+        if params is None or n == 0:
+            return 0
+        date_c = _vers_date(completion["date"])
+        compteur = 0
+        for mois in range(1, n + 1):
+            fermeture = date_fermeture_mois(params, mois)
+            if fermeture is None or date_c > fermeture:
+                compteur += 1
+        return compteur
+
+    lignes = []
+
+    def ligne(cle_cat, nom, prevu_total, pourquoi):
+        vecu = sum(float(m.get("montant") or 0) for m in mouvements
+                   if categoriser_mouvement(m) == cle_cat)
+        lignes.append({
+            "categorie": cle_cat, "nom": nom,
+            "prevu": _arrondir2(prevu_total), "vecu": _arrondir2(vecu),
+            "ecart": _arrondir2(vecu - prevu_total),
+            "pourquoi": pourquoi})
+
+    ligne("paie", "Paie", paie * n,
+          "Ta paie est celle de ton profil, elle entre au complet "
+          "chaque mois. Si le vécu dépasse le prévu, ce sont tes "
+          "heures supplémentaires ou tes réglages d'heures.")
+    ligne("heures", "Ajustement d'heures (tes réglages)", 0.0,
+          "Ce montant n'existe que si tu as réglé tes heures pour le "
+          "mois suivant dans Ma vie : travailler plus ou moins, ça "
+          "se voit ici, en argent.")
+    if n >= 1:
+        prevu_loyer = prevu["loyer_total"] + prevu["loyer_part"] * (n - 1)
+    else:
+        prevu_loyer = 0.0
+    ref_s2 = mois_reference("S2")
+    ligne("loyer", "Loyer", -prevu_loyer,
+          ("Le premier mois, le loyer complet tombe à l'entrée ; "
+           "ensuite, ta part de 50 % chaque mois. "
+           + (f"Pendant {ref_s2} mois, c'est le loyer de référence "
+              f"qui s'est appliqué parce que ta S2 n'était pas "
+              f"terminée : la vie n'attend pas." if ref_s2 else
+              "Ta S2 était terminée à temps : c'est ton vrai loyer "
+              "qui s'est appliqué dès le départ.")))
+    ligne("installation", "Installation (une seule fois)",
+          -prevu["installation"],
+          "Ton ameublement et tes électroménagers, payés une seule "
+          "fois au premier mois où ta S3 était terminée. Si le vécu "
+          "est à 0, c'est que ta S3 n'était pas terminée avant la "
+          "fermeture d'un mois.")
+    ref_s5 = mois_reference("S5")
+    ligne("epicerie", "Épicerie", -prevu["epicerie_mois_part"] * n,
+          ("Ta part de la semaine type de ta S5, répétée chaque mois. "
+           + (f"Tu as serré ton épicerie {mois_serres} mois "
+              f"(-10 % par tes réglages). " if mois_serres else "")
+           + (f"Tu l'as bonifiée {mois_mieux} mois (+10 %). "
+              if mois_mieux else "")
+           + (f"Pendant {ref_s5} mois, le montant de référence "
+              f"s'est appliqué parce que ta S5 n'était pas terminée."
+              if ref_s5 else "")))
+    ref_s4 = mois_reference("S4")
+    ligne("electricite", "Électricité", -prevu["elec_part"] * n,
+          ("Ta part de 50 % du calcul Hydro de ta S4. "
+           + (f"Réglage économe appliqué {mois_econo} mois (-10 %). "
+              if mois_econo else "")
+           + (f"Réglage confort appliqué {mois_confort} mois "
+              f"(+10 %). " if mois_confort else "")
+           + (f"Pendant {ref_s4} mois, le montant de référence "
+              f"s'est appliqué parce que ta S4 n'était pas terminée."
+              if ref_s4 else "")))
+    ligne("internet", "Internet", -prevu["internet_part"] * n,
+          "Ta part de 50 % du forfait de ta S4, chaque mois.")
+    ligne("cellulaire", "Cellulaire", -prevu["cellulaire"] * n,
+          "Ton forfait personnel de ta S4, chaque mois.")
+    ligne("assurance", "Assurance habitation",
+          -prevu["assurance"] * n,
+          "Ton assurance de ta S4, chaque mois.")
+    ligne("transport", "Transport", -prevu["transport"] * n,
+          "Le coût mensuel du transport de ta S5, chaque mois.")
+    decisions = vie.get("decisions") or {}
+    nb_defaut = sum(1 for d in decisions.values() if d.get("defaut"))
+    ligne("decisions", "Tes décisions", 0.0,
+          ("Aucun montant prévu : les décisions arrivent avec la "
+           "vie. "
+           + (f"{nb_defaut} décision{'s' if nb_defaut > 1 else ''} "
+              f"a été appliquée par défaut parce que tu n'avais pas "
+              f"tranché avant la fermeture : c'est l'option "
+              f"souvent la plus chère qui s'applique toute seule."
+              if nb_defaut else
+              "Tu as tranché chacune de tes décisions toi-même.")))
+    ligne("imprevus", "Imprévus reçus", 0.0,
+          "Par définition, un imprévu ne se prévoit pas. Ce qui "
+          "compte, c'est de l'absorber sans rester dans le rouge.")
+    ligne("evenements", "Événements de classe", 0.0,
+          "Les événements que ton enseignant a appliqués au groupe.")
+    ligne("corrections", "Corrections de ton enseignant", 0.0,
+          "Les ajustements que ton enseignant a faits à ton compte, "
+          "avec son motif dans ton journal.")
+    ligne("autres", "Autres mouvements", 0.0,
+          "Ce qui ne rentre pas dans les autres catégories, par "
+          "exemple le remboursement de la part avancée à ton coloc.")
+    lignes = [l for l in lignes
+              if l["prevu"] != 0 or l["vecu"] != 0
+              or l["categorie"] in ("decisions", "imprevus")]
+    total_prevu = _arrondir2(sum(l["prevu"] for l in lignes))
+    total_vecu = _arrondir2(sum(l["vecu"] for l in lignes))
+    return {"mois": n, "lignes": lignes, "total_prevu": total_prevu,
+            "total_vecu": total_vecu,
+            "ecart_total": _arrondir2(total_vecu - total_prevu)}
+
+
+# --- S7 : la réflexion, le mot de la fin ---
+
+def s7_par_defaut():
+    return {"appris": "", "decision_couteuse": "", "conseil": ""}
+
+
+def obtenir_s7(dossier):
+    s7 = (dossier or {}).get("s7")
+    if not isinstance(s7, dict):
+        return s7_par_defaut()
+    defaut = s7_par_defaut()
+    for cle, valeur in defaut.items():
+        s7.setdefault(cle, valeur)
+    return s7
+
+
+def enregistrer_s7(magasin, identifiant, s7):
+    dossier = magasin.charger_dossier(identifiant)
+    if dossier is None:
+        raise ValueError(f"Dossier introuvable : {identifiant}")
+    dossier["s7"] = s7
+    magasin.sauvegarder_dossier(identifiant, dossier)
+    return dossier
+
+
+def s7_manquants(s7):
+    manques = []
+    if not (s7.get("appris") or "").strip():
+        manques.append("ce que l'argent t'a appris")
+    if not (s7.get("decision_couteuse") or "").strip():
+        manques.append("ta décision la plus coûteuse")
+    if not (s7.get("conseil") or "").strip():
+        manques.append("ton conseil à ton moi de mars")
+    return manques

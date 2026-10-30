@@ -33,7 +33,10 @@ except Exception:
 if not hasattr(donnees, "PIECE_COLOC") or not hasattr(donnees, "nouveau_jeton_session") \
         or not hasattr(donnees, "calculer_electricite") \
         or not hasattr(donnees, "appliquer_vie") \
-        or not hasattr(donnees, "enregistrer_reglages"):
+        or not hasattr(donnees, "enregistrer_reglages") \
+        or not hasattr(donnees, "calculer_score_vie") \
+        or not hasattr(donnees, "comparer_prevu_vecu") \
+        or not hasattr(donnees, "basculer_classement"):
     import importlib
     importlib.reload(donnees)
 
@@ -827,6 +830,132 @@ p, li, label{ color:var(--texte); }
 .vie-recu h2{ font-family:"Special Elite",monospace; font-weight:400;
   font-size:22px; letter-spacing:.12em; color:var(--encre);
   text-align:center; margin:0 0 8px; }
+.vie-journal-pourquoi{ font-size:12.5px; color:#6B6257;
+  font-style:italic; margin-top:2px; max-width:46ch; }
+.bloc-accent .vie-journal-pourquoi{ color:#D8D2BE; }
+/* P4 : l'étiquette du score de vie, façon ÉnerGuide épinglée sur la
+   porte ; le classement en liste de frigo ; la S6 en cahier de
+   comptes au crayon ; la S7 en mot de la fin épinglé. */
+.score-etiquette{ position:relative; margin-top:20px; background:#FDFDFB;
+  color:var(--encre); border:3px solid #20242E; border-radius:6px;
+  padding:0 0 20px; box-shadow:0 20px 44px rgba(0,0,0,.55);
+  transform:rotate(-.4deg); overflow:hidden; }
+.score-etiquette .bande{ background:#20242E; color:#F5F2EA;
+  font-family:"Special Elite",monospace; font-size:12px;
+  letter-spacing:.24em; padding:9px 18px; display:flex;
+  justify-content:space-between; }
+.score-etiquette .corps{ padding:16px 24px 0; text-align:center; }
+.score-etiquette .titre{ font-family:"Bebas Neue",sans-serif;
+  font-size:26px; letter-spacing:.06em; color:#20242E; }
+.score-etiquette .nombre{ font-family:"Bebas Neue",sans-serif;
+  font-size:96px; line-height:.95; color:#20242E; }
+.score-etiquette .nombre small{ font-size:30px; color:#6B6257; }
+.score-echelle{ position:relative; height:20px; margin:14px 24px 4px;
+  border:2px solid #20242E; border-radius:10px;
+  background:linear-gradient(90deg,#C0392B 0%,#E67E22 30%,
+    #F2C224 55%,#7FB069 78%,#2E7D32 100%); }
+.score-echelle .curseur{ position:absolute; top:-9px; width:4px;
+  height:34px; background:#20242E; border-radius:2px; }
+.score-echelle .curseur::after{ content:""; position:absolute;
+  top:-8px; left:-6px; border:8px solid transparent;
+  border-top:10px solid #20242E; }
+.score-bornes{ display:flex; justify-content:space-between;
+  margin:0 26px; font-family:"Special Elite",monospace;
+  font-size:11.5px; color:#6B6257; }
+.score-note{ text-align:center; font-size:13.5px; color:#3A352B;
+  padding:8px 24px 0; }
+.score-carte{ position:relative; margin-top:18px; color:var(--encre);
+  padding:20px 22px 16px; border-radius:3px;
+  background:linear-gradient(175deg,#F7F1E3,#EEE4CE);
+  box-shadow:0 16px 36px rgba(0,0,0,.5); }
+.score-carte .tete{ display:flex; justify-content:space-between;
+  align-items:baseline; border-bottom:2px dashed rgba(42,38,32,.25);
+  padding-bottom:8px; }
+.score-carte h3{ font-family:"Bebas Neue",sans-serif; font-weight:400;
+  font-size:27px; letter-spacing:.04em; margin:0; color:var(--encre); }
+.score-carte .points{ font-family:"Bebas Neue",sans-serif;
+  font-size:34px; color:#A93226; }
+.score-carte .points small{ font-size:16px; color:#6B6257; }
+.score-carte p{ color:#3A352B; font-size:14.5px; margin:10px 0 2px; }
+.score-jauge{ height:10px; border-radius:5px; margin-top:10px;
+  background:rgba(42,38,32,.14); overflow:hidden; }
+.score-jauge i{ display:block; height:100%; background:var(--vert);
+  border-radius:5px; }
+.classement-titre{ font-family:"Bebas Neue",sans-serif; font-size:30px;
+  letter-spacing:.05em; color:var(--texte); margin:30px 0 4px; }
+.classement-ligne{ display:flex; gap:14px; align-items:baseline;
+  background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.14);
+  border-radius:8px; padding:10px 16px; margin-top:8px; color:var(--texte); }
+.classement-ligne.moi{ border-color:var(--jaune);
+  background:rgba(242,194,36,.12); }
+.classement-ligne .rang{ font-family:"Bebas Neue",sans-serif;
+  font-size:24px; color:var(--jaune); min-width:34px; }
+.classement-ligne .nom{ font-weight:700; font-size:16px; }
+.classement-ligne .ctx{ color:#B9BECB; font-size:13px; }
+.classement-ligne .pts{ margin-left:auto; font-family:"Bebas Neue",
+  sans-serif; font-size:24px; }
+.s6-cahier{ position:relative; margin-top:20px; color:var(--encre);
+  border-radius:4px; padding:24px 26px 18px 64px;
+  background:repeating-linear-gradient(#FBF7EC 0 31px,
+    #D8D2BE 31px 32px);
+  box-shadow:0 18px 40px rgba(0,0,0,.55); }
+.s6-cahier::before{ content:""; position:absolute; top:0; bottom:0;
+  left:46px; width:2px; background:rgba(169,50,38,.5); }
+.s6-cahier h2{ font-family:"Caveat",cursive; font-size:34px;
+  font-weight:700; margin:0 0 4px; color:#2B2620; }
+.s6-ligne{ display:grid; grid-template-columns:1.5fr .8fr .8fr .8fr;
+  gap:10px; padding:7px 0; border-bottom:1px solid rgba(42,38,32,.18);
+  font-size:14.5px; align-items:baseline; }
+.s6-ligne.entete{ font-family:"Special Elite",monospace; font-size:12px;
+  letter-spacing:.08em; color:#6B6257; }
+.s6-ligne .chiffre{ text-align:right; font-variant-numeric:tabular-nums; }
+.s6-ligne .ecart-positif{ color:var(--vert); font-weight:700; }
+.s6-ligne .ecart-negatif{ color:#A93226; font-weight:700; }
+.s6-pourquoi{ font-size:13px; color:#5A5344; font-style:italic;
+  padding:2px 0 8px; max-width:75ch; }
+.s7-mot{ position:relative; margin-top:20px; color:var(--encre);
+  padding:26px 28px 20px; border-radius:3px; transform:rotate(.5deg);
+  background:linear-gradient(175deg,#FFFDF4,#F4ECD4);
+  box-shadow:0 18px 40px rgba(0,0,0,.55); }
+.s7-mot::before{ content:""; position:absolute; top:-9px; left:50%;
+  width:20px; height:20px; margin-left:-10px; border-radius:50%;
+  background:#0A0A0E; box-shadow:inset 0 2px 5px rgba(255,255,255,.35); }
+.s7-mot h2{ font-family:"Caveat",cursive; font-size:36px;
+  font-weight:700; margin:0; color:#2B2620; }
+.s7-citation{ font-family:"Caveat",cursive; font-size:23px;
+  font-weight:600; color:#3A352B; margin:8px 0; }
+/* Le guide : le mode d'emploi du jeu, une grande fiche épinglée.
+   Chaque pas de la marche à suivre y est numéroté, en langage
+   simple, pour que personne ne devine comment jouer. */
+.guide-fiche{ position:relative; margin-top:20px; color:var(--encre);
+  padding:26px 30px 20px; border-radius:3px;
+  background:linear-gradient(175deg,#FDFBF4,#F1EAD6);
+  box-shadow:0 18px 40px rgba(0,0,0,.55); }
+.guide-fiche::before{ content:""; position:absolute; top:-9px;
+  left:50%; width:20px; height:20px; margin-left:-10px;
+  border-radius:50%; background:#0A0A0E;
+  box-shadow:inset 0 2px 5px rgba(255,255,255,.35); }
+.guide-fiche .mention{ font-family:"Special Elite",monospace;
+  font-size:12px; letter-spacing:.3em; color:#6B6257;
+  text-align:center; }
+.guide-fiche h2{ font-family:"Bebas Neue",sans-serif; font-weight:400;
+  font-size:40px; letter-spacing:.03em; text-align:center;
+  margin:6px 0 2px; color:var(--encre); }
+.guide-fiche .intro{ text-align:center; font-size:15px; color:#3A352B;
+  max-width:62ch; margin:0 auto; }
+.guide-etape{ display:grid; grid-template-columns:52px 1fr; gap:14px;
+  padding:14px 0; border-bottom:1.5px dashed rgba(42,38,32,.25); }
+.guide-etape:last-child{ border-bottom:none; }
+.guide-num{ font-family:"Bebas Neue",sans-serif; font-size:26px;
+  color:#FFF7E0; background:#A93226; border-radius:50%;
+  width:44px; height:44px; line-height:44px; text-align:center;
+  box-shadow:0 4px 10px rgba(0,0,0,.3); }
+.guide-etape h3{ font-family:"Bebas Neue",sans-serif; font-weight:400;
+  font-size:24px; letter-spacing:.03em; margin:6px 0 4px;
+  color:var(--encre); }
+.guide-etape p{ font-size:14.5px; color:#3A352B; margin:0;
+  max-width:78ch; }
+.guide-etape p b{ color:var(--encre); }
 .vie-attente{ background:#FFFFFF; color:var(--encre); padding:19px 21px;
   border-left:6px solid var(--jaune); border-radius:4px; margin-top:18px;
   box-shadow:0 14px 30px rgba(0,0,0,.45); font-size:15px; }
@@ -939,7 +1068,7 @@ def aller(page):
 NOM_COOKIE_JETON = "appart2_jeton"
 NOM_COOKIE_PAGE = "appart2_page"
 PAGES_CONNUES = {"accueil", "vie", "score", "imprevus", "sections", "console",
-                 "s1", "s2", "s3", "s4", "s5"}
+                 "guide", "s1", "s2", "s3", "s4", "s5", "s6", "s7"}
 
 
 def deconnecter():
@@ -1190,10 +1319,12 @@ def formulaire_connexion():
 # ------------------------------------------------------------- écrans élève
 def barre_navigation(page):
     onglets = [("accueil", "Accueil"), ("vie", "Ma vie"), ("score", "Mon score"),
-               ("imprevus", "Mes imprévus"), ("sections", "Mes sections S1 à S7")]
-    actif = "sections" if page in ("s1", "s2", "s3", "s4", "s5") else page
+               ("imprevus", "Mes imprévus"), ("sections", "Mes sections S1 à S7"),
+               ("guide", "Guide")]
+    actif = "sections" if page in ("s1", "s2", "s3", "s4", "s5",
+                                   "s6", "s7") else page
     with st.container(key="nav_bar"):
-        cols = st.columns([1.1, 1, 1.2, 1.4, 2.2, 1.5])
+        cols = st.columns([1.1, 1, 1.2, 1.4, 1.9, 0.9, 1.5])
         for col, (code, nom) in zip(cols, onglets):
             with col:
                 if st.button(nom, key=f"nav_{code}",
@@ -1201,7 +1332,7 @@ def barre_navigation(page):
                              use_container_width=True):
                     if code != actif:
                         aller(code)
-        with cols[5]:
+        with cols[6]:
             if st.button("Me déconnecter", key="nav_deco",
                          use_container_width=True):
                 deconnecter()
@@ -1342,11 +1473,16 @@ def page_accueil(compte, dossier, profil):
     nouveaux = st.session_state.get("_nouveaux_mouvements")
     if nouveaux:
         total = sum(m["montant"] for m in nouveaux)
-        lignes = "".join(
-            f"<div class='ligne'><div>{_court(m['libelle'])} "
-            f"(mois {m['mois']})</div><div class='valeur'>"
-            f"{fmt_montant(m['montant'], signe=True)}</div></div>"
-            for m in nouveaux)
+        def _ligne_absence(m):
+            pourquoi = m.get("pourquoi") or ""
+            sous = (f"<div class='vie-journal-pourquoi'>Pourquoi : "
+                    f"{pourquoi}</div>" if pourquoi else "")
+            return (f"<div class='ligne'><div>{_court(m['libelle'])} "
+                    f"(mois {m['mois']}){sous}</div>"
+                    f"<div class='valeur'>"
+                    f"{fmt_montant(m['montant'], signe=True)}</div>"
+                    f"</div>")
+        lignes = "".join(_ligne_absence(m) for m in nouveaux)
         st.markdown(
             "<section class='carte bloc-accent'><h2>Pendant ton absence</h2>"
             "<div class='aide'>La vie a continué pendant que tu n'étais "
@@ -1450,6 +1586,9 @@ def page_accueil(compte, dossier, profil):
                 aller("vie")
     else:
         st.success("Tu as terminé toutes tes sections. Beau travail!")
+    if st.button("Comment ça marche ? Le guide du jeu",
+                 key="accueil_guide"):
+        aller("guide")
 
 
 def rang(label, valeur):
@@ -2684,8 +2823,12 @@ def page_s5(compte, dossier, profil):
 
 def page_sections(compte, dossier, profil):
     st.markdown("<section class='carte'><h2>Mes sections</h2>"
-                "<div class='aide'>Ton travail, section par section. "
-                "La S1, la S2, la S3, la S4 et la S5 sont prêtes ; les autres arrivent plus tard.</div></section>",
+                "<div class='aide'>Ton travail, section par section, "
+                "dans l'ordre. Échéances : S1 et S2 pour fin mars, "
+                "S3 à S5 pour mi-avril, S6 et S7 pour début mai. Une "
+                "section faite en retard vaut moins de points, mais "
+                "elle reste faisable. Le mode d'emploi complet est "
+                "dans le Guide, en haut de la page.</div></section>",
                 unsafe_allow_html=True)
     progression = dossier.get("progression", {})
     courante = donnees.section_courante(dossier)
@@ -2697,11 +2840,8 @@ def page_sections(compte, dossier, profil):
             st.markdown(f"**{code} : {nom}** ({mot})")
             st.caption(AIDES_ETAPES[code])
         with col_bouton:
-            if code in ("S1", "S2", "S3", "S4", "S5"):
-                if st.button(f"Ouvrir la {code}", key=f"ouvrir_{code.lower()}"):
-                    aller(code.lower())
-            else:
-                st.caption("Arrive plus tard")
+            if st.button(f"Ouvrir la {code}", key=f"ouvrir_{code.lower()}"):
+                aller(code.lower())
 
 
 def page_attente(titre, texte, phase):
@@ -2709,6 +2849,393 @@ def page_attente(titre, texte, phase):
         f"<section class='carte'><h2>{titre}</h2><div>{texte}</div></section>",
         unsafe_allow_html=True)
     st.caption(f"Page en construction ({phase}).")
+
+
+# ---------------------------------------------------------------- page guide
+def page_guide(compte, dossier, profil):
+    """Le mode d'emploi du jeu, en langage simple : la marche à
+    suivre complète, pour que tout le côté « vie qui avance » du
+    projet soit compris de tous, pas seulement les sections."""
+    etapes = [
+        ("Ton but",
+         "Tu vis ton premier appartement, en colocation à "
+         "Trois-Rivières, pendant <b>9 mois de vie</b> (de mars à "
+         "début mai). Ton personnage, c'est le cas que tu as pigé "
+         "en classe : sa paie, son épargne de départ, son coloc. "
+         "Ton travail : prendre les bonnes décisions, garder un "
+         "solde en santé et terminer tes 7 sections."),
+        ("Le temps avance tout seul",
+         "<b>Une semaine réelle = un mois de vie.</b> Le dimanche, "
+         "le mois se ferme et un autre commence. Tu n'as pas de "
+         "bouton à peser pour faire avancer le temps : il avance, "
+         "que tu sois là ou pas. C'est pour ça qu'il faut passer "
+         "régulièrement, comme dans une vraie vie d'appartement."),
+        ("Tes 3 rendez-vous, chaque semaine",
+         "Dans <b>Ma vie</b> : <b>1.</b> tranche ta décision du mois "
+         "(un choix réel, avec un effet en argent, définitif) ; "
+         "<b>2.</b> fais ton bilan éclair (deux minutes, une "
+         "question, une phrase) ; <b>3.</b> règle ton prochain "
+         "mois (tes heures de travail, ton épicerie, ton "
+         "électricité) et vois ce que ton plan donne avant de le "
+         "garder. Trois petits gestes, chaque semaine."),
+        ("L'argent bouge tout seul, et tout est expliqué",
+         "Ta paie entre le 1er, le loyer sort, puis l'épicerie, "
+         "l'électricité, le cellulaire et le reste, chacun à sa "
+         "date. <b>Chaque montant qui bouge a son pourquoi</b>, "
+         "écrit dans ton journal (Ma vie) : tu vois toujours "
+         "pourquoi ton solde monte ou descend, jamais juste un "
+         "chiffre sans raison."),
+        ("Tes 7 sections, dans l'ordre",
+         "<b>S1</b> ton profil. <b>S2</b> ton logement (3 annonces "
+         "à comparer). <b>S3</b> ton installation (chaque article "
+         "avec le lien de l'annonce : sans lien, l'achat ne compte "
+         "pas). <b>S4</b> tes services (électricité calculée comme "
+         "Hydro, internet, cellulaire, assurance). <b>S5</b> ton "
+         "transport et tes menus d'une semaine. <b>S6</b> ton "
+         "cahier de comptes, à la fin : ton budget prévu contre ce "
+         "qui s'est vraiment passé. <b>S7</b> ta réflexion, le mot "
+         "de la fin. Échéances : S1 et S2 pour fin mars, S3 à S5 "
+         "pour mi-avril, S6 et S7 pour début mai."),
+        ("Si tu attends trop, la vie décide à ta place",
+         "Une section pas terminée ? Le mois tombe quand même, au "
+         "<b>montant de référence</b> : un montant moyen du projet, "
+         "comme si quelqu'un choisissait pour toi, et ce n'est "
+         "rarement le moins cher. Une décision pas tranchée ? "
+         "L'option par défaut s'applique, souvent la plus chère. "
+         "Une section terminée en retard vaut moins de points : "
+         "moins 25 % par mois de retard, mais jamais en bas de "
+         "60 %. Rien n'est bloqué, tu peux toujours finir, c'est "
+         "juste que ça vaut moins."),
+        ("Les imprévus, ça fait partie de la vie",
+         "En classe, tu piges des cartes d'imprévu et tu inscris "
+         "leur numéro dans <b>Mes imprévus</b>. Ton enseignant "
+         "peut aussi en lancer, à toi ou à tout le groupe : tu le "
+         "sauras par un message à ta connexion, avec le montant "
+         "et son pourquoi. Un bon imprévu existe aussi : parfois, "
+         "c'est de l'argent qui entre."),
+        ("Ton score de vie, ce n'est pas ta note",
+         "Dans <b>Mon score</b>, l'étiquette sur la porte dit où "
+         "tu en es sur 100 : ton budget tenu, ta réserve, ton "
+         "appartement, tes imprévus absorbés. Chaque partie est "
+         "expliquée en argent. Le score est toujours comparé à "
+         "<b>ton</b> profil, jamais à l'argent des autres, et il "
+         "ne compte pas dans ta note : c'est ton tableau de bord "
+         "et le classement de ton groupe, pour le jeu."),
+        ("Ce que ton enseignant voit",
+         "Ton enseignant voit ton dossier au complet : tes "
+         "sections, ton journal, tes décisions, tes retards. Il "
+         "peut mettre le temps sur pause, te geler si tu dois "
+         "t'absenter, lancer un imprévu et corriger un montant "
+         "avec un motif, qui paraît dans ton journal. Rien ne se "
+         "fait dans ton dos."),
+    ]
+    morceaux = [
+        "<div class='guide-fiche'>"
+        "<div class='mention'>PARTIR EN APPART! · MODE D'EMPLOI</div>"
+        "<h2>Comment ça marche</h2>"
+        "<div class='intro'>Tout le jeu, expliqué simplement, dans "
+        "l'ordre. Garde cette page ouverte la première semaine : "
+        "après, les gestes deviennent une habitude.</div>"]
+    for i, (titre, texte) in enumerate(etapes, start=1):
+        morceaux.append(
+            f"<div class='guide-etape'><div class='guide-num'>{i}"
+            f"</div><div><h3>{titre}</h3><p>{texte}</p></div></div>")
+    morceaux.append(
+        "<div class='intro' style='margin-top:14px'><b>Perdu ?</b> "
+        "Reviens à l'accueil : le gros bouton jaune te mène toujours "
+        "à ta prochaine étape.</div></div>")
+    st.markdown("".join(morceaux), unsafe_allow_html=True)
+    if st.button("Retour à l'accueil", key="guide_retour"):
+        aller("accueil")
+
+
+# ---------------------------------------------------------------- page score
+def _affiche_points(valeur):
+    valeur = float(valeur)
+    if valeur == int(valeur):
+        return f"{int(valeur)}"
+    return f"{valeur:.1f}".replace(".", ",")
+
+
+def page_score(compte, dossier, profil):
+    score = donnees.calculer_score_vie(dossier, profil)
+    total = score["total"]
+    pct = max(0.0, min(100.0, total))
+    st.markdown(
+        "<div class='score-etiquette'>"
+        "<div class='bande'><span>ARCTIQUE · ÉTIQUETTE OFFICIELLE</span>"
+        "<span>SCORE DE VIE</span></div>"
+        "<div class='corps'><div class='titre'>Ton score de vie</div>"
+        f"<div class='nombre'>{_affiche_points(total)}"
+        "<small> / 100</small></div></div>"
+        "<div class='score-echelle'>"
+        f"<div class='curseur' style='left:calc({pct:.0f}% - 2px)'></div>"
+        "</div>"
+        "<div class='score-bornes'><span>0 · dans le rouge</span>"
+        "<span>100 · en plein contrôle</span></div>"
+        f"<div class='score-note'>Calculé par rapport à TON profil : "
+        f"ta paie de {fmt_montant(donnees._paie_profil(profil))} par "
+        "mois, tes dépenses, ton appartement. Personne n'est comparé "
+        "à l'argent d'un autre. Le score ne compte pas dans ta note : "
+        "c'est ton tableau de bord.</div>"
+        + (f"<div class='score-note'>Score provisoire : "
+           f"{score['mois_fermes']} mois fermé"
+           f"{'s' if score['mois_fermes'] > 1 else ''} sur 9.</div>"
+           if score["mois_fermes"] < 9 else "")
+        + "</div>",
+        unsafe_allow_html=True)
+
+    for cle, titre in (("budget", "Budget tenu"),
+                       ("reserve", "Réserve"),
+                       ("appartement", "Appartement"),
+                       ("imprevus", "Imprévus absorbés")):
+        compo = score[cle]
+        largeur = (100.0 * compo["points"] / compo["max"]
+                   if compo["max"] else 0)
+        st.markdown(
+            "<div class='score-carte'><div class='tete'>"
+            f"<h3>{titre}</h3>"
+            f"<div class='points'>{_affiche_points(compo['points'])}"
+            f"<small> / {compo['max']}</small></div></div>"
+            f"<div class='score-jauge'><i style='width:{largeur:.0f}%'>"
+            "</i></div>"
+            f"<p>{compo['explication']}</p></div>",
+            unsafe_allow_html=True)
+
+    params = donnees.obtenir_parametres(MAGASIN, compte["groupe"])
+    st.markdown("<div class='classement-titre'>Le classement de ton "
+                "groupe</div>", unsafe_allow_html=True)
+    if not params.get("classement_visible", True):
+        st.markdown(
+            "<div class='vie-attente'>Ton enseignant a masqué le "
+            "classement pour le moment. Ton score, lui, reste "
+            "visible ci-dessus.</div>", unsafe_allow_html=True)
+        return
+    classement = donnees.classement_groupe(MAGASIN, compte["groupe"],
+                                           PROFILS)
+    for ligne in classement:
+        moi = ligne["identifiant"] == compte["identifiant"]
+        st.markdown(
+            f"<div class='classement-ligne{' moi' if moi else ''}'>"
+            f"<span class='rang'>{ligne['rang']}</span>"
+            f"<span class='nom'>{ligne['nom']}</span>"
+            f"<span class='ctx'>cas {ligne['cas']} · paie du profil : "
+            f"{fmt_montant(ligne['revenu_profil'])} par mois</span>"
+            f"<span class='pts'>"
+            f"{_affiche_points(ligne['score']['total'])}</span></div>",
+            unsafe_allow_html=True)
+    podiums = donnees.podiums_categories(classement)
+    if podiums:
+        texte = " · ".join(
+            f"{nom} : {p['nom']} ({_affiche_points(p['points'])}"
+            f"/{p['max']})" for nom, p in podiums.items())
+        st.markdown(
+            f"<div class='note-crayon'>Les champions par catégorie "
+            f": {texte}</div>", unsafe_allow_html=True)
+
+
+# ------------------------------------------------------------------ page S6
+def page_s6(compte, dossier, profil):
+    identifiant = compte["identifiant"]
+    params = donnees.obtenir_parametres(MAGASIN, compte["groupe"])
+    comp = donnees.comparer_prevu_vecu(dossier, profil, params)
+    s6 = donnees.obtenir_s6(dossier)
+
+    st.markdown(
+        "<div class='s6-cahier'><h2>S6 · Mon cahier de comptes</h2>"
+        "<div>Ton budget prévu, ligne par ligne, contre ce qui s'est "
+        "vraiment passé dans ta vie d'appartement. Chaque écart a "
+        "une raison : lis-la, c'est elle qui explique ton argent."
+        "</div></div>", unsafe_allow_html=True)
+
+    if comp["mois"] == 0:
+        st.markdown(
+            "<div class='vie-attente'>Aucun mois de vie n'est encore "
+            "fermé : ton cahier se remplira à la première fermeture. "
+            "Reviens après ton premier mois.</div>",
+            unsafe_allow_html=True)
+        return
+
+    lignes_html = ["<div class='s6-cahier'><div class='s6-ligne "
+                   "entete'><span>Catégorie</span>"
+                   "<span class='chiffre'>Prévu</span>"
+                   "<span class='chiffre'>Vécu</span>"
+                   "<span class='chiffre'>Écart</span></div>"]
+    for ligne in comp["lignes"]:
+        ecart = ligne["ecart"]
+        if ecart == 0:
+            classe = ""
+        elif (ligne["prevu"] < 0 and ecart < 0) or \
+                (ligne["prevu"] > 0 and ecart < 0) or \
+                (ligne["prevu"] == 0 and ecart < 0):
+            classe = "ecart-negatif"
+        else:
+            classe = "ecart-positif"
+        lignes_html.append(
+            "<div class='s6-ligne'>"
+            f"<span>{ligne['nom']}</span>"
+            f"<span class='chiffre'>"
+            f"{fmt_montant(ligne['prevu'], signe=True)}</span>"
+            f"<span class='chiffre'>"
+            f"{fmt_montant(ligne['vecu'], signe=True)}</span>"
+            f"<span class='chiffre {classe}'>"
+            f"{fmt_montant(ecart, signe=True)}</span></div>"
+            f"<div class='s6-pourquoi'>Pourquoi : "
+            f"{ligne['pourquoi']}</div>")
+    lignes_html.append(
+        "<div class='s6-ligne'><span><b>Total des "
+        f"{comp['mois']} mois</b></span>"
+        f"<span class='chiffre'><b>"
+        f"{fmt_montant(comp['total_prevu'], signe=True)}"
+        "</b></span>"
+        f"<span class='chiffre'><b>"
+        f"{fmt_montant(comp['total_vecu'], signe=True)}"
+        "</b></span>"
+        f"<span class='chiffre'><b>"
+        f"{fmt_montant(comp['ecart_total'], signe=True)}</b></span>"
+        "</div></div>")
+    st.markdown("".join(lignes_html), unsafe_allow_html=True)
+
+    plus_gros = max(comp["lignes"], key=lambda l: abs(l["ecart"]))
+    st.markdown(
+        f"<div class='note-crayon'>Ton plus gros écart : "
+        f"{plus_gros['nom']}, {fmt_montant(plus_gros['ecart'], signe=True)}"
+        " entre le prévu et le vécu.</div>", unsafe_allow_html=True)
+
+    noms = [l["nom"] for l in comp["lignes"]]
+    index_defaut = (noms.index(plus_gros["nom"])
+                    if plus_gros["nom"] in noms else 0)
+    if s6.get("categorie_ecart") in noms:
+        index_defaut = noms.index(s6["categorie_ecart"])
+    categorie = st.selectbox(
+        "La catégorie de ton plus gros écart, selon toi",
+        noms, index=index_defaut, key="s6_categorie")
+    pourquoi = st.text_area(
+        "Pourquoi cet écart, d'après toi ?",
+        value=s6.get("pourquoi_ecart", ""), key="s6_pourquoi",
+        placeholder="Ex. : J'avais prévu mon épicerie trop serrée, "
+                    "et le mois où ma S5 n'était pas terminée, c'est "
+                    "le montant de référence qui est tombé.")
+    changement = st.text_area(
+        "Si tu refaisais un mois, tu changerais quoi ?",
+        value=s6.get("changement", ""), key="s6_changement",
+        placeholder="Ex. : Je terminerais mes sections dès le début "
+                    "du mois, et je trancherais mes décisions au "
+                    "lieu de les laisser passer par défaut.")
+    saisie = {"categorie_ecart": categorie,
+              "pourquoi_ecart": pourquoi, "changement": changement}
+    if st.button("Enregistrer mon cahier", key="s6_enregistrer"):
+        donnees.enregistrer_s6(MAGASIN, identifiant, saisie)
+        st.success("Cahier enregistré.")
+    if st.button("J'ai terminé mon budget", type="primary",
+                 key="s6_terminer", use_container_width=True):
+        donnees.enregistrer_s6(MAGASIN, identifiant, saisie)
+        manques = []
+        if not (pourquoi or "").strip():
+            manques.append("Explique pourquoi ton plus gros écart "
+                           "est arrivé.")
+        if not (changement or "").strip():
+            manques.append("Écris ce que tu changerais si tu "
+                           "refaisais un mois.")
+        if manques:
+            for manque in manques:
+                st.error(manque)
+        else:
+            donnees.marquer_section_faite(MAGASIN, identifiant, "S6")
+            st.success("S6 terminée. Ton cahier de comptes est "
+                       "bouclé.")
+            aller("accueil")
+
+
+# ------------------------------------------------------------------ page S7
+def page_s7(compte, dossier, profil):
+    identifiant = compte["identifiant"]
+    vie = donnees.obtenir_vie(dossier)
+    s7 = donnees.obtenir_s7(dossier)
+    score = donnees.calculer_score_vie(dossier, profil)
+
+    st.markdown(
+        "<div class='s7-mot'><h2>S7 · Le mot de la fin</h2>"
+        "<div>Ta réflexion, épinglée sur la porte comme le premier "
+        "jour. Tout ce dont tu as besoin est dessous : tes bilans, "
+        "tes décisions, ton score. Relis-toi, puis écris.</div>"
+        "</div>", unsafe_allow_html=True)
+
+    bilans = vie.get("bilans") or {}
+    if bilans:
+        morceaux = ["<div class='s7-mot'><h2>Tes bilans éclair</h2>"]
+        for mois in sorted(bilans, key=lambda x: int(x)):
+            b = bilans[mois]
+            morceaux.append(
+                f"<div class='s7-citation'>Mois {mois} · "
+                f"{b.get('question', '')} : {b.get('choix', '')}"
+                f"</div><div>{b.get('phrase', '')}</div>")
+        morceaux.append("</div>")
+        st.markdown("".join(morceaux), unsafe_allow_html=True)
+
+    decisions = vie.get("decisions") or {}
+    if decisions:
+        morceaux = ["<div class='s7-mot'><h2>Tes décisions</h2>"]
+        for mois in sorted(decisions, key=lambda x: int(x)):
+            d = decisions[mois]
+            effet = d.get("montant")
+            morceaux.append(
+                f"<div class='s7-citation'>Mois {mois} · "
+                f"{d.get('titre', '')} : {d.get('libelle', '')}"
+                + (f" ({fmt_montant(effet, signe=True)})"
+                   if effet is not None else "")
+                + (" · appliquée par défaut" if d.get("defaut")
+                   else "") + "</div>")
+            if d.get("pourquoi"):
+                morceaux.append(
+                    f"<div class='s6-pourquoi'>Pourquoi : "
+                    f"{d['pourquoi']}</div>")
+        morceaux.append("</div>")
+        st.markdown("".join(morceaux), unsafe_allow_html=True)
+
+    st.markdown(
+        f"<div class='note-crayon'>Ton score de vie : "
+        f"{_affiche_points(score['total'])} sur 100 · Budget "
+        f"{_affiche_points(score['budget']['points'])}/40, Réserve "
+        f"{_affiche_points(score['reserve']['points'])}/20, "
+        f"Appartement {_affiche_points(score['appartement']['points'])}"
+        f"/20, Imprévus {_affiche_points(score['imprevus']['points'])}"
+        "/20.</div>", unsafe_allow_html=True)
+
+    appris = st.text_area(
+        "Ce que l'argent t'a appris",
+        value=s7.get("appris", ""), key="s7_appris",
+        placeholder="Ex. : J'ai appris qu'un budget, ce n'est pas "
+                    "ce qu'on prévoit, c'est ce qui reste après les "
+                    "imprévus.")
+    couteuse = st.text_area(
+        "Ta décision la plus coûteuse, et ce que tu feras autrement",
+        value=s7.get("decision_couteuse", ""), key="s7_decision",
+        placeholder="Ex. : Attendre pour le frigo m'a coûté 260 $, "
+                    "plus cher que la réparation. La prochaine fois, "
+                    "je répare tout de suite.")
+    conseil = st.text_area(
+        "Un conseil à ton moi de mars",
+        value=s7.get("conseil", ""), key="s7_conseil",
+        placeholder="Ex. : Fais tes sections dès la première "
+                    "semaine, sinon la vie décide à ta place, et "
+                    "elle charge plus cher.")
+    saisie = {"appris": appris, "decision_couteuse": couteuse,
+              "conseil": conseil}
+    if st.button("Enregistrer mon mot", key="s7_enregistrer"):
+        donnees.enregistrer_s7(MAGASIN, identifiant, saisie)
+        st.success("Mot de la fin enregistré.")
+    if st.button("J'ai terminé ma réflexion", type="primary",
+                 key="s7_terminer", use_container_width=True):
+        donnees.enregistrer_s7(MAGASIN, identifiant, saisie)
+        manques = donnees.s7_manquants(saisie)
+        if manques:
+            st.error("Il te manque : " + ", ".join(manques) + ".")
+        else:
+            donnees.marquer_section_faite(MAGASIN, identifiant, "S7")
+            st.success("S7 terminée. Ton mot de la fin est épinglé "
+                       "sur la porte.")
+            aller("accueil")
 
 
 # ----------------------------------------------------------------------- main
@@ -2763,6 +3290,10 @@ def main():
         page_s4(compte, dossier, profil)
     elif page == "s5":
         page_s5(compte, dossier, profil)
+    elif page == "s6":
+        page_s6(compte, dossier, profil)
+    elif page == "s7":
+        page_s7(compte, dossier, profil)
     elif page == "sections":
         page_sections(compte, dossier, profil)
     elif page == "vie":
@@ -2770,12 +3301,9 @@ def main():
     elif page == "console":
         page_console(compte)
     elif page == "score":
-        page_attente(
-            "Mon score",
-            "Ici, tu verras ton score de vie : comment tu tiens ton budget, "
-            "ta réserve, ton appartement et les imprévus. Le score est "
-            "toujours comparé à ton profil, jamais à l'argent des autres.",
-            "phase P4")
+        page_score(compte, dossier, profil)
+    elif page == "guide":
+        page_guide(compte, dossier, profil)
     elif page == "imprevus":
         page_attente(
             "Mes imprévus",
@@ -2909,11 +3437,18 @@ def page_vie(compte, dossier, profil):
         if mois_courant >= 1 else None
     nb_connexions = len(vie.get("connexions") or [])
     if mois_courant >= 1:
+        plan = (vie.get("reglages") or {}).get(str(mois_courant + 1)) \
+            if mois_courant < donnees.MOIS_MAX else None
+        chip_plan = (
+            f"<span class='vie-etat {'fait' if plan else ''}'>"
+            f"Prochain mois : <b>{'réglé' if plan else 'à régler'}"
+            "</b></span>" if mois_courant < donnees.MOIS_MAX else "")
         etats = (
             f"<span class='vie-etat {'fait' if decision else ''}'>"
             f"Décision : <b>{'tranchée' if decision else 'à trancher'}</b></span>"
             f"<span class='vie-etat {'fait' if bilan else ''}'>"
             f"Bilan éclair : <b>{'fait' if bilan else 'à faire'}</b></span>"
+            f"{chip_plan}"
             f"<span class='vie-etat'>Connexions : <b>{nb_connexions} "
             f"jour{'s' if nb_connexions > 1 else ''}</b></span>")
         titre_vie = f"Ma vie · Mois {mois_courant}"
@@ -2949,6 +3484,12 @@ def page_vie(compte, dossier, profil):
                                "n'avais pas décidé avant la fermeture."
                                if decision.get("defaut") else
                                "C'est définitif : pas de retour en arrière.")
+                    pourquoi = (decision.get("pourquoi")
+                                or opt.get("pourquoi") or "")
+                    bloc_pourquoi = (
+                        "<div class='vie-fait-ligne'><b>Pourquoi ce "
+                        f"montant :</b> {pourquoi}</div>"
+                        if pourquoi else "")
                     st.markdown(
                         "<div class='vie-tampon'>TRANCHÉ</div>"
                         "<div class='vie-fait-ligne'><b>Décidé :</b> "
@@ -2957,6 +3498,7 @@ def page_vie(compte, dossier, profil):
                         "solde :</b> "
                         f"{fmt_montant(decision['montant'], signe=True)}"
                         "</div>"
+                        f"{bloc_pourquoi}"
                         f"<div class='vie-texte'>{mention}</div>",
                         unsafe_allow_html=True)
             else:
@@ -3140,10 +3682,16 @@ def page_vie(compte, dossier, profil):
         groupe = par_mois[mois]
         total = sum(m["montant"] for m in groupe)
         titre = f"Mois {mois}" if mois else "Hors calendrier"
-        lignes = "".join(
-            f"<div class='ligne'><div>{_court(m['libelle'])}</div>"
-            f"<div class='valeur'>{fmt_montant(m['montant'], signe=True)}</div></div>"
-            for m in groupe)
+        def _ligne_journal(m):
+            pourquoi = m.get("pourquoi") or ""
+            sous = (f"<div class='vie-journal-pourquoi'>Pourquoi : "
+                    f"{pourquoi}</div>" if pourquoi else "")
+            return (f"<div class='ligne'><div>{_court(m['libelle'])}"
+                    f"{sous}</div>"
+                    f"<div class='valeur'>"
+                    f"{fmt_montant(m['montant'], signe=True)}</div>"
+                    f"</div>")
+        lignes = "".join(_ligne_journal(m) for m in groupe)
         st.markdown(
             f"<section class='vie-recu'><h2>{titre}</h2>" + lignes
             + "<div class='ligne total'><div>Solde du mois</div>"
@@ -3177,6 +3725,117 @@ def _etat_groupe(groupe):
     if donnees.calendrier_en_pause(params):
         return params, f"en pause (mois {min(mois, donnees.MOIS_MAX)})"
     return params, f"mois {min(mois, donnees.MOIS_MAX)} de {donnees.MOIS_MAX}"
+
+
+def _dossier_resume_md(identifiant, groupe, params, texte=False):
+    """Le dossier résumé d'une page (plan v2, section 9) : totaux
+    recomptés, écarts vécu contre prévu, drapeaux, preuves en liens,
+    imprévus reçus et réflexion S7. En markdown pour l'écran, en
+    texte pour le téléchargement."""
+    compte = MAGASIN.compte_par_identifiant(identifiant)
+    dossier = MAGASIN.charger_dossier(identifiant) or {}
+    profil = PROFILS[int(compte["cas_numero"])]
+    vie = donnees.obtenir_vie(dossier)
+    score = donnees.calculer_score_vie(dossier, profil)
+    comp6 = donnees.comparer_prevu_vecu(dossier, profil, params)
+    lignes = []
+    lignes.append(f"## Dossier résumé : {compte['nom_affiche']}")
+    lignes.append(
+        f"Groupe {groupe} · Cas {compte['cas_numero']} "
+        f"({profil['prenom']}, {profil['situation']}) · Paie du "
+        f"profil : {fmt_montant(donnees._paie_profil(profil))} par "
+        f"mois · Solde actuel : {fmt_montant(dossier.get('solde') or 0)}"
+        f" · Mois de vie fermés : {vie.get('mois_appliques') or 0}")
+    lignes.append(
+        f"**Score de vie : {_affiche_points(score['total'])}/100** "
+        f"(budget {_affiche_points(score['budget']['points'])}/40, "
+        f"réserve {_affiche_points(score['reserve']['points'])}/20, "
+        f"appartement {_affiche_points(score['appartement']['points'])}"
+        f"/20, imprévus {_affiche_points(score['imprevus']['points'])}"
+        "/20). Le score ne compte pas dans la note.")
+    lignes.append("**Sections**")
+    completions = vie.get("completions") or {}
+    progression = dossier.get("progression") or {}
+    for code, nom in donnees.SECTIONS:
+        fait = progression.get(code) == "fait"
+        comp = completions.get(code) or {}
+        detail = ""
+        if fait and comp.get("date"):
+            facteur = donnees.facteur_section(code, comp["date"],
+                                              params)
+            detail = f"terminée le {comp['date']}"
+            if facteur < 1.0:
+                detail += (f", en retard (fenêtre notée : "
+                           f"{int(facteur * 100)} %)")
+        lignes.append(f"- {code} {nom} : "
+                      f"{'faite. ' if fait else 'à faire. '}{detail}")
+    s3 = donnees.obtenir_s3(dossier)
+    lignes.append(
+        f"**Totaux recomptés** : installation "
+        f"{fmt_montant(donnees.total_installation(s3))} (plafond "
+        f"{fmt_montant(donnees.PLAFOND_INSTALLATION)}) · S6, sur "
+        f"{comp6['mois']} mois : prévu "
+        f"{fmt_montant(comp6['total_prevu'])}, vécu "
+        f"{fmt_montant(comp6['total_vecu'])}, écart "
+        f"{fmt_montant(comp6['ecart_total'], signe=True)} · "
+        f"connexions : {len(vie.get('connexions') or [])} jours")
+    if comp6["lignes"]:
+        gros = max(comp6["lignes"], key=lambda l: abs(l["ecart"]))
+        lignes.append(
+            f"Plus gros écart S6 : {gros['nom']} "
+            f"({fmt_montant(gros['ecart'], signe=True)}).")
+    drapeaux = []
+    if donnees.s2_manquants(donnees.obtenir_s2(dossier)):
+        drapeaux.append("S2 incomplète")
+    if donnees.s3_manquants(s3):
+        drapeaux.append("S3 incomplète ou articles sans preuve")
+    if donnees.s4_manquants(donnees.obtenir_s4(dossier)):
+        drapeaux.append("S4 incomplète")
+    if donnees.s5_manquants(donnees.obtenir_s5(dossier)):
+        drapeaux.append("S5 incomplète")
+    nb_defaut = sum(1 for d in (vie.get("decisions") or {}).values()
+                    if d.get("defaut"))
+    if nb_defaut:
+        drapeaux.append(f"{nb_defaut} décision(s) appliquée(s) "
+                        "par défaut")
+    lignes.append("**Drapeaux** : "
+                  + (" ; ".join(drapeaux) if drapeaux else "aucun."))
+    recus = [m for m in vie.get("mouvements") or []
+             if m.get("source") == "imprevu"]
+    if recus:
+        lignes.append("**Imprévus reçus**")
+        for m in recus:
+            lignes.append(
+                f"- Mois {m.get('mois')} : {m.get('libelle')} "
+                f"({fmt_montant(m.get('montant') or 0, signe=True)})")
+    liens = []
+    for piece, articles in (s3.get("pieces") or {}).items():
+        for a in articles:
+            if donnees.article_prouve(a):
+                liens.append((f"{piece} : {a.get('nom')}",
+                              a.get("lien")))
+    for a in s3.get("electro") or []:
+        if donnees.article_prouve(a):
+            liens.append((f"Électroménager : {a.get('nom')}",
+                          a.get("lien")))
+    if liens:
+        lignes.append("**Preuves S3**")
+        for nom_lien, url in liens:
+            if texte:
+                lignes.append(f"- {nom_lien} : {url}")
+            else:
+                lignes.append(f"- [{nom_lien}]({url})")
+    s7 = donnees.obtenir_s7(dossier)
+    if any((s7.get(cle) or "").strip()
+           for cle in ("appris", "decision_couteuse", "conseil")):
+        lignes.append("**Réflexion S7**")
+        lignes.append(f"- Ce que l'argent lui a appris : "
+                      f"{s7.get('appris', '')}")
+        lignes.append(f"- Décision la plus coûteuse : "
+                      f"{s7.get('decision_couteuse', '')}")
+        lignes.append(f"- Conseil à son moi de mars : "
+                      f"{s7.get('conseil', '')}")
+    return "\n\n".join(lignes) if texte else "\n\n".join(lignes)
 
 
 def page_console(compte):
@@ -3239,9 +3898,15 @@ def page_console(compte):
             if f < 1.0:
                 retards.append(f"{code} ({int(f * 100)} %)")
         cle = str(min(mois_courant, donnees.MOIS_MAX))
+        try:
+            score_vie = donnees.calculer_score_vie(
+                d, PROFILS[int(c["cas_numero"])])["total"]
+        except Exception:
+            score_vie = 0
         lignes.append({
             "Élève": c["nom_affiche"], "Cas": c["cas_numero"],
             "Sections": f"{faites}/7",
+            "Score": _affiche_points(score_vie),
             "Solde": fmt_montant(d.get("solde") or 0),
             "Mois atteint": vie.get("mois_appliques") or 0,
             "Décision": "faite" if cle in (vie.get("decisions") or {})
@@ -3280,6 +3945,36 @@ def page_console(compte):
                     MAGASIN, f"Calendrier {'gelé' if not est_gele else 'dégelé'} "
                     f"pour {noms[eleve_gel]} (groupe {groupe}).")
                 st.rerun()
+
+    st.markdown("### Classement du groupe")
+    visible = params.get("classement_visible", True)
+    st.write("Le classement est "
+             + ("visible pour les élèves." if visible
+                else "masqué pour les élèves."))
+    if st.button("Masquer le classement" if visible
+                 else "Afficher le classement", key="console_classement"):
+        nouvel = donnees.basculer_classement(MAGASIN, groupe)
+        donnees.consigner_prof(
+            MAGASIN, f"Classement du groupe {groupe} : "
+            f"{'affiché' if nouvel else 'masqué'}.")
+        st.rerun()
+
+    if comptes_groupe:
+        st.markdown("### Dossier résumé (une page par élève)")
+        eleve_resume = st.selectbox(
+            "Élève", list(noms), format_func=lambda i: noms[i],
+            key="resume_eleve")
+        if st.button("Préparer le résumé", key="resume_bouton"):
+            st.session_state["_resume_pour"] = eleve_resume
+        if st.session_state.get("_resume_pour") == eleve_resume:
+            st.markdown(_dossier_resume_md(eleve_resume, groupe, params),
+                        unsafe_allow_html=True)
+            st.download_button(
+                "Télécharger le résumé (.md)",
+                data=_dossier_resume_md(eleve_resume, groupe, params,
+                                        texte=True),
+                file_name=f"resume-{eleve_resume}.md",
+                key="resume_telecharger")
 
     st.markdown("### Imprévu ciblé")
     choix_imp = st.selectbox(
@@ -3333,12 +4028,17 @@ def page_console(compte):
             else:
                 montant = float(montant_perso or 0)
                 libelle = libelle_perso or "Imprévu"
+            pourquoi_imp = imp.get("pourquoi") if imp else None
             donnees.ajouter_mouvement(MAGASIN, ident, libelle, montant,
-                                      source="imprevu", mois=mois_e)
+                                      source="imprevu", mois=mois_e,
+                                      pourquoi=pourquoi_imp)
+            texte_pourquoi = (f" Pourquoi : {pourquoi_imp}"
+                              if pourquoi_imp else "")
             donnees.poser_annonce(
                 MAGASIN, ident,
                 f"Surprise de ton enseignant : {libelle} "
-                f"({fmt_montant(montant, signe=True)}). C'est déjà dans "
+                f"({fmt_montant(montant, signe=True)})."
+                f"{texte_pourquoi} C'est déjà dans "
                 f"ton journal, dans Ma vie.")
         donnees.consigner_prof(
             MAGASIN, f"Imprévu « {choix_imp} » appliqué à "
