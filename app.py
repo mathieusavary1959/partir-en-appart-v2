@@ -15,8 +15,10 @@ Le calendrier de vie, la console du prof et les sections S4 à S7
 arrivent aux phases suivantes.
 La couche de données vit dans donnees.py (magasin mémoire ou Supabase REST).
 """
+import base64
 import datetime
 import html
+import os
 
 import streamlit as st
 
@@ -1042,6 +1044,15 @@ p, li, label{ color:var(--texte); }
   rgba(30,42,56,.18); font-size:15px; color:#22334A; }
 .s1-coloc .ligne .valeur{ font-weight:700; color:#1E2A38; }
 .s1-coloc .son-handicap{ margin-top:10px; font-size:14.5px; }
+/* Les visages des cas (portraits illustrés) */
+.s1-photo img.visage{ width:100%; height:118px; object-fit:cover;
+  object-position:top center; border-radius:2px; display:block;
+  margin-bottom:5px; }
+.insc-visage{ float:right; width:96px; height:96px; object-fit:cover;
+  object-position:top center; border-radius:4px;
+  border:2px solid rgba(255,255,255,.25); margin:2px 0 8px 14px; }
+.pf-polaroid img.pf-photo-img{ width:100%; height:118px;
+  object-fit:cover; object-position:top center; display:block; }
 .vie-attente{ background:#FFFFFF; color:var(--encre); padding:19px 21px;
   border-left:6px solid var(--jaune); border-radius:4px; margin-top:18px;
   box-shadow:0 14px 30px rgba(0,0,0,.45); font-size:15px; }
@@ -1139,6 +1150,31 @@ def fmt_montant(valeur, signe=False):
     if signe:
         return ("+" if float(valeur) >= 0 else "−") + texte
     return texte
+
+
+@st.cache_data(show_spinner=False)
+def _visage_uri(numero):
+    """Le portrait illustré d'un cas, en URI de données pour
+    l'insérer dans le HTML. Source : le module visages_data (les
+    images voyagent en base64, l'outil de poussée GitHub ne
+    transporte que du texte) ; repli sur le fichier visages/cas-XX
+    en local. None si absent : l'interface retombe sur l'initiale."""
+    try:
+        import visages_data
+        code = visages_data.VISAGES_B64.get(int(numero))
+        if code:
+            return "data:image/webp;base64," + code
+    except Exception:
+        pass
+    chemin = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), "visages",
+        f"cas-{int(numero):02d}.webp")
+    try:
+        with open(chemin, "rb") as fichier:
+            return ("data:image/webp;base64,"
+                    + base64.b64encode(fichier.read()).decode())
+    except OSError:
+        return None
 
 
 def aller(page):
@@ -1355,8 +1391,12 @@ def formulaire_inscription():
     cas = st.selectbox("Le numéro de ton cas pigé en classe",
                        list(range(1, 31)), key="insc_cas")
     profil = PROFILS[int(cas)]
+    uri_cas = _visage_uri(profil["numero"])
     st.markdown(
-        "<div class='carte'><h2>Ton cas : " + profil["prenom"] + "</h2>"
+        "<div class='carte'>"
+        + (f"<img class='insc-visage' src='{uri_cas}' "
+           f"alt='Portrait de {profil['prenom']}'>" if uri_cas else "")
+        + "<h2>Ton cas : " + profil["prenom"] + "</h2>"
         "<div class='aide'>" + profil["situation_detail"] + "</div>"
         "<div>C'est le cas numéro " + str(profil["numero"]) +
         ". Si ce n'est pas ton cas, change le numéro ci-dessus.</div></div>",
@@ -1495,7 +1535,11 @@ def html_porte_accueil(compte, dossier, profil):
         "<div class='pf-congelo'><div class='pf-marque'>ARCTIQUE</div>"
         f"<div><div class='pf-lettres'>{lettres}</div>"
         f"<div style='margin-top:9px;'><span class='pf-plaque'>BIENVENUE CHEZ {profil['prenom'].upper()}</span></div></div>"
-        f"<div class='pf-polaroid'>{SVG_POLAROID}<div class='legende'>Le jour des clés!</div></div>"
+        f"<div class='pf-polaroid'>"
+        + (f"<img class='pf-photo-img' src='{_visage_uri(profil['numero'])}' "
+           f"alt='Portrait de {profil['prenom']}'>"
+           if _visage_uri(profil["numero"]) else SVG_POLAROID)
+        + "<div class='legende'>Le jour des clés!</div></div>"
         f"<div class='pf-clezone'><div class='pf-crochet'></div>{SVG_CLE}"
         + ("<div class='pf-cle-legende'>Ta clé<br>est arrivée!</div>"
            if dossier.get("progression", {}).get("S2") == "fait"
@@ -1732,8 +1776,11 @@ def page_s1(compte, dossier, profil):
         "<div class='s1-tampon-pige'>PIGÉ EN CLASSE</div>"
         "<div class='corps'>"
         "<div class='s1-photo'>"
-        f"<div class='initiale'>{esc(profil['prenom'][:1])}</div>"
-        f"<div class='qui'>{esc(profil['prenom'])}</div>"
+        + (f"<img class='visage' src='{_visage_uri(profil['numero'])}' "
+           f"alt='Portrait de {esc(profil['prenom'])}'>"
+           if _visage_uri(profil["numero"]) else
+           f"<div class='initiale'>{esc(profil['prenom'][:1])}</div>")
+        + f"<div class='qui'>{esc(profil['prenom'])}</div>"
         f"<div class='num'>CAS Nº {profil['numero']} · S1</div></div>"
         f"<div class='s1-champs'>{html_champs}</div></div>"
         "<div class='s1-talon'>"
