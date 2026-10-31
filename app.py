@@ -25,6 +25,11 @@ import streamlit as st
 import donnees
 
 try:
+    from fond_data import FOND_CUISINE_JPG_B64
+except Exception:
+    FOND_CUISINE_JPG_B64 = ""
+
+try:
     import extra_streamlit_components as stx
 except Exception:
     stx = None
@@ -65,23 +70,19 @@ CSS = """
   --vert:#1E9E4A;
 }
 .stApp{
-  background-color:var(--mur);
-  /* La cuisine, partout (demande de Mathieu le 31 oct. 2026 :
-     le quadrillage gris « non fini » est remplacé par la pièce
-     où vit la porte : mur chaud sous la lampe, plinthe, et
-     plancher de bois au bas de l'écran, en fond fixe). */
+  background-color:#3A2E22;
+  /* La cuisine du soir, partout (choix de Mathieu le 31 oct. 2026 :
+     une vraie illustration en fond FIXE, dessinée dans l'univers du
+     projet (frigo turquoise, boîtes de déménagement, lumière chaude).
+     L'image ne bouge pas quand la page défile : aucun désalignement.
+     Un léger voile chaud garde le contenu lisible par-dessus. */
   background-image:
-    radial-gradient(900px 480px at 50% -60px,rgba(255,240,200,.13),rgba(255,240,200,0) 70%),
-    repeating-linear-gradient(90deg,rgba(0,0,0,.25) 0 2px,transparent 2px 190px),
-    repeating-linear-gradient(0deg,rgba(0,0,0,.20) 0 2px,transparent 2px 42px),
-    linear-gradient(180deg,#4A3826,#2C2115),
-    linear-gradient(180deg,#3A3F49,#22262E),
-    repeating-linear-gradient(0deg,rgba(255,255,255,.014) 0 3px,transparent 3px 6px),
-    linear-gradient(180deg,#242A35 0%,#1C1F27 55%,#161920 82%,#161920 100%);
-  background-size:100% 100%,100% 18%,100% 18%,100% 18%,100% 12px,100% 100%,100% 100%;
-  background-position:0 0,0 100%,0 100%,0 100%,0 calc(100% - 18vh),0 0,0 0;
-  background-repeat:no-repeat,no-repeat,no-repeat,no-repeat,no-repeat,repeat,no-repeat;
-  background-attachment:fixed;
+    linear-gradient(180deg,rgba(43,32,20,.16),rgba(43,32,20,.30)),
+    url("data:image/jpeg;base64,__FOND_CUISINE__");
+  background-size:cover,cover;
+  background-position:center center,center center;
+  background-repeat:no-repeat,no-repeat;
+  background-attachment:fixed,fixed;
   color:var(--texte); font-family:"Work Sans",sans-serif;
 }
 .block-container{ max-width:1180px; padding-top:1.2rem; }
@@ -114,10 +115,6 @@ p, li, label{ color:var(--texte); }
 .stButton > button:disabled{ opacity:.45; }
 .stCheckbox label span, .stRadio label span{ color:var(--texte); }
 
-/* La lampe suspendue et son cône de lumière */
-.stApp::before{ content:""; position:fixed; top:0; left:50%; transform:translateX(-50%); width:980px; height:720px; z-index:0;
-  background:linear-gradient(180deg,rgba(255,240,200,.16),rgba(255,240,200,.04) 55%,transparent 78%);
-  clip-path:polygon(43% 0,57% 0,100% 100%,0 100%); pointer-events:none; }
 .block-container{ position:relative; z-index:1; }
 .pf-lampe{ text-align:center; height:74px; }
 .pf-lampe .fil{ width:3px; height:28px; background:#0E0F13; margin:0 auto; }
@@ -1270,6 +1267,7 @@ div[class*="st-key-sec_s"] button:hover{
 }
 </style>
 """
+CSS = CSS.replace("__FOND_CUISINE__", FOND_CUISINE_JPG_B64)
 st.markdown(CSS, unsafe_allow_html=True)
 
 # ------------------------------------------------------- base de données
