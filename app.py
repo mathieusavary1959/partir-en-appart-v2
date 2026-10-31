@@ -265,6 +265,25 @@ p, li, label{ color:var(--texte); }
 .pf-solde .detail b{ color:var(--crayon); }
 
 .pf-cal{ grid-area:calendrier; background:#FFFFFF; }
+.calvie{ display:grid; grid-template-columns:repeat(7,1fr);
+  gap:8px; margin-top:10px; }
+.calvie-col{ background:#FFFFFF; border:1.5px solid #D8D2C4;
+  border-radius:8px; padding:8px 7px; }
+.calvie-col.aujourdhui{ border-color:var(--accent);
+  box-shadow:0 0 0 2px rgba(229,9,20,.18); }
+.calvie-entete{ font-family:"Bebas Neue",sans-serif; font-size:17px;
+  letter-spacing:.04em; }
+.calvie-plage{ font-size:11px; color:#6B6257; margin-bottom:6px; }
+.calvie-j{ border-top:1px dashed #D8D2C4; padding:4px 0 3px;
+  position:relative; }
+.calvie-num{ font-weight:800; font-size:13px; }
+.calvie-ev{ font-size:11px; line-height:1.25; color:#3D3A33; }
+.calvie-j.limite .calvie-num,
+.calvie-j.limite .calvie-ev{ color:#C00D18; font-weight:800; }
+.calvie-j.ici{ background:#FFF3A6; border-radius:4px; }
+.calvie-ici{ font-family:"Special Elite",monospace; font-size:10px;
+  color:#C00D18; letter-spacing:.06em; }
+.calvie-legende{ font-size:12.5px; color:#6B6257; margin-top:8px; }
 .pf-cal-legende{ font-size:12px; color:#6B6257; margin-top:7px; }
 .pf-cal-total{ font-size:13.5px; font-weight:700; margin-top:2px; }
 .pf-cal .titre{ font-family:"Bebas Neue",sans-serif; font-size:19px; letter-spacing:.14em; display:flex; justify-content:space-between; }
@@ -3126,6 +3145,71 @@ def page_attente(titre, texte, phase):
 
 
 # ---------------------------------------------------------------- page guide
+JOURS_REELS_VIE = ["Dimanche", "Lundi", "Mardi", "Mercredi",
+                   "Jeudi", "Vendredi", "Samedi"]
+
+EVENEMENTS_JOURS_VIE = {
+    1: "Paie + loyer",
+    5: "Épicerie",
+    10: "Électricité + internet",
+    12: "Épicerie",
+    15: "Cellulaire, assurance, transport",
+    19: "Épicerie",
+    26: "Épicerie",
+    30: "Fin du mois : ton bilan",
+}
+
+
+def jour_reel_limite():
+    """Le jour réel où le jour limite de la décision tombe."""
+    for r in range(7):
+        if (r + 1) * 30 // 7 >= donnees.JOUR_LIMITE_DECISION:
+            return JOURS_REELS_VIE[r]
+    return JOURS_REELS_VIE[-1]
+
+
+def html_calendrier_vie(jour_actuel=0):
+    """Le calendrier qui explique la correspondance : un mois
+    de vie de 30 jours étalé sur une semaine réelle. Chaque
+    colonne est un vrai jour de la semaine ; on y voit quels
+    jours de vie il fait vivre, et ce qui tombe chaque jour."""
+    colonnes = []
+    for r in range(7):
+        debut = r * 30 // 7 + 1
+        fin = (r + 1) * 30 // 7
+        cellules = []
+        for j in range(debut, fin + 1):
+            classes = "calvie-j"
+            if j == donnees.JOUR_LIMITE_DECISION:
+                classes += " limite"
+            if j == jour_actuel:
+                classes += " ici"
+            evenement = EVENEMENTS_JOURS_VIE.get(j, "")
+            if j == donnees.JOUR_LIMITE_DECISION:
+                evenement = "JOUR LIMITE : ta décision"
+            badge = ("<div class='calvie-ici'>TU ES ICI</div>"
+                     if j == jour_actuel else "")
+            cellules.append(
+                f"<div class='{classes}'><div class='calvie-num'>"
+                f"{j}</div>"
+                + (f"<div class='calvie-ev'>{evenement}</div>"
+                   if evenement else "")
+                + badge + "</div>")
+        classe_col = ("calvie-col aujourdhui"
+                      if debut <= jour_actuel <= fin
+                      else "calvie-col")
+        colonnes.append(
+            f"<div class='{classe_col}'><div class='calvie-entete'>"
+            f"{JOURS_REELS_VIE[r]}</div>"
+            f"<div class='calvie-plage'>jours {debut} à {fin}</div>"
+            + "".join(cellules) + "</div>")
+    return ("<div class='calvie'>" + "".join(colonnes) + "</div>"
+            "<div class='calvie-legende'>En rouge : le jour "
+            "limite de ta décision du mois. Si tu n'as pas "
+            "tranché quand il passe, la vie décide à ta place."
+            "</div>")
+
+
 def page_guide(compte, dossier, profil):
     """Le mode d'emploi du jeu, en langage simple : la marche à
     suivre complète, pour que tout le côté « vie qui avance » du
@@ -3220,6 +3304,18 @@ def page_guide(compte, dossier, profil):
         morceaux.append(
             f"<div class='guide-etape'><div class='guide-num'>{i}"
             f"</div><div><h3>{titre}</h3><p>{texte}</p></div></div>")
+    params_guide = donnees.obtenir_parametres(MAGASIN,
+                                              compte["groupe"])
+    _, jour_guide = donnees.position_dans_mois(params_guide)
+    morceaux.append(
+        "<div class='guide-etape'><div class='guide-num'>+</div>"
+        "<div><h3>Le calendrier d'un mois de vie</h3><p>Un mois "
+        "de vie compte 30 jours, étalés sur une semaine réelle. "
+        "Chaque colonne est un vrai jour de la semaine : tu y "
+        "vois quels jours de vie il fait vivre, et ce qui tombe "
+        "chaque jour.</p>"
+        + html_calendrier_vie(jour_guide)
+        + "</div></div>")
     morceaux.append(
         "<div class='intro' style='margin-top:14px'><b>Perdu ?</b> "
         "Reviens à l'accueil : le gros bouton jaune te mène toujours "
@@ -4001,7 +4097,8 @@ def page_vie(compte, dossier, profil):
                     opt = choix["options"][decision["option"]]
                     mention = ("La vie a choisi à ta place parce que tu "
                                "n'avais pas décidé avant le jour limite, "
-                               "le jour 15 du mois."
+                               f"le jour {donnees.JOUR_LIMITE_DECISION} "
+                               "du mois."
                                if decision.get("defaut") else
                                "C'est définitif : pas de retour en arrière.")
                     pourquoi = (decision.get("pourquoi")
@@ -4037,10 +4134,12 @@ def page_vie(compte, dossier, profil):
                     "<div class='vie-texte'>Les montants ne sont pas "
                     "écrits à côté des choix. Tu verras l'effet de ton "
                     "choix seulement après l'avoir tranché.</div>"
-                    f"<div class='vie-texte'><b>À trancher avant le "
-                    f"jour 15 du mois.</b> Tu es au jour "
-                    f"{journee_courante}. Passé le jour 15, la vie "
-                    "décide à ta place.</div>",
+                    f"<div class='vie-texte'><b>À trancher avant "
+                    f"le {jour_reel_limite().lower()}.</b> Le jour "
+                    f"limite est le jour "
+                    f"{donnees.JOUR_LIMITE_DECISION} du mois ; tu "
+                    f"es au jour {journee_courante}. Passé ce "
+                    "jour, la vie décide à ta place.</div>",
                     unsafe_allow_html=True)
                 if st.button("Je décide, sans retour en arrière",
                              type="primary"):

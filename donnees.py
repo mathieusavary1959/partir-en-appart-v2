@@ -1781,8 +1781,9 @@ def generer_mouvements_mois(dossier, profil, params, mois, identifiant=""):
     if str(mois) not in (vie.get("decisions") or {}):
         choix = choix_pour_mois(identifiant, mois)
         option = choix["options"][choix["defaut"]]
-        ajoute(14, f"Décision manquée : {choix['titre']} "
-                   f"({option['libelle']})", option["montant"],
+        ajoute(JOUR_LIMITE_DECISION,
+               f"Décision manquée : {choix['titre']} "
+               f"({option['libelle']})", option["montant"],
                source="decision", pourquoi=option.get("pourquoi"))
     return mouvements
 
@@ -1872,7 +1873,7 @@ def appliquer_vie(magasin, identifiant, groupe, profil, aujourdhui=None):
                 dossier["solde"] = _arrondir2(
                     float(dossier.get("solde") or 0) + m["montant"])
                 nouveaux.append(m)
-            if ferme or journee >= 14:
+            if ferme or journee >= JOUR_LIMITE_DECISION:
                 enregistrer_defaut_decision(vie, identifiant, mois)
             if ferme:
                 vie["mois_appliques"] = mois
@@ -2475,6 +2476,12 @@ def pourquoi_carte(carte):
 # annoncé : 15 $ (le resto pour le remercier).
 
 FRAIS_AVANCE_COLOC = 15.0
+
+# Le jour de vie où la décision du mois tombe par défaut si
+# l'élève n'a pas tranché. Avec la correspondance des jours
+# (30 jours de vie par semaine réelle), le jour 14 tombe le
+# mercredi : mardi soir est le dernier moment pour décider.
+JOUR_LIMITE_DECISION = 14
 
 STRATEGIES_IMPREVU = [
     {"id": "tout-de-suite",
