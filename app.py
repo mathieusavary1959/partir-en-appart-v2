@@ -66,8 +66,22 @@ CSS = """
 }
 .stApp{
   background-color:var(--mur);
-  background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);
-  background-size:118px 118px;
+  /* La cuisine, partout (demande de Mathieu le 31 oct. 2026 :
+     le quadrillage gris « non fini » est remplacé par la pièce
+     où vit la porte : mur chaud sous la lampe, plinthe, et
+     plancher de bois au bas de l'écran, en fond fixe). */
+  background-image:
+    radial-gradient(900px 480px at 50% -60px,rgba(255,240,200,.13),rgba(255,240,200,0) 70%),
+    repeating-linear-gradient(90deg,rgba(0,0,0,.25) 0 2px,transparent 2px 190px),
+    repeating-linear-gradient(0deg,rgba(0,0,0,.20) 0 2px,transparent 2px 42px),
+    linear-gradient(180deg,#4A3826,#2C2115),
+    linear-gradient(180deg,#3A3F49,#22262E),
+    repeating-linear-gradient(0deg,rgba(255,255,255,.014) 0 3px,transparent 3px 6px),
+    linear-gradient(180deg,#242A35 0%,#1C1F27 55%,#161920 82%,#161920 100%);
+  background-size:100% 100%,100% 18%,100% 18%,100% 18%,100% 12px,100% 100%,100% 100%;
+  background-position:0 0,0 100%,0 100%,0 100%,0 calc(100% - 18vh),0 0,0 0;
+  background-repeat:no-repeat,no-repeat,no-repeat,no-repeat,no-repeat,repeat,no-repeat;
+  background-attachment:fixed;
   color:var(--texte); font-family:"Work Sans",sans-serif;
 }
 .block-container{ max-width:1180px; padding-top:1.2rem; }
