@@ -1260,6 +1260,59 @@ div[class*="st-key-sec_s"] button:hover{
   box-shadow:0 8px 18px rgba(0,0,0,.3); }
 .vie-projection div, .vie-projection b{ color:var(--encre); }
 
+/* La console du prof : un vrai panneau de contrôle posé sur le mur.
+   Plaque sombre, modules enfoncés, voyants d'état, tuiles de lecture. */
+.st-key-console_panneau{
+  background:linear-gradient(180deg,#272C38,#1B1F28);
+  border:1.5px solid #3D4457; border-radius:20px;
+  padding:26px 30px 30px; margin-top:6px;
+  box-shadow:0 30px 60px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.07);
+}
+.console-tete{ display:flex; align-items:center; gap:16px;
+  border-bottom:2px solid #3D4457; padding-bottom:16px; margin-bottom:20px; }
+.console-titre{ font-family:"Bebas Neue",sans-serif; font-size:42px;
+  letter-spacing:.05em; color:var(--texte); line-height:.95; }
+.console-sous{ color:var(--gris); font-size:13.5px; margin-top:2px; }
+.led{ width:11px; height:11px; border-radius:50%; display:inline-block;
+  flex:none; position:relative; top:1px; }
+.led.vert{ background:#2BD576; box-shadow:0 0 10px #2BD576; }
+.led.rouge{ background:#FF5A4E; box-shadow:0 0 10px #FF5A4E; }
+.led.orange{ background:#FFB020; box-shadow:0 0 10px #FFB020; }
+.led.gris{ background:#6B7280; box-shadow:none; }
+.led.gros{ width:16px; height:16px; }
+.st-key-console_panneau [data-baseweb="tab-list"]{
+  background:#14171E; border:1px solid #343B4C; border-radius:12px;
+  padding:6px; gap:6px; }
+.st-key-console_panneau [data-baseweb="tab"]{
+  border-radius:8px; color:var(--gris); font-weight:700; padding:8px 14px; }
+.st-key-console_panneau [data-baseweb="tab"][aria-selected="true"]{
+  background:#2E3442; color:var(--jaune); }
+.st-key-console_panneau [data-baseweb="tab-highlight"]{
+  background-color:var(--jaune) !important; }
+.st-key-console_panneau [data-baseweb="tab-border"]{ display:none; }
+.mod-head{ display:flex; align-items:center; gap:11px; margin-bottom:12px; }
+.mod-titre{ font-family:"Bebas Neue",sans-serif; font-size:24px;
+  letter-spacing:.07em; color:var(--texte); }
+.mod-aide{ color:var(--gris); font-size:13px; margin:-6px 0 12px; }
+.st-key-mod_alertes, .st-key-mod_classe, .st-key-mod_fiche,
+.st-key-mod_cartes, .st-key-mod_gel, .st-key-mod_mdp,
+.st-key-mod_imp, .st-key-mod_evt, .st-key-mod_corr,
+.st-key-mod_temps, .st-key-mod_classement, .st-key-mod_journal{
+  background:#20242E; border:1px solid #343B4C; border-radius:14px;
+  padding:18px 20px 20px; margin-top:18px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.04); }
+.tuile{ background:#14171E; border:1px solid #343B4C; border-radius:14px;
+  padding:14px 18px 12px; }
+.tuile .n{ font-family:"Bebas Neue",sans-serif; font-size:40px;
+  line-height:1; color:var(--texte); }
+.tuile .l{ color:var(--gris); font-size:12px; font-weight:700;
+  text-transform:uppercase; letter-spacing:.09em; margin-top:5px; }
+.tuile.jaune .n{ color:var(--jaune); }
+.tuile.alerte .n{ color:#FF7A59; }
+.alerte-ligne{ display:flex; align-items:baseline; gap:11px;
+  padding:7px 0; border-bottom:1px dashed #343B4C; font-size:15px; }
+.alerte-ligne:last-child{ border-bottom:none; }
+
 @media (max-width:980px){
   .pf-grille{ grid-template-columns:1fr; grid-template-areas:"solde" "calendrier" "croquis" "liste" "coloc" "epicerie" "energuide" "vide"; }
   .pf-congelo{ flex-wrap:wrap; }
@@ -4866,303 +4919,536 @@ def _dossier_resume_md(identifiant, groupe, params, texte=False):
     return "\n\n".join(lignes) if texte else "\n\n".join(lignes)
 
 
+def _mod_head(titre, led="vert", aide=None):
+    """En-tête d'un module de la console : voyant + titre du panneau."""
+    st.markdown(
+        f'<div class="mod-head"><span class="led {led}"></span>'
+        f'<span class="mod-titre">{titre}</span></div>',
+        unsafe_allow_html=True)
+    if aide:
+        st.markdown(f'<div class="mod-aide">{aide}</div>',
+                    unsafe_allow_html=True)
+
+
 def page_console(compte):
     if st.button("Retour à l'accueil"):
         aller("accueil")
-    st.markdown("## Console du prof")
-    if not st.session_state.get("console_ok"):
-        code = st.text_input("Code du prof", type="password",
-                             key="console_code")
-        if st.button("Ouvrir la console"):
-            if code == CODE_PROF:
-                st.session_state["console_ok"] = True
-                st.rerun()
+    with st.container(key="console_panneau"):
+        st.markdown(
+            '<div class="console-tete"><span class="led vert gros"></span>'
+            '<div><div class="console-titre">Console du prof</div>'
+            '<div class="console-sous">Le panneau de contrôle de la '
+            'classe : surveiller, décider, agir.</div></div></div>',
+            unsafe_allow_html=True)
+        if not st.session_state.get("console_ok"):
+            code = st.text_input("Code du prof", type="password",
+                                 key="console_code")
+            if st.button("Ouvrir la console"):
+                if code == CODE_PROF:
+                    st.session_state["console_ok"] = True
+                    st.rerun()
+                else:
+                    st.error("Code incorrect.")
+            return
+
+        # Le groupe se choisit une fois, en haut du panneau : il vaut
+        # pour la vue d'ensemble, la fiche d'un élève et les actions.
+        groupe = st.selectbox(
+            "Groupe affiché (ce choix vaut pour tous les onglets)",
+            donnees.GROUPES, key="console_groupe")
+        params, _ = _etat_groupe(groupe)
+        mois_courant, _ = donnees.position_dans_mois(params)
+        comptes_groupe = MAGASIN.comptes_du_groupe(groupe)
+        noms = {c["identifiant"]: c["nom_affiche"] for c in comptes_groupe}
+
+        (onglet_vue, onglet_eleve, onglet_agir, onglet_temps,
+         onglet_journal) = st.tabs(
+            ["Vue d'ensemble", "Un élève", "Agir sur le groupe",
+             "Temps et réglages", "Journal"])
+
+        # -------------------------------------------- Vue d'ensemble
+        with onglet_vue:
+            lignes = []
+            alertes = []
+            nb_negatifs = 0
+            for c in comptes_groupe:
+                d = MAGASIN.charger_dossier(c["identifiant"]) or {}
+                vie = donnees.obtenir_vie(d)
+                faites = sum(
+                    1 for v in (d.get("progression") or {}).values()
+                    if v == "fait")
+                retards = []
+                for code, comp in (vie.get("completions") or {}).items():
+                    f = donnees.facteur_section(code, comp.get("date"),
+                                                params)
+                    if f < 1.0:
+                        retards.append(f"{code} ({int(f * 100)} %)")
+                cle = str(min(mois_courant, donnees.MOIS_MAX))
+                try:
+                    score_vie = donnees.calculer_score_vie(
+                        d, PROFILS[int(c["cas_numero"])])["total"]
+                except Exception:
+                    score_vie = 0
+                connexions = vie.get("connexions") or []
+                decision = (vie.get("decisions") or {}).get(cle) or {}
+                lignes.append({
+                    "Élève": c["nom_affiche"], "Cas": c["cas_numero"],
+                    "Sections": f"{faites}/7",
+                    "Score": _affiche_points(score_vie),
+                    "Solde": fmt_montant(d.get("solde") or 0),
+                    "Mois atteint": vie.get("mois_appliques") or 0,
+                    "Décision": ("manquée" if decision.get("defaut")
+                                 else "faite" if decision else "à faire"),
+                    "Bilan": "fait" if cle in (vie.get("bilans") or {})
+                             else "à faire",
+                    "Retards": ", ".join(retards) or "-",
+                    "Dernière connexion": connexions[-1] if connexions
+                                          else "jamais",
+                    "Gelé": "oui" if vie.get("gele") else "-",
+                })
+                raisons = []
+                if (d.get("solde") or 0) < 0:
+                    raisons.append("solde négatif")
+                    nb_negatifs += 1
+                if not connexions:
+                    raisons.append("jamais connecté")
+                if decision.get("defaut"):
+                    raisons.append("décision manquée ce mois-ci")
+                if retards:
+                    raisons.append("en retard : " + ", ".join(retards))
+                if raisons:
+                    grave = ((d.get("solde") or 0) < 0
+                             or bool(decision.get("defaut")))
+                    alertes.append((c["nom_affiche"], raisons,
+                                    "rouge" if grave else "orange"))
+            tuiles = st.columns(4)
+            mois_affiche = (f"{min(mois_courant, donnees.MOIS_MAX)} / 9"
+                            if params.get("lance_le") else "—")
+            donnees_tuiles = [
+                (str(len(comptes_groupe)), f"Élèves · groupe {groupe}", ""),
+                (mois_affiche, "Mois de vie en cours", "jaune"),
+                (str(len(alertes)), "À surveiller",
+                 "alerte" if alertes else ""),
+                (str(nb_negatifs), "Soldes négatifs",
+                 "alerte" if nb_negatifs else ""),
+            ]
+            for col, (n, l, classe) in zip(tuiles, donnees_tuiles):
+                col.markdown(
+                    f'<div class="tuile {classe}"><div class="n">{n}</div>'
+                    f'<div class="l">{l}</div></div>',
+                    unsafe_allow_html=True)
+            with st.container(key="mod_alertes"):
+                _mod_head("À surveiller",
+                          "rouge" if alertes else "vert",
+                          "Ce qui demande ton oeil, dans ce groupe, "
+                          "maintenant.")
+                if alertes:
+                    for nom_a, raisons, couleur in alertes:
+                        st.markdown(
+                            f'<div class="alerte-ligne">'
+                            f'<span class="led {couleur}"></span>'
+                            f'<span><b>{nom_a}</b> : '
+                            f'{" ; ".join(raisons)}</span></div>',
+                            unsafe_allow_html=True)
+                else:
+                    st.write("Rien à signaler dans ce groupe.")
+            with st.container(key="mod_classe"):
+                _mod_head("La classe", "vert",
+                          "Tout le groupe d'un coup d'oeil. Le détail "
+                          "d'un élève est dans l'onglet Un élève.")
+                if lignes:
+                    st.dataframe(lignes, use_container_width=True,
+                                 hide_index=True)
+                else:
+                    st.write("Aucun compte dans ce groupe pour "
+                             "l'instant.")
+
+        # -------------------------------------------------- Un élève
+        with onglet_eleve:
+            if not comptes_groupe:
+                st.write("Aucun compte dans ce groupe pour l'instant.")
             else:
-                st.error("Code incorrect.")
-        return
-
-    st.markdown("### Le temps, par groupe")
-    for groupe in donnees.GROUPES:
-        params, etat = _etat_groupe(groupe)
-        cols = st.columns([1, 2, 2, 2])
-        cols[0].markdown(f"**Groupe {groupe}**")
-        cols[1].write(etat)
-        if not params.get("lance_le"):
-            with cols[2]:
-                jour = st.date_input("Lancement", key=f"lancer_{groupe}")
-            with cols[3]:
-                if st.button("Lancer le calendrier", key=f"go_{groupe}"):
-                    donnees.lancer_calendrier(MAGASIN, groupe, jour)
-                    donnees.consigner_prof(
-                        MAGASIN, f"Calendrier lancé pour le groupe "
-                        f"{groupe} le {jour}.")
-                    st.rerun()
-        else:
-            with cols[3]:
-                en_pause = donnees.calendrier_en_pause(params)
-                if st.button("Reprendre" if en_pause else "Mettre en pause",
-                             key=f"pause_{groupe}"):
-                    donnees.basculer_pause(
-                        MAGASIN, groupe,
-                        __import__('datetime').date.today())
-                    donnees.consigner_prof(
-                        MAGASIN, f"Calendrier du groupe {groupe} : "
-                        f"{'repris' if en_pause else 'mis en pause'}.")
-                    st.rerun()
-
-    st.markdown("### La classe")
-    groupe = st.selectbox("Groupe", donnees.GROUPES, key="console_groupe")
-    params, _ = _etat_groupe(groupe)
-    mois_courant, _ = donnees.position_dans_mois(params)
-    lignes = []
-    for c in MAGASIN.comptes_du_groupe(groupe):
-        d = MAGASIN.charger_dossier(c["identifiant"]) or {}
-        vie = donnees.obtenir_vie(d)
-        faites = sum(1 for v in (d.get("progression") or {}).values()
-                     if v == "fait")
-        retards = []
-        for code, comp in (vie.get("completions") or {}).items():
-            f = donnees.facteur_section(code, comp.get("date"), params)
-            if f < 1.0:
-                retards.append(f"{code} ({int(f * 100)} %)")
-        cle = str(min(mois_courant, donnees.MOIS_MAX))
-        try:
-            score_vie = donnees.calculer_score_vie(
-                d, PROFILS[int(c["cas_numero"])])["total"]
-        except Exception:
-            score_vie = 0
-        lignes.append({
-            "Élève": c["nom_affiche"], "Cas": c["cas_numero"],
-            "Sections": f"{faites}/7",
-            "Score": _affiche_points(score_vie),
-            "Solde": fmt_montant(d.get("solde") or 0),
-            "Mois atteint": vie.get("mois_appliques") or 0,
-            "Décision": "faite" if cle in (vie.get("decisions") or {})
-                        else "à faire",
-            "Bilan": "fait" if cle in (vie.get("bilans") or {})
-                     else "à faire",
-            "Retards": ", ".join(retards) or "-",
-            "Connexions": len(vie.get("connexions") or []),
-            "Gelé": "oui" if vie.get("gele") else "-",
-        })
-    if lignes:
-        st.dataframe(lignes, use_container_width=True, hide_index=True)
-    else:
-        st.write("Aucun compte dans ce groupe pour l'instant.")
-
-    comptes_groupe = MAGASIN.comptes_du_groupe(groupe)
-    noms = {c["identifiant"]: c["nom_affiche"] for c in comptes_groupe}
-
-    if comptes_groupe:
-        st.markdown("**Pause individuelle** : geler un élève arrête SON "
-                    "calendrier (aucun mois ne s'applique à son dossier) "
-                    "sans toucher au groupe. Au dégel, les mois dus "
-                    "s'appliquent d'un coup, comme après une absence.")
-        cols_gel = st.columns([3, 1])
-        with cols_gel[0]:
-            eleve_gel = st.selectbox("Élève", list(noms),
+                eleve = st.selectbox("Élève", list(noms),
                                      format_func=lambda i: noms[i],
-                                     key="gel_eleve")
-        with cols_gel[1]:
-            d_gel = MAGASIN.charger_dossier(eleve_gel) or {}
-            est_gele = donnees.obtenir_vie(d_gel).get("gele")
-            if st.button("Dégeler" if est_gele else "Geler",
-                         key="gel_bouton"):
-                donnees.basculer_gel(MAGASIN, eleve_gel)
-                donnees.consigner_prof(
-                    MAGASIN, f"Calendrier {'gelé' if not est_gele else 'dégelé'} "
-                    f"pour {noms[eleve_gel]} (groupe {groupe}).")
-                st.rerun()
-
-    st.markdown("### Classement du groupe")
-    visible = params.get("classement_visible", True)
-    st.write("Le classement est "
-             + ("visible pour les élèves." if visible
-                else "masqué pour les élèves."))
-    if st.button("Masquer le classement" if visible
-                 else "Afficher le classement", key="console_classement"):
-        nouvel = donnees.basculer_classement(MAGASIN, groupe)
-        donnees.consigner_prof(
-            MAGASIN, f"Classement du groupe {groupe} : "
-            f"{'affiché' if nouvel else 'masqué'}.")
-        st.rerun()
-
-    if comptes_groupe:
-        st.markdown("### Dossier résumé (une page par élève)")
-        eleve_resume = st.selectbox(
-            "Élève", list(noms), format_func=lambda i: noms[i],
-            key="resume_eleve")
-        if st.button("Préparer le résumé", key="resume_bouton"):
-            st.session_state["_resume_pour"] = eleve_resume
-        if st.session_state.get("_resume_pour") == eleve_resume:
-            st.markdown(_dossier_resume_md(eleve_resume, groupe, params),
-                        unsafe_allow_html=True)
-            st.download_button(
-                "Télécharger le résumé (.md)",
-                data=_dossier_resume_md(eleve_resume, groupe, params,
-                                        texte=True),
-                file_name=f"resume-{eleve_resume}.md",
-                key="resume_telecharger")
-        dossier_resume = MAGASIN.charger_dossier(eleve_resume) or {}
-        cartes_eleve = (donnees.obtenir_vie(dossier_resume)
-                        .get("cartes") or [])
-        if cartes_eleve:
-            st.markdown(
-                "**Cartes pigées par cet élève** : annuler "
-                "défait tout l'effet (solde, mouvements, "
-                "suites programmées, verrou d'épicerie).")
-            for c in cartes_eleve:
-                col_texte, col_bouton = st.columns([3, 1])
-                col_texte.markdown(
-                    f"nº {c.get('numero')} : {c.get('titre')} "
-                    f"({fmt_montant(c.get('montant') or 0, signe=True)}"
-                    f"), le {c.get('date')}, choix : "
-                    f"{c.get('strategie_libelle') or '—'}")
-                if col_bouton.button(
-                        "Annuler cette carte",
-                        key=f"annuler_carte_{eleve_resume}_"
-                            f"{c.get('numero')}"):
-                    try:
-                        res_ann = donnees.annuler_carte_imprevu(
-                            MAGASIN, eleve_resume, c.get("numero"))
-                        st.success(
-                            f"Carte nº {c.get('numero')} annulée : "
-                            f"{fmt_montant(res_ann['restaure'], signe=True)} "
-                            "restaurés au solde de l'élève.")
+                                     key="eleve_tout")
+                d_eleve = MAGASIN.charger_dossier(eleve) or {}
+                vie_eleve = donnees.obtenir_vie(d_eleve)
+                faites_e = sum(
+                    1 for v in (d_eleve.get("progression") or {}).values()
+                    if v == "fait")
+                with st.container(key="mod_fiche"):
+                    _mod_head(f"Fiche de {noms[eleve]}", "vert",
+                              "Son résumé d'une page, prêt à imprimer "
+                              "ou à montrer.")
+                    st.markdown(
+                        f"**{faites_e}/7 sections** · solde "
+                        f"**{fmt_montant(d_eleve.get('solde') or 0)}** · "
+                        f"mois atteint "
+                        f"**{vie_eleve.get('mois_appliques') or 0}**"
+                        + (" · **calendrier gelé**"
+                           if vie_eleve.get("gele") else ""))
+                    if st.button("Préparer le résumé",
+                                 key="resume_bouton"):
+                        st.session_state["_resume_pour"] = eleve
+                    if st.session_state.get("_resume_pour") == eleve:
+                        st.markdown(
+                            _dossier_resume_md(eleve, groupe, params),
+                            unsafe_allow_html=True)
+                        st.download_button(
+                            "Télécharger le résumé (.md)",
+                            data=_dossier_resume_md(eleve, groupe, params,
+                                                    texte=True),
+                            file_name=f"resume-{eleve}.md",
+                            key="resume_telecharger")
+                cartes_eleve = vie_eleve.get("cartes") or []
+                if cartes_eleve:
+                    with st.container(key="mod_cartes"):
+                        _mod_head("Cartes pigées en classe", "orange",
+                                  "Annuler défait tout l'effet : solde, "
+                                  "mouvements, suites programmées, "
+                                  "verrou d'épicerie.")
+                        for c in cartes_eleve:
+                            col_texte, col_bouton = st.columns([3, 1])
+                            col_texte.markdown(
+                                f"nº {c.get('numero')} : {c.get('titre')} "
+                                f"({fmt_montant(c.get('montant') or 0, signe=True)}"
+                                f"), le {c.get('date')}, choix : "
+                                f"{c.get('strategie_libelle') or '—'}")
+                            if col_bouton.button(
+                                    "Annuler cette carte",
+                                    key=f"annuler_carte_{eleve}_"
+                                        f"{c.get('numero')}"):
+                                try:
+                                    res_ann = (
+                                        donnees.annuler_carte_imprevu(
+                                            MAGASIN, eleve,
+                                            c.get("numero")))
+                                    st.success(
+                                        f"Carte nº {c.get('numero')} "
+                                        f"annulée : "
+                                        f"{fmt_montant(res_ann['restaure'], signe=True)} "
+                                        "restaurés au solde de l'élève.")
+                                    st.rerun()
+                                except ValueError as e:
+                                    st.error(str(e))
+                with st.container(key="mod_gel"):
+                    _mod_head("Pause individuelle",
+                              "orange" if vie_eleve.get("gele") else "gris",
+                              "Geler arrête SON calendrier (aucun mois "
+                              "ne s'applique à son dossier) sans toucher "
+                              "au groupe. Au dégel, les mois dus "
+                              "s'appliquent d'un coup, comme après une "
+                              "absence.")
+                    est_gele = vie_eleve.get("gele")
+                    if st.button("Dégeler" if est_gele else "Geler",
+                                 key="gel_bouton"):
+                        donnees.basculer_gel(MAGASIN, eleve)
+                        donnees.consigner_prof(
+                            MAGASIN,
+                            f"Calendrier {'gelé' if not est_gele else 'dégelé'} "
+                            f"pour {noms[eleve]} (groupe {groupe}).")
                         st.rerun()
-                    except ValueError as e:
-                        st.error(str(e))
+                with st.container(key="mod_mdp"):
+                    _mod_head("Mot de passe oublié", "gris",
+                              "Un nouveau mot de passe, à lui remettre "
+                              "en classe.")
+                    nouveau = st.text_input(
+                        "Nouveau mot de passe (à lui remettre en classe)",
+                        key="mdp_nouveau")
+                    if st.button("Réinitialiser le mot de passe"):
+                        if len(nouveau or "") >= 6:
+                            donnees.reinitialiser_mot_de_passe(
+                                MAGASIN, eleve, nouveau)
+                            donnees.consigner_prof(
+                                MAGASIN, f"Mot de passe réinitialisé pour "
+                                f"{noms[eleve]} (groupe {groupe}).")
+                            st.success("Mot de passe réinitialisé.")
+                        else:
+                            st.error("Six caractères minimum.")
 
-    st.markdown("### Imprévu ciblé")
-    choix_imp = st.selectbox(
-        "Imprévu", [i["titre"] for i in donnees.BANQUE_IMPREVUS]
-        + ["Personnalisé…"], key="imp_choix")
-    cible = st.radio("Cible", ["Un élève", "Tout le groupe"],
-                     key="imp_cible", horizontal=True)
-    identifiant_cible = None
-    if cible == "Un élève" and comptes_groupe:
-        identifiant_cible = st.selectbox(
-            "Élève", list(noms), format_func=lambda i: noms[i],
-            key="imp_eleve")
-    montant_perso = None
-    libelle_perso = None
-    if choix_imp == "Personnalisé…":
-        libelle_perso = st.text_input("Libellé (vu par l'élève)",
-                                      key="imp_libelle")
-        montant_perso = st.number_input(
-            "Montant (négatif = un coût, positif = un gain)",
-            value=0.0, step=10.0, key="imp_montant")
-    if st.button("Appliquer l'imprévu", type="primary"):
-        imp = next((i for i in donnees.BANQUE_IMPREVUS
-                    if i["titre"] == choix_imp), None)
-        cibles = [identifiant_cible] if cible == "Un élève"             else list(noms)
-        for ident in [c for c in cibles if c]:
-            c = MAGASIN.compte_par_identifiant(ident)
-            profil_e = PROFILS[int(c["cas_numero"])]
-            d = MAGASIN.charger_dossier(ident) or {}
-            mois_e = min(mois_courant, donnees.MOIS_MAX) or None
-            if imp and imp.get("special") == "heures_coupees":
-                paie_e = (float(profil_e["revenu_net_mensuel"])
-                          + float(profil_e["autre_revenu_mensuel"])
-                          + float(profil_e["aide_parents_mensuelle"]))
-                montant = -round(paie_e * 0.20, 2)
-                libelle = ("Heures coupées au travail : ta paie du mois "
-                           "est réduite de 20 %")
-            elif imp and imp.get("special") == "coloc_retard":
-                fermeture = donnees.date_fermeture_mois(params, mois_e or 1)
-                part = donnees._montant_pour(d, "S2", "loyer_part",
-                                             fermeture)
-                montant = -part
-                libelle = ("Tu avances la part de loyer de ton coloc "
-                           "(il te remboursera le mois prochain)")
-                donnees.programmer_mouvement(
-                    MAGASIN, ident, (mois_e or 1) + 1,
-                    "Remboursement de ton coloc : sa part de loyer",
-                    part)
-            elif imp:
-                montant = imp["montant"]
-                libelle = imp["titre"]
-            else:
-                montant = float(montant_perso or 0)
-                libelle = libelle_perso or "Imprévu"
-            pourquoi_imp = imp.get("pourquoi") if imp else None
-            donnees.ajouter_mouvement(MAGASIN, ident, libelle, montant,
-                                      source="imprevu", mois=mois_e,
-                                      pourquoi=pourquoi_imp)
-            texte_pourquoi = (f" Pourquoi : {pourquoi_imp}"
-                              if pourquoi_imp else "")
-            donnees.poser_annonce(
-                MAGASIN, ident,
-                f"Surprise de ton enseignant : {libelle} "
-                f"({fmt_montant(montant, signe=True)})."
-                f"{texte_pourquoi} C'est déjà dans "
-                f"ton journal, dans Ma vie.")
-        donnees.consigner_prof(
-            MAGASIN, f"Imprévu « {choix_imp} » appliqué à "
-            f"{cible.lower()} du groupe {groupe}.")
-        st.success("Imprévu appliqué et annoncé aux élèves concernés.")
+        # ----------------------------------------- Agir sur le groupe
+        with onglet_agir:
+            with st.container(key="mod_imp"):
+                _mod_head("Imprévu ciblé", "orange",
+                          "Un coup de la vie, pour un élève ou pour "
+                          "tout le groupe. Rien ne part sans ta "
+                          "confirmation.")
+                choix_imp = st.selectbox(
+                    "Imprévu",
+                    [i["titre"] for i in donnees.BANQUE_IMPREVUS]
+                    + ["Personnalisé…"], key="imp_choix")
+                cible = st.radio("Cible", ["Un élève", "Tout le groupe"],
+                                 key="imp_cible", horizontal=True)
+                identifiant_cible = None
+                if cible == "Un élève" and comptes_groupe:
+                    identifiant_cible = st.selectbox(
+                        "Élève", list(noms),
+                        format_func=lambda i: noms[i], key="imp_eleve")
+                montant_perso = None
+                libelle_perso = None
+                if choix_imp == "Personnalisé…":
+                    libelle_perso = st.text_input(
+                        "Libellé (vu par l'élève)", key="imp_libelle")
+                    montant_perso = st.number_input(
+                        "Montant (négatif = un coût, positif = un gain)",
+                        value=0.0, step=10.0, key="imp_montant")
+                if st.button("Appliquer l'imprévu", type="primary"):
+                    if cible == "Un élève" and not identifiant_cible:
+                        st.error("Choisis un élève d'abord.")
+                    else:
+                        qui = (noms[identifiant_cible]
+                               if cible == "Un élève"
+                               else f"les {len(noms)} élèves du groupe "
+                                    f"{groupe}")
+                        st.session_state["_conf_imp"] = {
+                            "choix": choix_imp, "cible": cible,
+                            "identifiant": identifiant_cible,
+                            "libelle_perso": libelle_perso,
+                            "montant_perso": montant_perso,
+                            "recap": f"« {choix_imp} » pour {qui}."}
+                conf_imp = st.session_state.get("_conf_imp")
+                if conf_imp:
+                    st.warning("Tu vas appliquer : " + conf_imp["recap"]
+                               + " Vérifie, puis confirme.")
+                    col_ok, col_non = st.columns(2)
+                    if col_non.button("Annuler", key="conf_imp_non"):
+                        st.session_state.pop("_conf_imp", None)
+                        st.rerun()
+                    if col_ok.button("Confirmer l'imprévu",
+                                     key="conf_imp_oui", type="primary"):
+                        st.session_state.pop("_conf_imp", None)
+                        imp = next((i for i in donnees.BANQUE_IMPREVUS
+                                    if i["titre"] == conf_imp["choix"]),
+                                   None)
+                        cibles = ([conf_imp["identifiant"]]
+                                  if conf_imp["cible"] == "Un élève"
+                                  else list(noms))
+                        for ident in [c for c in cibles if c]:
+                            c = MAGASIN.compte_par_identifiant(ident)
+                            profil_e = PROFILS[int(c["cas_numero"])]
+                            d = MAGASIN.charger_dossier(ident) or {}
+                            mois_e = (min(mois_courant, donnees.MOIS_MAX)
+                                      or None)
+                            if imp and imp.get("special") == "heures_coupees":
+                                paie_e = (
+                                    float(profil_e["revenu_net_mensuel"])
+                                    + float(profil_e["autre_revenu_mensuel"])
+                                    + float(profil_e["aide_parents_mensuelle"]))
+                                montant = -round(paie_e * 0.20, 2)
+                                libelle = ("Heures coupées au travail : "
+                                           "ta paie du mois est réduite "
+                                           "de 20 %")
+                            elif imp and imp.get("special") == "coloc_retard":
+                                fermeture = donnees.date_fermeture_mois(
+                                    params, mois_e or 1)
+                                part = donnees._montant_pour(
+                                    d, "S2", "loyer_part", fermeture)
+                                montant = -part
+                                libelle = ("Tu avances la part de loyer "
+                                           "de ton coloc (il te "
+                                           "remboursera le mois prochain)")
+                                donnees.programmer_mouvement(
+                                    MAGASIN, ident, (mois_e or 1) + 1,
+                                    "Remboursement de ton coloc : sa "
+                                    "part de loyer", part)
+                            elif imp:
+                                montant = imp["montant"]
+                                libelle = imp["titre"]
+                            else:
+                                montant = float(
+                                    conf_imp["montant_perso"] or 0)
+                                libelle = (conf_imp["libelle_perso"]
+                                           or "Imprévu")
+                            pourquoi_imp = (imp.get("pourquoi")
+                                            if imp else None)
+                            donnees.ajouter_mouvement(
+                                MAGASIN, ident, libelle, montant,
+                                source="imprevu", mois=mois_e,
+                                pourquoi=pourquoi_imp)
+                            texte_pourquoi = (
+                                f" Pourquoi : {pourquoi_imp}"
+                                if pourquoi_imp else "")
+                            donnees.poser_annonce(
+                                MAGASIN, ident,
+                                f"Surprise de ton enseignant : {libelle} "
+                                f"({fmt_montant(montant, signe=True)})."
+                                f"{texte_pourquoi} C'est déjà dans "
+                                f"ton journal, dans Ma vie.")
+                        donnees.consigner_prof(
+                            MAGASIN,
+                            f"Imprévu « {conf_imp['choix']} » appliqué à "
+                            f"{conf_imp['cible'].lower()} du groupe "
+                            f"{groupe}.")
+                        st.success("Imprévu appliqué et annoncé aux "
+                                   "élèves concernés.")
+            with st.container(key="mod_evt"):
+                _mod_head("Événement et annonce", "orange",
+                          "Un message pour tout le groupe, avec ou "
+                          "sans effet en argent.")
+                texte_annonce = st.text_area("Texte de l'annonce",
+                                             key="evt_texte")
+                montant_evt = st.number_input(
+                    "Effet en argent pour chaque élève "
+                    "(0 = annonce simple)",
+                    value=0.0, step=10.0, key="evt_montant")
+                if st.button("Envoyer au groupe"):
+                    st.session_state["_conf_evt"] = {
+                        "texte": texte_annonce,
+                        "montant": float(montant_evt)}
+                conf_evt = st.session_state.get("_conf_evt")
+                if conf_evt:
+                    effet = (f", avec "
+                             f"{fmt_montant(conf_evt['montant'], signe=True)} "
+                             "pour chacun" if conf_evt["montant"] else "")
+                    st.warning(
+                        f"Tu vas envoyer au groupe {groupe} "
+                        f"({len(noms)} élèves) : « {conf_evt['texte']} »"
+                        f"{effet}. Vérifie, puis confirme.")
+                    col_ok, col_non = st.columns(2)
+                    if col_non.button("Annuler", key="conf_evt_non"):
+                        st.session_state.pop("_conf_evt", None)
+                        st.rerun()
+                    if col_ok.button("Confirmer l'envoi",
+                                     key="conf_evt_oui", type="primary"):
+                        st.session_state.pop("_conf_evt", None)
+                        for ident in noms:
+                            if conf_evt["montant"]:
+                                donnees.ajouter_mouvement(
+                                    MAGASIN, ident,
+                                    conf_evt["texte"]
+                                    or "Événement de classe",
+                                    conf_evt["montant"],
+                                    source="evenement",
+                                    mois=min(mois_courant,
+                                             donnees.MOIS_MAX) or None)
+                            if conf_evt["texte"]:
+                                donnees.poser_annonce(
+                                    MAGASIN, ident, conf_evt["texte"])
+                        donnees.consigner_prof(
+                            MAGASIN,
+                            f"Événement/annonce au groupe {groupe} : "
+                            f"« {conf_evt['texte']} » "
+                            f"({fmt_montant(conf_evt['montant'], signe=True)}).")
+                        st.success("C'est envoyé.")
+            with st.container(key="mod_corr"):
+                _mod_head("Correction en lot", "orange",
+                          "Le même ajustement pour tout le groupe, "
+                          "avec le motif qui paraît dans leur journal.")
+                montant_corr = st.number_input(
+                    "Montant pour chaque élève du groupe",
+                    value=0.0, step=10.0, key="corr_montant")
+                motif = st.text_input(
+                    "Motif (il paraît dans leur journal)", key="corr_motif")
+                if st.button("Appliquer la correction"):
+                    st.session_state["_conf_corr"] = {
+                        "montant": float(montant_corr), "motif": motif}
+                conf_corr = st.session_state.get("_conf_corr")
+                if conf_corr:
+                    st.warning(
+                        f"Tu vas appliquer "
+                        f"{fmt_montant(conf_corr['montant'], signe=True)} "
+                        f"à chacun des {len(noms)} élèves du groupe "
+                        f"{groupe} (motif : "
+                        f"{conf_corr['motif'] or 'ajustement'}). "
+                        "Vérifie, puis confirme.")
+                    col_ok, col_non = st.columns(2)
+                    if col_non.button("Annuler", key="conf_corr_non"):
+                        st.session_state.pop("_conf_corr", None)
+                        st.rerun()
+                    if col_ok.button("Confirmer la correction",
+                                     key="conf_corr_oui", type="primary"):
+                        st.session_state.pop("_conf_corr", None)
+                        for ident in noms:
+                            donnees.ajouter_mouvement(
+                                MAGASIN, ident,
+                                f"Correction : "
+                                f"{conf_corr['motif'] or 'ajustement'}",
+                                conf_corr["montant"], source="correction",
+                                mois=min(mois_courant, donnees.MOIS_MAX)
+                                or None)
+                        donnees.consigner_prof(
+                            MAGASIN,
+                            f"Correction en lot groupe {groupe} : "
+                            f"{fmt_montant(conf_corr['montant'], signe=True)}"
+                            f" : {conf_corr['motif']}.")
+                        st.success("Correction appliquée à tout le "
+                                   "groupe.")
 
-    st.markdown("### Événement et annonce pour un groupe")
-    texte_annonce = st.text_area("Texte de l'annonce", key="evt_texte")
-    montant_evt = st.number_input(
-        "Effet en argent pour chaque élève (0 = annonce simple)",
-        value=0.0, step=10.0, key="evt_montant")
-    if st.button("Envoyer au groupe"):
-        for ident in noms:
-            if montant_evt:
-                donnees.ajouter_mouvement(
-                    MAGASIN, ident, texte_annonce or "Événement de classe",
-                    float(montant_evt), source="evenement",
-                    mois=min(mois_courant, donnees.MOIS_MAX) or None)
-            if texte_annonce:
-                donnees.poser_annonce(MAGASIN, ident, texte_annonce)
-        donnees.consigner_prof(
-            MAGASIN, f"Événement/annonce au groupe {groupe} : "
-            f"« {texte_annonce} » ({fmt_montant(montant_evt, signe=True)}).")
-        st.success("C'est envoyé.")
+        # --------------------------------------------- Temps et réglages
+        with onglet_temps:
+            with st.container(key="mod_temps"):
+                _mod_head("Le temps, par groupe", "vert",
+                          "Le voyant dit où en est chaque calendrier : "
+                          "vert il roule, orange il est en pause, gris "
+                          "il n'est pas lancé.")
+                for g in donnees.GROUPES:
+                    params_g, etat = _etat_groupe(g)
+                    if not params_g.get("lance_le"):
+                        couleur = "gris"
+                    elif donnees.calendrier_en_pause(params_g):
+                        couleur = "orange"
+                    else:
+                        couleur = "vert"
+                    cols = st.columns([1, 2, 2, 2])
+                    cols[0].markdown(
+                        f'<span class="led {couleur}"></span> '
+                        f'<b>Groupe {g}</b>', unsafe_allow_html=True)
+                    cols[1].write(etat)
+                    if not params_g.get("lance_le"):
+                        with cols[2]:
+                            jour = st.date_input("Lancement",
+                                                 key=f"lancer_{g}")
+                        with cols[3]:
+                            if st.button("Lancer le calendrier",
+                                         key=f"go_{g}"):
+                                donnees.lancer_calendrier(MAGASIN, g, jour)
+                                donnees.consigner_prof(
+                                    MAGASIN,
+                                    f"Calendrier lancé pour le groupe "
+                                    f"{g} le {jour}.")
+                                st.rerun()
+                    else:
+                        with cols[3]:
+                            en_pause = donnees.calendrier_en_pause(params_g)
+                            if st.button("Reprendre" if en_pause
+                                         else "Mettre en pause",
+                                         key=f"pause_{g}"):
+                                donnees.basculer_pause(
+                                    MAGASIN, g,
+                                    __import__('datetime').date.today())
+                                donnees.consigner_prof(
+                                    MAGASIN,
+                                    f"Calendrier du groupe {g} : "
+                                    f"{'repris' if en_pause else 'mis en pause'}.")
+                                st.rerun()
+            with st.container(key="mod_classement"):
+                _mod_head("Classement du groupe", "vert",
+                          "Visible ou masqué, pour les élèves du "
+                          "groupe affiché.")
+                visible = params.get("classement_visible", True)
+                st.write("Le classement du groupe " + groupe + " est "
+                         + ("visible pour les élèves." if visible
+                            else "masqué pour les élèves."))
+                if st.button("Masquer le classement" if visible
+                             else "Afficher le classement",
+                             key="console_classement"):
+                    nouvel = donnees.basculer_classement(MAGASIN, groupe)
+                    donnees.consigner_prof(
+                        MAGASIN, f"Classement du groupe {groupe} : "
+                        f"{'affiché' if nouvel else 'masqué'}.")
+                    st.rerun()
 
-    st.markdown("### Correction en lot")
-    montant_corr = st.number_input("Montant pour chaque élève du groupe",
-                                   value=0.0, step=10.0, key="corr_montant")
-    motif = st.text_input("Motif (il paraît dans leur journal)",
-                          key="corr_motif")
-    if st.button("Appliquer la correction"):
-        for ident in noms:
-            donnees.ajouter_mouvement(
-                MAGASIN, ident, f"Correction : {motif or 'ajustement'}",
-                float(montant_corr), source="correction",
-                mois=min(mois_courant, donnees.MOIS_MAX) or None)
-        donnees.consigner_prof(
-            MAGASIN, f"Correction en lot groupe {groupe} : "
-            f"{fmt_montant(montant_corr, signe=True)} : {motif}.")
-        st.success("Correction appliquée à tout le groupe.")
-
-    st.markdown("### Mot de passe oublié")
-    if comptes_groupe:
-        eleve_mdp = st.selectbox("Élève", list(noms),
-                                 format_func=lambda i: noms[i],
-                                 key="mdp_eleve")
-        nouveau = st.text_input("Nouveau mot de passe (à lui remettre "
-                                "en classe)", key="mdp_nouveau")
-        if st.button("Réinitialiser le mot de passe"):
-            if len(nouveau or "") >= 6:
-                donnees.reinitialiser_mot_de_passe(
-                    MAGASIN, eleve_mdp, nouveau)
-                donnees.consigner_prof(
-                    MAGASIN, f"Mot de passe réinitialisé pour "
-                    f"{noms[eleve_mdp]} (groupe {groupe}).")
-                st.success("Mot de passe réinitialisé.")
-            else:
-                st.error("Six caractères minimum.")
-
-    st.markdown("### Journal du prof")
-    entrees = donnees.lire_journal_prof(MAGASIN)
-    if entrees:
-        for entree in entrees[-30:][::-1]:
-            st.write(f"{entree['date']} · {entree['texte']}")
-    else:
-        st.write("Rien pour l'instant : tout ce que tu injecteras "
-                 "paraîtra ici.")
-
+        # ----------------------------------------------------- Journal
+        with onglet_journal:
+            with st.container(key="mod_journal"):
+                _mod_head("Journal du prof", "gris",
+                          "Tout ce que la console a fait, dans l'ordre.")
+                entrees = donnees.lire_journal_prof(MAGASIN)
+                if entrees:
+                    for entree in entrees[-30:][::-1]:
+                        st.write(f"{entree['date']} · {entree['texte']}")
+                else:
+                    st.write("Rien pour l'instant : tout ce que tu "
+                             "injecteras paraîtra ici.")
 
 main()
