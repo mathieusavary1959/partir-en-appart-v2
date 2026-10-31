@@ -2620,6 +2620,57 @@ def appliquer_carte_imprevu(magasin, identifiant, numero,
     return {"carte": carte, "part": part, "strategie": strategie}
 
 
+def annuler_carte_imprevu(magasin, identifiant, numero):
+    """L'enseignant annule une carte pigée inscrite par
+    l'élève (console, choix de Mathieu le 31 oct. 2026 :
+    visibilité + annulation). Tout l'effet est défait :
+    mouvements déjà tombés retirés du journal et du solde,
+    suites programmées retirées, verrou d'épicerie levé,
+    carte retirée du dossier. L'annulation est consignée
+    au journal du prof."""
+    dossier = magasin.charger_dossier(identifiant)
+    if dossier is None:
+        raise ValueError(f"Dossier introuvable : {identifiant}")
+    vie = obtenir_vie(dossier)
+    faites = vie.get("cartes") or []
+    if not any(c.get("numero") == numero for c in faites):
+        raise ValueError("Cette carte n'est pas inscrite dans "
+                         "le dossier de cet élève.")
+    motifs = ("Carte d'imprévu nº %d :" % numero,
+              "Carte nº %d :" % numero,
+              "Remboursement à ton coloc (carte nº %d :" % numero)
+
+    def concerne(libelle):
+        return any(str(libelle or "").startswith(motif)
+                   for motif in motifs)
+
+    gardes = []
+    restaure = 0.0
+    for m in vie.get("mouvements") or []:
+        if m.get("source") == "imprevu" and concerne(m.get("libelle")):
+            restaure -= float(m.get("montant") or 0)
+        else:
+            gardes.append(m)
+    vie["mouvements"] = gardes
+    dossier["solde"] = _arrondir2(
+        float(dossier.get("solde") or 0) + restaure)
+    vie["a_appliquer"] = [
+        a for a in vie.get("a_appliquer") or []
+        if not concerne(a.get("libelle"))]
+    for plan in (vie.get("reglages") or {}).values():
+        if plan.get("verrou_epicerie") == numero:
+            plan.pop("verrou_epicerie", None)
+            plan["epicerie"] = "normal"
+    vie["cartes"] = [c for c in faites
+                     if c.get("numero") != numero]
+    magasin.sauvegarder_dossier(identifiant, dossier)
+    consigner_prof(
+        magasin,
+        f"Carte d'imprévu nº {numero} de {identifiant} annulée "
+        f"par l'enseignant ({restaure:.2f} $ restaurés).")
+    return {"restaure": _arrondir2(restaure)}
+
+
 # --- Journal du prof : tout le chaos est consigné ---
 
 def consigner_prof(magasin, texte, aujourdhui=None):

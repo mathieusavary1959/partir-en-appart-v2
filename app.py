@@ -44,7 +44,8 @@ if not hasattr(donnees, "PIECE_COLOC") or not hasattr(donnees, "nouveau_jeton_se
         or not hasattr(donnees, "reaction_coloc") \
         or not hasattr(donnees, "analyser_bilans") \
         or not hasattr(donnees, "strategies_disponibles") \
-        or not hasattr(donnees, "enregistrer_defaut_decision"):
+        or not hasattr(donnees, "enregistrer_defaut_decision") \
+        or not hasattr(donnees, "annuler_carte_imprevu"):
     import importlib
     importlib.reload(donnees)
 
@@ -3304,18 +3305,6 @@ def page_guide(compte, dossier, profil):
         morceaux.append(
             f"<div class='guide-etape'><div class='guide-num'>{i}"
             f"</div><div><h3>{titre}</h3><p>{texte}</p></div></div>")
-    params_guide = donnees.obtenir_parametres(MAGASIN,
-                                              compte["groupe"])
-    _, jour_guide = donnees.position_dans_mois(params_guide)
-    morceaux.append(
-        "<div class='guide-etape'><div class='guide-num'>+</div>"
-        "<div><h3>Le calendrier d'un mois de vie</h3><p>Un mois "
-        "de vie compte 30 jours, étalés sur une semaine réelle. "
-        "Chaque colonne est un vrai jour de la semaine : tu y "
-        "vois quels jours de vie il fait vivre, et ce qui tombe "
-        "chaque jour.</p>"
-        + html_calendrier_vie(jour_guide)
-        + "</div></div>")
     morceaux.append(
         "<div class='intro' style='margin-top:14px'><b>Perdu ?</b> "
         "Reviens à l'accueil : le gros bouton jaune te mène toujours "
@@ -4055,6 +4044,16 @@ def page_vie(compte, dossier, profil):
         "ton mois devient.</div>"
         f"<div class='vie-etats'>{etats}</div></section>",
         unsafe_allow_html=True)
+    if mois_courant >= 1:
+        st.markdown(
+            "<section class='carte'><h2>Le calendrier de ton "
+            "mois</h2><div class='aide'>Un mois de vie compte "
+            "30 jours, étalés sur une semaine réelle. Chaque "
+            "colonne est un vrai jour de la semaine : tu y vois "
+            "quels jours de vie il fait vivre, et ce qui tombe "
+            "chaque jour.</div>"
+            + html_calendrier_vie(journee_courante)
+            + "</section>", unsafe_allow_html=True)
 
     # --- La couche histoire : le coloc réagit (son post-it bleu
     # de la porte s'éteint quand l'élève passe ici), et la
@@ -4580,6 +4579,15 @@ def _dossier_resume_md(identifiant, groupe, params, texte=False):
                         "par défaut")
     lignes.append("**Drapeaux** : "
                   + (" ; ".join(drapeaux) if drapeaux else "aucun."))
+    cartes_r = vie.get("cartes") or []
+    if cartes_r:
+        lignes.append("**Cartes pigées en classe**")
+        for c in cartes_r:
+            lignes.append(
+                f"- nº {c.get('numero')} : {c.get('titre')} "
+                f"({fmt_montant(c.get('montant') or 0, signe=True)}"
+                f"), inscrite le {c.get('date')}, choix : "
+                f"{c.get('strategie_libelle') or '—'}")
     recus = [m for m in vie.get("mouvements") or []
              if m.get("source") == "imprevu"]
     if recus:
@@ -4755,6 +4763,35 @@ def page_console(compte):
                                         texte=True),
                 file_name=f"resume-{eleve_resume}.md",
                 key="resume_telecharger")
+        dossier_resume = MAGASIN.charger_dossier(eleve_resume) or {}
+        cartes_eleve = (donnees.obtenir_vie(dossier_resume)
+                        .get("cartes") or [])
+        if cartes_eleve:
+            st.markdown(
+                "**Cartes pigées par cet élève** : annuler "
+                "défait tout l'effet (solde, mouvements, "
+                "suites programmées, verrou d'épicerie).")
+            for c in cartes_eleve:
+                col_texte, col_bouton = st.columns([3, 1])
+                col_texte.markdown(
+                    f"nº {c.get('numero')} : {c.get('titre')} "
+                    f"({fmt_montant(c.get('montant') or 0, signe=True)}"
+                    f"), le {c.get('date')}, choix : "
+                    f"{c.get('strategie_libelle') or '—'}")
+                if col_bouton.button(
+                        "Annuler cette carte",
+                        key=f"annuler_carte_{eleve_resume}_"
+                            f"{c.get('numero')}"):
+                    try:
+                        res_ann = donnees.annuler_carte_imprevu(
+                            MAGASIN, eleve_resume, c.get("numero"))
+                        st.success(
+                            f"Carte nº {c.get('numero')} annulée : "
+                            f"{fmt_montant(res_ann['restaure'], signe=True)} "
+                            "restaurés au solde de l'élève.")
+                        st.rerun()
+                    except ValueError as e:
+                        st.error(str(e))
 
     st.markdown("### Imprévu ciblé")
     choix_imp = st.selectbox(
