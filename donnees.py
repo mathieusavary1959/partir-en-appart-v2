@@ -1816,6 +1816,7 @@ def appliquer_vie(magasin, identifiant, groupe, profil, aujourdhui=None):
                     "libelle": a["libelle"],
                     "montant": _arrondir2(a["montant"]),
                     "source": a.get("source", "imprevu"),
+                    "pourquoi": a.get("pourquoi"),
                     "date_reelle": _date.today().isoformat()})
             for m in mouvements:
                 vie["mouvements"].append(m)
@@ -1937,9 +1938,18 @@ def enregistrer_reglages(magasin, identifiant, mois_courant, heures,
     if dossier is None:
         raise ValueError(f"Dossier introuvable : {identifiant}")
     vie = obtenir_vie(dossier)
-    vie.setdefault("reglages", {})[str(int(mois_courant) + 1)] = {
-        "heures": heures, "epicerie": epicerie,
-        "electricite": electricite, "date": aujourdhui.isoformat()}
+    cible = str(int(mois_courant) + 1)
+    existant = (vie.get("reglages") or {}).get(cible) or {}
+    plan = {"heures": heures, "epicerie": epicerie,
+            "electricite": electricite,
+            "date": aujourdhui.isoformat()}
+    if existant.get("verrou_epicerie"):
+        # L'épicerie a été serrée d'avance par le choix d'une
+        # carte d'imprévu : le verrou reste, quoi que l'élève
+        # règle d'autre.
+        plan["epicerie"] = "serrer"
+        plan["verrou_epicerie"] = existant["verrou_epicerie"]
+    vie.setdefault("reglages", {})[cible] = plan
     magasin.sauvegarder_dossier(identifiant, dossier)
     return dossier
 
@@ -2163,6 +2173,36 @@ def reaction_coloc(dossier, mois_courant, champ="coloc_vus"):
     if cartes:
         derniere = cartes[-1]
         carte = carte_imprevu(derniere.get("numero"))
+        strat = derniere.get("strategie")
+        if strat == "coloc-avance":
+            r = fraiche({
+                "cle": "carte-%s-%s" % (derniere.get("numero"),
+                                        derniere.get("date", "")),
+                "texte": "Je t'ai avancé, cette fois. On "
+                         "s'arrange le mois prochain, avec "
+                         "le resto.",
+                "source": "carte"})
+            if r:
+                return r
+        elif strat == "serrer":
+            r = fraiche({
+                "cle": "carte-%s-%s" % (derniere.get("numero"),
+                                        derniere.get("date", "")),
+                "texte": "J'ai vu ton plan : le mois prochain, "
+                         "on serre. Je vais apprendre à aimer "
+                         "les pâtes.",
+                "source": "carte"})
+            if r:
+                return r
+        elif strat == "deux-fois":
+            r = fraiche({
+                "cle": "carte-%s-%s" % (derniere.get("numero"),
+                                        derniere.get("date", "")),
+                "texte": "Étalé sur deux mois. Sage, "
+                         "partenaire.",
+                "source": "carte"})
+            if r:
+                return r
         if carte and carte["partage"]:
             texte = REACTIONS_CARTES.get(
                 carte["numero"],
@@ -2377,39 +2417,148 @@ def pourquoi_carte(carte):
             f"compte.")
 
 
+# --- Les stratégies d'absorption d'une carte (le labyrinthe) :
+# l'élève choisit COMMENT il absorbe le coup, et le choix change
+# la suite pour vrai. Le prix de l'avance du coloc est fixe et
+# annoncé : 15 $ (le resto pour le remercier).
+
+FRAIS_AVANCE_COLOC = 15.0
+
+STRATEGIES_IMPREVU = [
+    {"id": "tout-de-suite",
+     "titre": "J'absorbe le coup tout de suite"},
+    {"id": "deux-fois",
+     "titre": "Je l'étale sur deux mois"},
+    {"id": "serrer",
+     "titre": "Je serre mon prochain mois"},
+    {"id": "coloc-avance",
+     "titre": "Mon coloc m'avance l'argent"},
+]
+
+
+def strategies_disponibles(magasin, groupe, aujourdhui=None):
+    """Les stratégies offertes à ce moment-ci de l'histoire :
+    celles qui engagent le mois prochain n'existent que si le
+    calendrier roule et qu'il reste un mois après celui-ci."""
+    params = obtenir_parametres(magasin, groupe)
+    if not params.get("lance_le"):
+        return [STRATEGIES_IMPREVU[0]]
+    mois_courant, _ = position_dans_mois(params, aujourdhui)
+    if mois_courant < 1 or mois_courant >= MOIS_MAX:
+        return [STRATEGIES_IMPREVU[0]]
+    return list(STRATEGIES_IMPREVU)
+
+
 def appliquer_carte_imprevu(magasin, identifiant, numero,
-                            reponse="", aujourdhui=None):
-    """L'élève inscrit la carte d'imprévu qu'il a pigée en classe :
-    l'effet s'applique tout de suite au solde (source « imprevu »,
-    donc comptée dans le score de vie), la carte est gardée dans
-    son dossier avec sa réponse, et elle ne peut pas être inscrite
-    une deuxième fois."""
+                            strategie="tout-de-suite",
+                            aujourdhui=None):
+    """L'élève inscrit la carte d'imprévu qu'il a pigée en classe
+    et CHOISIT comment il absorbe le coup : 4 stratégies aux
+    impacts réels sur la suite (retour de Mathieu, 31 oct.
+    2026 : « on est plus dans un genre de labyrinthe, comme les
+    livres dont tu es le héros ; une décision impacte le
+    reste »). La phrase libre a été abandonnée : l'élève ne
+    savait pas quoi écrire, et une phrase n'impactait rien."""
     aujourdhui = _vers_date(aujourdhui) if aujourdhui else _date.today()
     carte = carte_imprevu(numero)
     if carte is None:
         raise ValueError("Ce numéro de carte n'existe pas. "
                          "Vérifie le numéro écrit sur ta carte.")
+    ids = [s["id"] for s in STRATEGIES_IMPREVU]
+    if strategie not in ids:
+        raise ValueError("Choisis d'abord comment tu absorbes "
+                         "ce coût.")
     dossier = magasin.charger_dossier(identifiant)
     if dossier is None:
         raise ValueError(f"Dossier introuvable : {identifiant}")
+    compte = magasin.compte_par_identifiant(identifiant) or {}
+    groupe = compte.get("groupe", "")
+    params = obtenir_parametres(magasin, groupe)
+    mois_courant, _ = position_dans_mois(params, aujourdhui)
     vie = obtenir_vie(dossier)
     faites = vie.setdefault("cartes", [])
     if any(c.get("numero") == numero for c in faites):
         raise ValueError("Cette carte est déjà inscrite dans ton "
                          "dossier. Une carte ne se joue qu'une "
                          "fois.")
+    dispos = strategies_disponibles(magasin, groupe, aujourdhui)
+    if strategie not in [s["id"] for s in dispos]:
+        raise ValueError("Cette façon d'absorber le coup n'est "
+                         "pas possible à ce moment-ci de ton "
+                         "histoire.")
     part = part_carte(carte)
+    libelle_strat = next(s["titre"] for s in STRATEGIES_IMPREVU
+                         if s["id"] == strategie)
     faites.append({"numero": numero, "titre": carte["titre"],
                    "montant": -part,
                    "date": aujourdhui.isoformat(),
-                   "reponse": (reponse or "").strip()})
+                   "strategie": strategie,
+                   "strategie_libelle": libelle_strat})
+    prochain = int(mois_courant) + 1
+    if strategie == "deux-fois":
+        moitie = _arrondir2(part / 2)
+        reste = _arrondir2(part - moitie)
+        vie.setdefault("a_appliquer", []).append({
+            "mois": prochain,
+            "libelle": "Carte nº %d : %s (deuxième moitié)"
+                       % (numero, carte["titre"]),
+            "montant": -reste, "source": "imprevu",
+            "pourquoi": "Le reste de ta carte nº %d : tu avais "
+                        "choisi de l'étaler sur deux mois."
+                        % numero})
+    elif strategie == "serrer":
+        reglages = vie.setdefault("reglages", {})
+        plan = dict(reglages.get(str(prochain)) or {})
+        plan.setdefault("heures", "garder")
+        plan.setdefault("electricite", "normal")
+        plan["epicerie"] = "serrer"
+        plan["verrou_epicerie"] = numero
+        plan.setdefault("date", aujourdhui.isoformat())
+        reglages[str(prochain)] = plan
+    elif strategie == "coloc-avance":
+        vie.setdefault("a_appliquer", []).append({
+            "mois": prochain,
+            "libelle": "Remboursement à ton coloc (carte nº %d : "
+                       "%s)" % (numero, carte["titre"]),
+            "montant": _arrondir2(-(part + FRAIS_AVANCE_COLOC)),
+            "source": "imprevu",
+            "pourquoi": "Ton coloc avait avancé ta part de "
+                        + _fmt_montant(part)
+                        + " pour ta carte nº %d. Tu le "
+                          "rembourses, avec " % numero
+                        + "%.0f $ de plus : le resto pour le "
+                          "remercier, comme tu l'avais choisi."
+                        % FRAIS_AVANCE_COLOC})
     magasin.sauvegarder_dossier(identifiant, dossier)
-    ajouter_mouvement(
-        magasin, identifiant,
-        f"Carte d'imprévu no {numero} : {carte['titre']}",
-        -part, source="imprevu", aujourdhui=aujourdhui,
-        pourquoi=pourquoi_carte(carte))
-    return {"carte": carte, "part": part}
+    if strategie == "tout-de-suite":
+        ajouter_mouvement(
+            magasin, identifiant,
+            "Carte d'imprévu nº %d : %s" % (numero, carte["titre"]),
+            -part, source="imprevu", aujourdhui=aujourdhui,
+            pourquoi=pourquoi_carte(carte)
+            + " Ton choix : absorber le coup tout de suite.")
+    elif strategie == "deux-fois":
+        moitie = _arrondir2(part / 2)
+        reste = _arrondir2(part - moitie)
+        ajouter_mouvement(
+            magasin, identifiant,
+            "Carte d'imprévu nº %d : %s (première moitié)"
+            % (numero, carte["titre"]),
+            -moitie, source="imprevu", aujourdhui=aujourdhui,
+            pourquoi=pourquoi_carte(carte)
+            + " Ton choix : l'étaler sur deux mois. "
+            + _fmt_montant(reste)
+            + " suivront le mois prochain.")
+    elif strategie == "serrer":
+        ajouter_mouvement(
+            magasin, identifiant,
+            "Carte d'imprévu nº %d : %s" % (numero, carte["titre"]),
+            -part, source="imprevu", aujourdhui=aujourdhui,
+            pourquoi=pourquoi_carte(carte)
+            + " Ton choix : serrer ton épicerie du prochain "
+              "mois, elle est déjà réglée et verrouillée.")
+    # coloc-avance : rien ne bouge tout de suite, c'est le choix.
+    return {"carte": carte, "part": part, "strategie": strategie}
 
 
 # --- Journal du prof : tout le chaos est consigné ---

@@ -42,7 +42,8 @@ if not hasattr(donnees, "PIECE_COLOC") or not hasattr(donnees, "nouveau_jeton_se
         or not hasattr(donnees, "appliquer_carte_imprevu") \
         or not hasattr(donnees, "effets_reglages") \
         or not hasattr(donnees, "reaction_coloc") \
-        or not hasattr(donnees, "analyser_bilans"):
+        or not hasattr(donnees, "analyser_bilans") \
+        or not hasattr(donnees, "strategies_disponibles"):
     import importlib
     importlib.reload(donnees)
 
@@ -1227,6 +1228,19 @@ def _visage_uri(numero):
 
 
 def aller(page):
+    # Le néon de la porte s'éteint quand l'élève QUITTE
+    # l'accueil, pas pendant qu'il y est : en production, un
+    # rafraîchissement ou la fermeture du récap d'absence
+    # consommait la réaction avant même qu'elle soit lue
+    # (constaté le 31 oct. 2026, dossier de test à l'appui).
+    cle_porte = st.session_state.get("_porte_reaction")
+    if cle_porte and page != "accueil":
+        identifiant = st.session_state.get("identifiant")
+        if identifiant:
+            donnees.marquer_coloc_vu(
+                MAGASIN, identifiant, cle_porte,
+                champ="coloc_vus_porte")
+        st.session_state.pop("_porte_reaction", None)
     st.session_state["page"] = page
     # La page est aussi préparée pour le cookie « appart2_page » : après
     # un rafraîchissement, l'élève revient sur la page où il était, pas
@@ -1730,9 +1744,7 @@ def page_accueil(compte, dossier, profil):
                                     reaction_porte),
                 unsafe_allow_html=True)
     if reaction_porte:
-        donnees.marquer_coloc_vu(
-            MAGASIN, compte["identifiant"], reaction_porte["cle"],
-            champ="coloc_vus_porte")
+        st.session_state["_porte_reaction"] = reaction_porte["cle"]
     st.markdown(
         "<div class='pf-plinthe'></div><div class='pf-sol'>"
         "<div class='pf-reflet'></div><div class='pf-plancher'></div></div>",
@@ -3744,45 +3756,103 @@ def page_imprevus(compte, dossier, profil):
                     f"{html.escape(donnees.pourquoi_carte(carte))}</div>"
                     "</div>",
                     unsafe_allow_html=True)
-                reponse = st.text_area(
-                    "Ce que tu coupes ou changes pour absorber ce "
-                    "coût, avec les chiffres",
-                    placeholder="Ex. Je coupe mes sorties du mois "
-                                "et je mets 40 $ de côté chaque "
-                                "semaine.",
-                    key="imp_reponse")
-                if st.button("Inscrire ma carte et appliquer "
-                             "l'effet", type="primary",
-                             key="imp_appliquer"):
-                    if not (reponse or "").strip():
-                        st.error("Écris d'abord ce que tu coupes "
-                                 "ou changes pour absorber ce "
-                                 "coût, avec les chiffres. C'est "
-                                 "écrit sur ta carte.")
-                    else:
-                        try:
-                            res = donnees.appliquer_carte_imprevu(
-                                MAGASIN, compte["identifiant"],
-                                numero, reponse)
-                            st.session_state["_imp_message"] = (
-                                f"Carte nº {res['carte']['numero']} "
-                                f"inscrite : {fmt_montant(-res['part'], signe=True)} "
-                                "appliqué à ton solde. Tu la "
-                                "retrouves épinglée juste en "
-                                "dessous.")
-                            aller("imprevus")
-                        except ValueError as e:
-                            st.error(str(e))
+                part = donnees.part_carte(carte)
+                solde_actuel = float(dossier.get("solde") or 0)
+                dispos = donnees.strategies_disponibles(
+                    MAGASIN, compte["groupe"])
+                moitie = round(part / 2, 2)
+                reste = round(part - moitie, 2)
+
+                def _desc_strategie(sid):
+                    if sid == "tout-de-suite":
+                        return (f"Ta part de {fmt_montant(part)} "
+                                "sort de ton solde tout de suite "
+                                f"(il te restera "
+                                f"{fmt_montant(solde_actuel - part)}"
+                                "). Après, c'est réglé.")
+                    if sid == "deux-fois":
+                        return (f"{fmt_montant(moitie)} sort "
+                                f"maintenant, {fmt_montant(reste)} "
+                                "sortira le mois prochain. Ton "
+                                "solde respire, mais ton prochain "
+                                "mois commence avec ce poids.")
+                    if sid == "serrer":
+                        return (f"Ta part de {fmt_montant(part)} "
+                                "sort tout de suite, et ton "
+                                "épicerie du prochain mois est "
+                                "serrée d'avance (-10 %) : ce "
+                                "levier-là sera verrouillé.")
+                    return (f"Rien ne sort maintenant. Le mois "
+                            "prochain, tu rembourses "
+                            f"{fmt_montant(part + donnees.FRAIS_AVANCE_COLOC)} "
+                            "à ton coloc : son avance, plus "
+                            f"{fmt_montant(donnees.FRAIS_AVANCE_COLOC)} "
+                            "(le resto pour le remercier).")
+
+                titres_strat = {s["id"]: s["titre"] for s in dispos}
+                strat = st.radio(
+                    "Comment tu absorbes ce coup ? Ton choix "
+                    "change la suite.",
+                    [s["id"] for s in dispos],
+                    format_func=lambda sid: (
+                        f"{titres_strat[sid]} : "
+                        f"{_desc_strategie(sid)}"),
+                    key="imp_strategie")
+                if st.button("Je choisis et j'applique",
+                             type="primary", key="imp_appliquer"):
+                    try:
+                        res = donnees.appliquer_carte_imprevu(
+                            MAGASIN, compte["identifiant"],
+                            numero, strat)
+                        if strat == "deux-fois":
+                            message = (
+                                f"Carte nº {numero} inscrite : "
+                                f"{fmt_montant(-moitie, signe=True)} "
+                                "maintenant, et "
+                                f"{fmt_montant(reste)} suivront le "
+                                "mois prochain.")
+                        elif strat == "serrer":
+                            message = (
+                                f"Carte nº {numero} inscrite : "
+                                f"{fmt_montant(-part, signe=True)} "
+                                "appliqué, et ton épicerie du "
+                                "prochain mois est déjà serrée "
+                                "et verrouillée.")
+                        elif strat == "coloc-avance":
+                            message = (
+                                f"Carte nº {numero} inscrite : "
+                                "rien ne sort maintenant. Ton "
+                                "coloc avance "
+                                f"{fmt_montant(part)} ; tu le "
+                                "rembourseras le mois prochain.")
+                        else:
+                            message = (
+                                f"Carte nº {numero} inscrite : "
+                                f"{fmt_montant(-part, signe=True)} "
+                                "appliqué à ton solde.")
+                        st.session_state["_imp_message"] = (
+                            message + " Tu la retrouves épinglée "
+                            "juste en dessous.")
+                        aller("imprevus")
+                    except ValueError as e:
+                        st.error(str(e))
     if faites:
         st.markdown("### Tes cartes déjà inscrites")
         for entree in reversed(faites):
             carte = donnees.carte_imprevu(entree.get("numero"))
             titre = (carte["titre"] if carte
                      else entree.get("titre", ""))
-            reponse_html = (
-                f"<div class='imp-reponse'>Ce que tu changes : "
-                f"{html.escape(entree['reponse'])}</div>"
-                if entree.get("reponse") else "")
+            if entree.get("strategie_libelle"):
+                reponse_html = (
+                    "<div class='imp-reponse'>Ton choix : "
+                    f"{html.escape(entree['strategie_libelle'])}"
+                    "</div>")
+            elif entree.get("reponse"):
+                reponse_html = (
+                    "<div class='imp-reponse'>Ce que tu changes : "
+                    f"{html.escape(entree['reponse'])}</div>")
+            else:
+                reponse_html = ""
             st.markdown(
                 "<div class='imp-carte'>"
                 f"<div class='imp-entete'>IMPRÉVU · Nº {entree.get('numero')} · {entree.get('date', '')}</div>"
@@ -4068,13 +4138,22 @@ def page_vie(compte, dossier, profil):
                     horizontal=True, key=f"reg_heures_{mois_courant}",
                     index=["garder", "plus", "moins"].index(
                         plan["heures"]) if plan else 0)
+                verrou_epicerie = (plan or {}).get(
+                    "verrou_epicerie")
                 epicerie = st.radio(
                     "Ton épicerie",
                     options=["normal", "serrer", "mieux"],
                     format_func=lambda c: LIB_EPICERIE[c],
                     horizontal=True, key=f"reg_epicerie_{mois_courant}",
                     index=["normal", "serrer", "mieux"].index(
-                        plan["epicerie"]) if plan else 0)
+                        plan["epicerie"]) if plan else 0,
+                    disabled=bool(verrou_epicerie))
+                if verrou_epicerie:
+                    st.caption(
+                        "Ton épicerie est serrée d'avance et "
+                        f"verrouillée par ta carte nº "
+                        f"{verrou_epicerie} : c'est le choix que "
+                        "tu as fait dans Mes imprévus.")
                 electricite = st.radio(
                     "Ton électricité",
                     options=["normal", "econome", "confort"],
