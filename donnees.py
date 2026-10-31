@@ -1331,6 +1331,69 @@ def bilan_exemple(mois):
     return EXEMPLES_BILANS[(int(mois) - 1) % len(EXEMPLES_BILANS)]
 
 
+def _norm_mots(texte):
+    """Les mots d'un texte, normalisés (minuscules, sans accents
+    ni ponctuation) pour comparer des phrases sans se faire avoir
+    par les détails."""
+    import unicodedata as _uni
+    brut = _uni.normalize("NFKD", str(texte or "").lower())
+    brut = "".join(c for c in brut
+                   if not _uni.combining(c))
+    brut = "".join(c if c.isalnum() or c == " " else " "
+                   for c in brut)
+    return [m for m in brut.split() if m]
+
+
+def copie_exemple(phrase, mois):
+    """Vrai si la phrase recopie l'exemple du mois : la phrase
+    couvre au moins 85 % des mots distincts de l'exemple ET a
+    une longueur comparable (entre 70 % et 140 % de celle de
+    l'exemple). Calibré sur un cas réel : la réponse honnête
+    courte à la question 1 (« mon loyer, il part le premier »)
+    couvre 75 % des mots de l'exemple et doit passer ; la
+    copie mot pour mot couvre 100 % à longueur égale."""
+    p = set(_norm_mots(phrase))
+    e = set(_norm_mots(bilan_exemple(mois)))
+    if not p or not e:
+        return False
+    couverture = len(p & e) / len(e)
+    ratio = len(p) / len(e)
+    return couverture >= 0.85 and 0.7 <= ratio <= 1.4
+
+
+def bilan_expedie(bilan, mois):
+    """Un bilan expédié : la phrase ajoute moins de 4 mots à
+    l'amorce (ou fait moins de 4 mots en tout). C'est un
+    drapeau pour l'enseignant, pas un refus à la saisie."""
+    mots = _norm_mots((bilan or {}).get("phrase"))
+    amorce = _norm_mots(bilan_amorce(mois))
+    if mots[:len(amorce)] == amorce:
+        return len(mots) - len(amorce) < 4
+    return len(mots) < 4
+
+
+def analyser_bilans(dossier, mois_fermes):
+    """L'état des bilans d'un élève pour la correction : faits,
+    expédiés, manqués sur les mois fermés, et le plafond qui
+    s'applique à la S6 et à la S7 (règle de Mathieu, 31 oct.
+    2026 : -10 % par bilan expédié ou manqué, plancher 50 %).
+    Les bilans comptent parce que la S6 et la S7 sont bâties
+    dessus."""
+    vie = obtenir_vie(dossier)
+    bilans = vie.get("bilans") or {}
+    faits = sorted(int(m) for m in bilans)
+    expedies = [m for m in faits
+                if bilan_expedie(bilans[str(m)], m)]
+    manques = [m for m in range(1, int(mois_fermes) + 1)
+               if str(m) not in bilans]
+    problemes = len(expedies) + len(manques)
+    plafond = max(0.5, 1.0 - 0.1 * problemes)
+    return {"faits": faits, "expedies": expedies,
+            "manques": manques, "problemes": problemes,
+            "plafond": plafond}
+
+
+
 
 def vie_par_defaut():
     return {"mouvements": [], "mois_appliques": 0, "completions": {},
@@ -1835,7 +1898,19 @@ def enregistrer_bilan(magasin, identifiant, mois, reponse_choix,
         raise ValueError(
             "Écris une vraie phrase, même courte : c'est elle qui "
             "te servira en S6 et en S7.")
+    if copie_exemple(phrase_nette, mois):
+        raise ValueError(
+            "On dirait que tu as recopié l'exemple mot pour mot. "
+            "Écris ta vraie réponse, avec tes chiffres à toi : "
+            "l'exemple est là pour te partir, pas pour être copié.")
     vie = obtenir_vie(dossier)
+    norme = _norm_mots(phrase_nette)
+    for autre_mois, autre in (vie.get("bilans") or {}).items():
+        if int(autre_mois) != int(mois) \
+                and _norm_mots(autre.get("phrase")) == norme:
+            raise ValueError(
+                "Tu as déjà écrit exactement cette phrase un "
+                "autre mois. Dis ce qui s'est passé CE mois-ci.")
     vie.setdefault("bilans", {})[str(mois)] = {
         "question": BANQUE_BILANS[(int(mois) - 1) % len(BANQUE_BILANS)],
         "choix": reponse_choix, "phrase": phrase_nette,

@@ -41,7 +41,8 @@ if not hasattr(donnees, "PIECE_COLOC") or not hasattr(donnees, "nouveau_jeton_se
         or not hasattr(donnees, "basculer_classement") \
         or not hasattr(donnees, "appliquer_carte_imprevu") \
         or not hasattr(donnees, "effets_reglages") \
-        or not hasattr(donnees, "reaction_coloc"):
+        or not hasattr(donnees, "reaction_coloc") \
+        or not hasattr(donnees, "analyser_bilans"):
     import importlib
     importlib.reload(donnees)
 
@@ -3106,7 +3107,9 @@ def page_guide(compte, dossier, profil):
          "Dans <b>Ma vie</b> : <b>1.</b> tranche ta décision du mois "
          "(un choix réel, avec un effet en argent, définitif) ; "
          "<b>2.</b> fais ton bilan éclair (deux minutes, une "
-         "question, une phrase) ; <b>3.</b> règle ton prochain "
+         "question, une phrase : écris ta vraie réponse, un "
+         "bilan bâclé ou manqué enlève 10 % à ta S6 et à ta "
+         "S7) ; <b>3.</b> règle ton prochain "
          "mois (tes heures de travail, ton épicerie, ton "
          "électricité) et vois ce que ton plan donne avant de le "
          "garder. Trois petits gestes, chaque semaine."),
@@ -3664,55 +3667,74 @@ def page_imprevus(compte, dossier, profil):
         "te connectes, et dans ton journal de Ma vie.</div>"
         "</section>",
         unsafe_allow_html=True)
-    if restantes:
-        numero = st.selectbox(
-            "Le numéro écrit sur ta carte", restantes, index=None,
-            placeholder="Choisis le numéro de ta carte",
-            key="imp_numero")
-        if numero is not None:
-            carte = donnees.carte_imprevu(int(numero))
-            part = donnees.part_carte(carte)
-            genre = ("Coût partagé avec ton coloc"
-                     if carte["partage"] else "Coût personnel")
-            st.markdown(
-                "<div class='imp-carte'>"
-                f"<div class='imp-entete'>IMPRÉVU · Nº {carte['numero']}</div>"
-                f"<h3>{html.escape(carte['titre'])}</h3>"
-                f"<div>{html.escape(carte['texte'])}</div>"
-                f"<div class='imp-montant'>{fmt_montant(carte['montant'])}</div>"
-                f"<div><b>{genre}.</b> "
-                f"{html.escape(donnees.pourquoi_carte(carte))}</div>"
-                "</div>",
-                unsafe_allow_html=True)
-            reponse = st.text_area(
-                "Ce que tu coupes ou changes pour absorber ce coût, "
-                "avec les chiffres",
-                placeholder="Ex. Je coupe mes sorties du mois et je "
-                            "mets 40 $ de côté chaque semaine.",
-                key="imp_reponse")
-            if st.button("Inscrire ma carte et appliquer l'effet",
-                         type="primary", key="imp_appliquer"):
-                if not (reponse or "").strip():
-                    st.error("Écris d'abord ce que tu coupes ou "
-                             "changes pour absorber ce coût, avec "
-                             "les chiffres. C'est écrit sur ta "
-                             "carte.")
-                else:
-                    try:
-                        res = donnees.appliquer_carte_imprevu(
-                            MAGASIN, compte["identifiant"],
-                            int(numero), reponse)
-                        st.session_state["_imp_message"] = (
-                            f"Carte nº {res['carte']['numero']} "
-                            f"inscrite : {fmt_montant(-res['part'], signe=True)} "
-                            "appliqué à ton solde. Tu la retrouves "
-                            "épinglée juste en dessous.")
-                        aller("imprevus")
-                    except ValueError as e:
-                        st.error(str(e))
-    else:
+    if not restantes:
         st.info("Tu as inscrit toutes tes cartes d'imprévu. "
                 "Il n'en reste plus à jouer.")
+    # Le numéro se TAPE, pas se choisit dans une liste (Mathieu,
+    # 31 oct. 2026) : l'élève inscrit lui-même le numéro de la
+    # carte physique pigée en classe, dans une case numérique.
+    # Il ne peut donc pas magasiner la carte la moins chère.
+    numero_saisi = st.number_input(
+        "Le numéro écrit sur ta carte",
+        min_value=0, max_value=99, step=1, value=None,
+        placeholder="Tape le numéro de ta carte, ex. : 7",
+        key="imp_numero")
+    st.caption("Tape toi-même le numéro de la carte que tu as "
+               "pigée en classe : il est écrit dessus.")
+    if numero_saisi is not None:
+        numero = int(numero_saisi)
+        if numero in numeros_faits:
+            st.info(f"La carte nº {numero}, tu l'as déjà inscrite : "
+                    "elle est épinglée en bas de cette page. Une "
+                    "carte ne se joue qu'une fois.")
+        else:
+            carte = donnees.carte_imprevu(numero)
+            if carte is None:
+                st.error(f"Il n'y a pas de carte nº {numero}. "
+                         "Vérifie le numéro écrit sur ta carte "
+                         "(il va de 1 à 30).")
+            else:
+                genre = ("Coût partagé avec ton coloc"
+                         if carte["partage"] else "Coût personnel")
+                st.markdown(
+                    "<div class='imp-carte'>"
+                    f"<div class='imp-entete'>IMPRÉVU · Nº {carte['numero']}</div>"
+                    f"<h3>{html.escape(carte['titre'])}</h3>"
+                    f"<div>{html.escape(carte['texte'])}</div>"
+                    f"<div class='imp-montant'>{fmt_montant(carte['montant'])}</div>"
+                    f"<div><b>{genre}.</b> "
+                    f"{html.escape(donnees.pourquoi_carte(carte))}</div>"
+                    "</div>",
+                    unsafe_allow_html=True)
+                reponse = st.text_area(
+                    "Ce que tu coupes ou changes pour absorber ce "
+                    "coût, avec les chiffres",
+                    placeholder="Ex. Je coupe mes sorties du mois "
+                                "et je mets 40 $ de côté chaque "
+                                "semaine.",
+                    key="imp_reponse")
+                if st.button("Inscrire ma carte et appliquer "
+                             "l'effet", type="primary",
+                             key="imp_appliquer"):
+                    if not (reponse or "").strip():
+                        st.error("Écris d'abord ce que tu coupes "
+                                 "ou changes pour absorber ce "
+                                 "coût, avec les chiffres. C'est "
+                                 "écrit sur ta carte.")
+                    else:
+                        try:
+                            res = donnees.appliquer_carte_imprevu(
+                                MAGASIN, compte["identifiant"],
+                                numero, reponse)
+                            st.session_state["_imp_message"] = (
+                                f"Carte nº {res['carte']['numero']} "
+                                f"inscrite : {fmt_montant(-res['part'], signe=True)} "
+                                "appliqué à ton solde. Tu la "
+                                "retrouves épinglée juste en "
+                                "dessous.")
+                            aller("imprevus")
+                        except ValueError as e:
+                            st.error(str(e))
     if faites:
         st.markdown("### Tes cartes déjà inscrites")
         for entree in reversed(faites):
@@ -3924,7 +3946,11 @@ def page_vie(compte, dossier, profil):
                 st.markdown(
                     "<div class='vie-texte'>Complète la phrase "
                     "commencée : une courte phrase suffit, et "
-                    "c'est elle qui te servira en S6 et en S7."
+                    "c'est elle qui te servira en S6 et en S7. "
+                    "Écris ta vraie réponse, avec tes chiffres : "
+                    "recopier l'exemple est refusé, et chaque "
+                    "bilan bâclé ou manqué enlève 10 % à ce que "
+                    "tu peux obtenir en S6 et en S7."
                     "</div>",
                     unsafe_allow_html=True)
                 phrase = st.text_input(
@@ -4247,6 +4273,29 @@ def _dossier_resume_md(identifiant, groupe, params, texte=False):
         lignes.append(
             f"Plus gros écart S6 : {gros['nom']} "
             f"({fmt_montant(gros['ecart'], signe=True)}).")
+    analyse_b = donnees.analyser_bilans(
+        dossier, donnees.mois_fermes(params))
+    lignes.append("**Bilans éclair** (la matière de la S6 et "
+                  "de la S7)")
+    bilans_r = vie.get("bilans") or {}
+    mois_r = sorted({int(m) for m in bilans_r}
+                    | set(range(1, (donnees.mois_fermes(params))
+                                + 1)))
+    for m in mois_r:
+        b_r = bilans_r.get(str(m))
+        if b_r:
+            tag = (" · EXPÉDIÉ" if m in analyse_b["expedies"]
+                   else "")
+            lignes.append(
+                f"- Mois {m} : « {b_r.get('phrase', '')} »{tag}")
+        else:
+            lignes.append(f"- Mois {m} : manqué.")
+    lignes.append(
+        f"Problèmes de bilans : {analyse_b['problemes']} "
+        f"(expédiés : {len(analyse_b['expedies'])}, manqués : "
+        f"{len(analyse_b['manques'])}) · **Plafond S6 et S7 : "
+        f"{int(analyse_b['plafond'] * 100)} %** "
+        "(-10 % par bilan expédié ou manqué, plancher 50 %).")
     drapeaux = []
     if donnees.s2_manquants(donnees.obtenir_s2(dossier)):
         drapeaux.append("S2 incomplète")
