@@ -1167,12 +1167,16 @@ REFERENCES_VIE = {
     "transport": 81.0,              # repère STTR
 }
 
-# Installation de référence (décision de Mathieu le 31 oct. 2026) :
-# si la S3 n'est pas terminée à la fin du mois 6, le mois 7 prélève
-# ce montant, le milieu entre rien et le plafond de 3 500 $. Quand
-# l'élève termine enfin sa S3, son vrai total remplace la
-# référence : la différence est chargée ou remboursée.
-INSTALLATION_REFERENCE = 1750.0
+# Installation de référence (décisions de Mathieu le 31 oct.
+# 2026) : si la S3 n'est pas terminée à la fin du mois 6, le
+# mois 7 prélève le PLEIN montant, soit le plafond de
+# 3 500 $ (« je chargerais le plein montant à celui qui n'a
+# jamais fait la partie meubler »). Quand l'élève termine
+# enfin sa S3, son vrai total (toujours sous le plafond)
+# remplace le plein montant : la différence lui est
+# remboursée. Sauter la S3 coûte donc le maximum ; la faire
+# ne coûte que son vrai montant.
+INSTALLATION_REFERENCE = 3500.0
 
 # Mois de vie d'échéance par section (jalons traduits : fin mars = mois
 # 4, mi-avril = mois 6, début mai = mois 9).
@@ -1778,9 +1782,9 @@ def generer_mouvements_mois(dossier, profil, params, mois, identifiant=""):
                 pourquoi="Ta S3 n'était pas terminée à la fin "
                          "du mois 6. La vie continue : ton "
                          "appartement se meuble quand même, au "
-                         "montant de référence de 1 750,00 $ (le "
-                         "milieu entre rien et le plafond de "
-                         "3 500 $). Si tu termines ta S3, ton "
+                         "plein montant : 3 500,00 $, le maximum "
+                         "permis pour meubler un appartement. Si "
+                         "tu termines ta S3, ton "
                          "vrai montant remplacera celui-ci : la "
                          "différence te sera chargée ou "
                          "remboursée.")
