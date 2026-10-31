@@ -267,6 +267,92 @@ p, li, label{ color:var(--texte); }
 .pf-solde .detail b{ color:var(--crayon); }
 
 .pf-cal{ grid-area:calendrier; background:#FFFFFF; }
+
+
+/* La page Mes sections se pose SUR la porte : un panneau
+   d'émail acier qui porte la liste, aimants compris. */
+div.st-key-porte_sections{position:relative;border-radius:20px;
+  padding:26px 26px 12px;margin-top:6px;
+  background:
+    radial-gradient(600px 200px at 18% -40px,
+      rgba(255,255,255,.55), rgba(255,255,255,0) 70%),
+    linear-gradient(168deg,#D9E0E6 0%,#B7C1CA 34%,#9DABB6 68%,
+      #8795A1 100%);
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.65),
+    inset 0 -14px 30px rgba(40,55,70,.25),
+    0 24px 50px rgba(0,0,0,.55)}
+.porte-aimants{display:flex;gap:14px;margin-bottom:10px}
+.porte-aimant{width:22px;height:22px;border-radius:50%;
+  box-shadow:inset 0 -3px 5px rgba(0,0,0,.35),
+    0 3px 6px rgba(0,0,0,.35)}
+.porte-aimant.rouge{background:radial-gradient(circle at 35% 30%,#FF8A80,#C00D18)}
+.porte-aimant.bleu{background:radial-gradient(circle at 35% 30%,#82B1FF,#0B5FA5)}
+.porte-aimant.jaune{background:radial-gradient(circle at 35% 30%,#FFE082,#E3A008)}
+.porte-aimant.vert{background:radial-gradient(circle at 35% 30%,#A5D6A7,#2E7D32)}
+/* --- Mes sections : la liste de déménagement épinglée --------- */
+.liste-entete{background:linear-gradient(178deg,#FBF7EC,#F3EAD3);
+  border-radius:8px;padding:18px 20px 14px;color:#26221A;
+  box-shadow:0 10px 24px rgba(0,0,0,.45);margin-bottom:16px}
+.liste-entete .mention{font-family:'Special Elite',monospace;
+  font-size:12px;letter-spacing:.3em;color:#8A7B57}
+.liste-entete h2{font-family:'Bebas Neue',sans-serif;font-size:40px;
+  letter-spacing:.04em;margin:2px 0 6px;color:#26221A}
+.liste-segs{display:flex;gap:5px;margin:10px 0 8px}
+.liste-segs span{flex:1;height:12px;border-radius:6px;
+  background:#DAD0B8;border:1px solid #B9A97F}
+.liste-segs span.fait{background:#3E8914;border-color:#2F6B0E}
+.liste-chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.liste-chip{font-family:'Work Sans',sans-serif;font-weight:700;
+  font-size:13px;border-radius:999px;padding:3px 12px}
+.liste-chip.faites{background:#DFF0D2;color:#2F6B0E}
+.liste-chip.reste{background:#F6E3B8;color:#7A5200}
+.liste-prochaine-txt{font-family:'Caveat',cursive;font-size:21px;
+  color:#8C2B1B;margin-top:8px}
+div.st-key-sec_s1,div.st-key-sec_s2,div.st-key-sec_s3,
+div.st-key-sec_s4,div.st-key-sec_s5,div.st-key-sec_s6,
+div.st-key-sec_s7{position:relative;border-radius:8px;
+  padding:14px 18px 10px;margin-bottom:14px;color:#26221A;
+  background:linear-gradient(178deg,#FBF7EC,#F1E8D0);
+  box-shadow:0 8px 20px rgba(0,0,0,.4)}
+div.st-key-sec_s1{border-left:12px solid #2E6DA4}
+div.st-key-sec_s2{border-left:12px solid #C99700}
+div.st-key-sec_s3{border-left:12px solid #D96C27}
+div.st-key-sec_s4{border-left:12px solid #B03A2E}
+div.st-key-sec_s5{border-left:12px solid #3E8914}
+div.st-key-sec_s6{border-left:12px solid #5D6D7E}
+div.st-key-sec_s7{border-left:12px solid #1B3B8B}
+div[class*="st-key-sec_s"] p,div[class*="st-key-sec_s"] li,
+div[class*="st-key-sec_s"] label{color:#26221A}
+.sec-titre{font-family:'Bebas Neue',sans-serif;font-size:27px;
+  letter-spacing:.03em;color:#26221A;line-height:1.05}
+.sec-univers{font-family:'Special Elite',monospace;font-size:12px;
+  letter-spacing:.18em;color:#8A7B57;text-transform:uppercase}
+.sec-aide{font-family:'Work Sans',sans-serif;font-size:14.5px;
+  color:#4A4230;margin-top:3px}
+.sec-chips{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}
+.sec-chip{font-family:'Work Sans',sans-serif;font-size:12.5px;
+  font-weight:700;border-radius:999px;padding:2px 10px;
+  background:#E7DCC0;color:#5C4F30}
+.sec-chip.points{background:#26221A;color:#FFD94D}
+.sec-chip.retard{background:#F5C6C6;color:#8C1D1D}
+.sec-chip.commencee{background:#F6E3B8;color:#7A5200}
+.sec-reste{font-family:'Work Sans',sans-serif;font-size:13.5px;
+  color:#7A2E1B;margin-top:7px}
+div[class*="st-key-sec_s"] button{
+  background:#FFFDF5 !important;color:#26221A !important;
+  border:2px solid #26221A !important;font-weight:700}
+div[class*="st-key-sec_s"] button:hover{
+  background:#FFD94D !important;color:#26221A !important}
+.sec-tampon{position:absolute;top:12px;right:16px;
+  transform:rotate(-7deg);font-family:'Special Elite',monospace;
+  font-size:15px;letter-spacing:.12em;padding:3px 10px;
+  border:3px solid #2E7D32;color:#2E7D32;border-radius:4px;
+  background:rgba(255,255,255,.35)}
+.sec-tampon.retard{border-color:#B26A00;color:#B26A00}
+.sec-prochaine{position:absolute;top:12px;right:16px;
+  transform:rotate(3deg);font-family:'Special Elite',monospace;
+  font-size:13px;letter-spacing:.1em;padding:4px 10px;border-radius:999px;
+  background:#C00D18;color:#FFF}
 .calvie{ display:grid; grid-template-columns:repeat(7,1fr);
   gap:8px; margin-top:10px; }
 .calvie-col{ background:#FFFFFF; border:1.5px solid #D8D2C4;
@@ -3117,25 +3203,159 @@ def page_s5(compte, dossier, profil):
 
 
 def page_sections(compte, dossier, profil):
-    st.markdown("<section class='carte'><h2>Mes sections</h2>"
-                "<div class='aide'>Ton travail, section par section, "
-                "dans l'ordre. Échéances : S1 et S2 pour fin mars, "
-                "S3 à S5 pour mi-avril, S6 et S7 pour début mai. Une "
-                "section faite en retard vaut moins de points, mais "
-                "elle reste faisable. Le mode d'emploi complet est "
-                "dans le Guide, en haut de la page.</div></section>",
-                unsafe_allow_html=True)
+    """Mes sections, refaite le 31 oct. 2026 (demande de
+    Mathieu) : la liste de déménagement épinglée sur la porte.
+    Chaque section est un billet de la liste, avec sa couleur,
+    son univers, ses points et son échéance ; l'état se lit
+    d'un coup d'oeil (tampon TERMINÉE, chip Commencée avec ce
+    qui reste, chip En retard avec la valeur restante)."""
+    from datetime import date as _date_sec
+    params = donnees.obtenir_parametres(MAGASIN, compte["groupe"])
     progression = dossier.get("progression", {})
+    completions = donnees.obtenir_vie(dossier).get(
+        "completions") or {}
     courante = donnees.section_courante(dossier)
+    points = {"S1": 10, "S2": 15, "S3": 25, "S4": 15, "S5": 15,
+              "S6": 10, "S7": 10}
+    univers = {"S1": "La fiche de ton cas",
+               "S2": "Les petites annonces",
+               "S3": "Le jour d'emménagement",
+               "S4": "Le pic à factures",
+               "S5": "Le panier et la passe",
+               "S6": "Le cahier de comptes",
+               "S7": "Le mot de la fin"}
+    echeances = {4: "fin du mois 4 · fin mars",
+                 6: "fin du mois 6 · mi-avril",
+                 9: "fin du mois 9 · début mai"}
+    manquants = {
+        "S2": donnees.s2_manquants(donnees.obtenir_s2(dossier)),
+        "S3": donnees.s3_manquants(donnees.obtenir_s3(dossier)),
+        "S4": donnees.s4_manquants(donnees.obtenir_s4(dossier)),
+        "S5": donnees.s5_manquants(donnees.obtenir_s5(dossier)),
+    }
+    s6 = donnees.obtenir_s6(dossier)
+    s7 = donnees.obtenir_s7(dossier)
+    _s2 = donnees.obtenir_s2(dossier)
+    _s3 = donnees.obtenir_s3(dossier)
+    _s4 = donnees.obtenir_s4(dossier)
+    _s5 = donnees.obtenir_s5(dossier)
+    commencee = {
+        "S2": bool(_s2.get("choix") is not None
+                   or any((a or {}).get("adresse")
+                          or (a or {}).get("loyer")
+                          for a in _s2.get("annonces") or [])),
+        "S3": bool(any(_s3.get("pieces", {}).get(p)
+                       for p in _s3.get("pieces", {}))
+                   or _s3.get("electro")),
+        "S4": any(((_s4.get(bloc) or {}).get(champ))
+                  for bloc, champ in
+                  (("electricite", "taille"),
+                   ("internet", "fournisseur"),
+                   ("cellulaire", "fournisseur"),
+                   ("assurance", "compagnie"))),
+        "S5": bool((_s5.get("transport") or {}).get("mode")
+                   or any((j or {}).get(r)
+                          for j in _s5.get("jours") or []
+                          for r in ("dejeuner", "diner", "souper",
+                                    "collation"))),
+        "S6": any((s6.get(c) or "") for c in
+                  ("categorie", "pourquoi", "changement")),
+        "S7": any((s7.get(c) or "") for c in
+                  ("appris", "decision_couteuse", "conseil")),
+    }
+    nb_faites = sum(1 for c, _ in donnees.SECTIONS
+                    if progression.get(c) == "fait")
+    segs = "".join(
+        "<span class='fait'></span>" if progression.get(c) == "fait"
+        else "<span></span>" for c, _ in donnees.SECTIONS)
+    if courante:
+        nom_courante = dict(donnees.SECTIONS)[courante]
+        phrase = (f"La prochaine : {courante}, {nom_courante}. "
+                  "C'est elle qui t'attend.")
+    else:
+        phrase = "Tout est fait. Il ne reste que la vie qui roule."
+    porte = st.container(key="porte_sections")
+    porte.markdown(
+        "<div class='porte-aimants'>"
+        "<span class='porte-aimant rouge'></span>"
+        "<span class='porte-aimant bleu'></span>"
+        "<span class='porte-aimant jaune'></span>"
+        "<span class='porte-aimant vert'></span></div>",
+        unsafe_allow_html=True)
+    porte.markdown(
+        "<section class='liste-entete'>"
+        "<div class='mention'>ÉPINGLÉE SUR LA PORTE · TON TRAVAIL"
+        ", SECTION PAR SECTION</div>"
+        "<h2>TA LISTE DE DÉMÉNAGEMENT</h2>"
+        f"<div class='liste-segs'>{segs}</div>"
+        "<div class='liste-chips'>"
+        f"<span class='liste-chip faites'>{nb_faites} faite"
+        f"{'s' if nb_faites > 1 else ''} sur 7</span>"
+        f"<span class='liste-chip reste'>{7 - nb_faites} à faire"
+        "</span></div>"
+        f"<div class='liste-prochaine-txt'>{phrase}</div>"
+        "</section>", unsafe_allow_html=True)
     for code, nom in donnees.SECTIONS:
         etat = progression.get(code, "a_faire")
-        mot = "Fait" if etat == "fait" else ("En cours" if code == courante else "À faire")
-        col_texte, col_bouton = st.columns([4, 1])
-        with col_texte:
-            st.markdown(f"**{code} : {nom}** ({mot})")
-            st.caption(AIDES_ETAPES[code])
-        with col_bouton:
-            if st.button(f"Ouvrir la {code}", key=f"ouvrir_{code.lower()}"):
+        fait = etat == "fait"
+        comp = completions.get(code) or {}
+        facteur = (donnees.facteur_section(
+            code, comp.get("date") or _date_sec.today().isoformat(),
+            params) if params.get("lance_le") else 1.0)
+        chips = [f"<span class='sec-chip points'>vaut "
+                 f"{points[code]} points</span>",
+                 f"<span class='sec-chip'>à finir : "
+                 f"{echeances[donnees.ECHEANCES_VIE[code]]}</span>"]
+        reste_html = ""
+        tampon = ""
+        if fait:
+            texte_tampon = "TERMINÉE"
+            if comp.get("date"):
+                texte_tampon += f" · {comp['date']}"
+            if facteur < 1.0:
+                tampon = (f"<div class='sec-tampon retard'>"
+                          f"{texte_tampon}</div>")
+                chips.append(
+                    f"<span class='sec-chip retard'>en retard : "
+                    f"vaut {round(points[code] * facteur)} points "
+                    f"sur {points[code]}</span>")
+            else:
+                tampon = (f"<div class='sec-tampon'>"
+                          f"{texte_tampon}</div>")
+        else:
+            if code == courante:
+                tampon = ("<div class='sec-prochaine'>"
+                          "LA PROCHAINE</div>")
+            if params.get("lance_le") and facteur < 1.0:
+                chips.append(
+                    f"<span class='sec-chip retard'>en retard : "
+                    f"finie ce mois-ci, elle vaut "
+                    f"{int(facteur * 100)} % de ses points</span>")
+            if commencee.get(code) and manquants.get(code):
+                chips.append(
+                    "<span class='sec-chip commencee'>Commencée"
+                    "</span>")
+                exemples = [e if len(e) <= 80 else e[:77] + "…"
+                            for e in manquants[code][:3]]
+                reste_html = (
+                    "<div class='sec-reste'>Il te reste : "
+                    + " · ".join(html.escape(e) for e in exemples)
+                    + (f" · et {len(manquants[code]) - 3} autre"
+                       f"{'s' if len(manquants[code]) - 3 > 1 else ''}"
+                       " chose" if len(manquants[code]) > 3
+                       else "")
+                    + "</div>")
+        with porte.container(key=f"sec_{code.lower()}"):
+            st.markdown(
+                f"<div class='sec-univers'>{univers[code]}</div>"
+                f"<div class='sec-titre'>{code} · {nom}</div>"
+                f"<div class='sec-aide'>"
+                f"{html.escape(AIDES_ETAPES[code])}</div>"
+                f"<div class='sec-chips'>{''.join(chips)}</div>"
+                + reste_html + tampon,
+                unsafe_allow_html=True)
+            if st.button(f"Ouvrir la {code}",
+                         key=f"ouvrir_{code.lower()}"):
                 aller(code.lower())
 
 
