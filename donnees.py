@@ -642,6 +642,23 @@ def s3_manquants(s3):
                     + " pour que cet achat compte. Sans preuve, "
                     "l'achat ne compte pas : complète-le ou retire-le.")
 
+    def distance(nombre, seuil_min):
+        """Une distance qualitative, jamais le seuil lui-même (les
+        seuils restent cachés, décision de Mathieu) : l'élève sait
+        s'il est loin ou tout près, sans connaître le nombre."""
+        if nombre <= 0:
+            return ("Rien n'est encore prouvé ici : commence par "
+                    "l'essentiel.")
+        ratio = nombre / seuil_min
+        if ratio >= 0.8:
+            return ("Cette partie est presque fonctionnelle : "
+                    "encore un petit effort sur l'essentiel.")
+        if ratio >= 0.5:
+            return ("Il manque encore plusieurs achats essentiels "
+                    "pour que ça fonctionne.")
+        return ("Il manque encore beaucoup d'achats essentiels "
+                "pour que ça fonctionne.")
+
     for piece in PIECES:
         if piece == PIECE_COLOC:
             continue
@@ -651,7 +668,9 @@ def s3_manquants(s3):
         if niveau_s3(nombre, SEUILS_S3[piece]) is None:
             manques.append(
                 f"{piece} : pas encore assez d'achats prouvés pour que "
-                "la pièce fonctionne. Pense à l'essentiel pour y vivre, "
+                "la pièce fonctionne. "
+                + distance(nombre, SEUILS_S3[piece][0])
+                + " Pense à l'essentiel pour y vivre, "
                 "chaque achat avec son lien de preuve.")
 
     electro = s3.get("electro", [])
@@ -660,7 +679,9 @@ def s3_manquants(s3):
     if niveau_s3(nombre_e, SEUILS_ELECTRO) is None:
         manques.append(
             "Électroménagers : pas encore assez d'achats prouvés pour "
-            "que la cuisine et la lessive fonctionnent. Pense aux gros "
+            "que la cuisine et la lessive fonctionnent. "
+            + distance(nombre_e, SEUILS_ELECTRO[0])
+            + " Pense aux gros "
             "essentiels, chaque achat avec son lien de preuve.")
 
     total = total_installation(s3)
@@ -1267,7 +1288,8 @@ def vie_par_defaut():
     return {"mouvements": [], "mois_appliques": 0, "completions": {},
             "decisions": {}, "bilans": {}, "connexions": [],
             "installation_payee": False, "annonces": [],
-            "a_appliquer": [], "gele": False, "reglages": {}}
+            "a_appliquer": [], "gele": False, "reglages": {},
+            "cartes": []}
 
 
 def obtenir_vie(dossier):
@@ -1912,6 +1934,205 @@ def programmer_mouvement(magasin, identifiant, mois, libelle, montant,
         {"mois": int(mois), "libelle": libelle,
          "montant": _arrondir2(montant), "source": source})
     magasin.sauvegarder_dossier(identifiant, dossier)
+
+
+# --- Les 30 cartes d'imprévu pigées en classe (fidèles aux cartes
+# imprimées de la v1, cartes-imprevu.pdf) : l'élève inscrit le numéro
+# de sa carte dans Mes imprévus, l'effet s'applique tout de suite à
+# son solde. « montant » est le montant TOTAL écrit sur la carte ;
+# quand le coût est partagé, la part de l'élève est la moitié.
+# Chaque carte reste inscrite une seule fois par élève.
+
+def _carte(numero, titre, texte, montant, partage):
+    return {"numero": numero, "titre": titre, "texte": texte,
+            "montant": float(montant), "partage": bool(partage)}
+
+
+CARTES_IMPREVU = [
+    _carte(1, "Le frigo lâche",
+           "Le réfrigérateur fait un drôle de bruit, puis il arrête "
+           "de refroidir. Le réparateur peut le sauver, mais la "
+           "réparation coûte cher.", 340, True),
+    _carte(2, "Laveuse à remplacer",
+           "La laveuse coule et elle ne tourne plus. Tu dois la "
+           "remplacer par une laveuse usagée, avec ton coloc.",
+           450, True),
+    _carte(3, "Heures coupées au travail",
+           "Ton employeur coupe tes heures pendant 2 mois, car "
+           "c'est la saison tranquille. Tu gagnes moins d'argent "
+           "que prévu pendant cette période.", 480, False),
+    _carte(4, "Écran de cellulaire brisé",
+           "Ton cellulaire tombe sur le béton et l'écran casse. Tu "
+           "as besoin de ton téléphone pour le travail et pour "
+           "l'école.", 220, False),
+    _carte(5, "Contravention",
+           "Tu reçois une contravention pour un stationnement "
+           "interdit près de l'école. Tu dois la payer dans les "
+           "délais pour éviter des frais de plus.", 180, False),
+    _carte(6, "Grosse facture d'électricité",
+           "Janvier a été très froid et le chauffage a roulé fort. "
+           "La facture d'électricité du mois est beaucoup plus "
+           "haute que ton mois type.", 260, True),
+    _carte(7, "Dégât d'eau",
+           "Un tuyau sous l'évier fuit pendant la nuit et abîme le "
+           "plancher. Ton assurance paie une partie, mais tu dois "
+           "payer la franchise.", 500, True),
+    _carte(8, "Ton coloc perd son emploi",
+           "Ton coloc perd son emploi pour un mois. Tu avances sa "
+           "part du loyer pour garder l'appartement, et il te "
+           "remboursera plus tard.", 550, False),
+    _carte(9, "Visite chez le vétérinaire",
+           "Ton animal de compagnie avale quelque chose qu'il ne "
+           "fallait pas. La visite chez le vétérinaire et le "
+           "traitement sont à payer tout de suite.", 380, False),
+    _carte(10, "Lunettes brisées",
+           "Tes lunettes cassent en jouant au ballon. Tu en as "
+           "besoin tous les jours, alors tu dois les remplacer "
+           "vite.", 290, False),
+    _carte(11, "Ordinateur portable à réparer",
+           "Ton ordinateur portable ne s'allume plus, en pleine "
+           "session. La réparation est nécessaire pour finir tes "
+           "travaux.", 350, False),
+    _carte(12, "Hausse de loyer",
+           "Au renouvellement du bail, le loyer augmente pour "
+           "l'année qui vient. Sur 12 mois, ta part de "
+           "l'augmentation représente le montant de la carte.",
+           420, True),
+    _carte(13, "Épicerie plus chère",
+           "Ce mois-ci, plusieurs aliments de base coûtent plus "
+           "cher que d'habitude. Vos courses communes dépassent "
+           "le budget prévu pour le mois.", 120, True),
+    _carte(14, "Crevaison et remorquage",
+           "Tu as une crevaison sur la route, loin de chez toi. "
+           "Tu dois payer le remorquage et un pneu de "
+           "remplacement.", 210, False),
+    _carte(15, "Matériel scolaire imprévu",
+           "Un cours demande du matériel que tu n'avais pas prévu "
+           "au budget. Tu dois l'acheter cette semaine pour "
+           "pouvoir suivre le cours.", 150, False),
+    _carte(16, "Laissez-passer perdu",
+           "Tu perds ton laissez-passer d'autobus au milieu du "
+           "mois. Tu dois en racheter un pour te rendre à l'école "
+           "et au travail.", 81, False),
+    _carte(17, "Visite chez le dentiste",
+           "Tu as une dent qui fait mal et le rendez-vous ne peut "
+           "pas attendre. Le soin n'est pas couvert, alors tu "
+           "paies la facture.", 240, False),
+    _carte(18, "Bicyclette volée",
+           "Ta bicyclette disparaît du support devant l'école. "
+           "Tu la remplaces par une bicyclette usagée pour "
+           "continuer tes déplacements.", 280, False),
+    _carte(19, "Élément de cuisinière à changer",
+           "Un élément de la cuisinière ne chauffe plus du tout. "
+           "Vous payez la pièce et la réparation, à deux avec "
+           "ton coloc.", 190, True),
+    _carte(20, "Une semaine de maladie",
+           "Tu es malade et tu manques une semaine complète de "
+           "travail. Ces heures-là ne sont pas payées.", 330, False),
+    _carte(21, "Sécheuse à réparer",
+           "La sécheuse tourne, mais elle ne chauffe plus. Le "
+           "réparateur doit changer une pièce pour qu'elle "
+           "remarche.", 260, True),
+    _carte(22, "Bottes d'hiver à remplacer",
+           "Tes bottes d'hiver prennent l'eau et la semelle "
+           "décolle. En plein janvier à Trois-Rivières, tu dois "
+           "les remplacer.", 140, False),
+    _carte(23, "Serrurier en soirée",
+           "Tu perds tes clés un soir et tu restes pris dehors. "
+           "Le serrurier se déplace pour ouvrir la porte.",
+           110, False),
+    _carte(24, "Micro-ondes qui lâche",
+           "Le micro-ondes de la cuisine arrête de fonctionner. "
+           "Vous le remplacez par un modèle simple, à deux.",
+           130, True),
+    _carte(25, "Médicaments non couverts",
+           "Le médecin te prescrit un médicament qui n'est pas "
+           "couvert par ton assurance. Tu dois le payer de ta "
+           "poche ce mois-ci.", 95, False),
+    _carte(26, "Réparation d'auto imprévue",
+           "Ton auto fait un bruit inquiétant et le garagiste "
+           "trouve le problème. La réparation est nécessaire pour "
+           "que tu puisses te déplacer en sécurité.", 780, False),
+    _carte(27, "Aspirateur qui lâche",
+           "L'aspirateur de l'appartement ne démarre plus. Vous "
+           "le remplacez par un aspirateur usagé, à deux.",
+           160, True),
+    _carte(28, "Frais de cours imprévus",
+           "Des frais liés à un cours s'ajoutent à ta facture de "
+           "session. Tu dois les payer avant la date limite pour "
+           "rester inscrit.", 300, False),
+    _carte(29, "Gros dépassement de données",
+           "Tu dépasses les données de ton forfait de cellulaire "
+           "sans t'en rendre compte. Des frais de dépassement "
+           "s'ajoutent à ta facture du mois.", 90, False),
+    _carte(30, "Matelas à remplacer",
+           "Ton matelas est rendu inconfortable et tu dors très "
+           "mal. Tu le remplaces par un matelas usagé en bon "
+           "état.", 300, False),
+]
+
+
+def carte_imprevu(numero):
+    """La carte d'imprévu de ce numéro, ou None."""
+    for c in CARTES_IMPREVU:
+        if c["numero"] == numero:
+            return c
+    return None
+
+
+def part_carte(carte):
+    """Ce qui sort vraiment du compte de l'élève pour cette carte."""
+    return _arrondir2(carte["montant"] / 2 if carte["partage"]
+                      else carte["montant"])
+
+
+def pourquoi_carte(carte):
+    """Le pourquoi du montant, en langage simple (règle : aucun
+    montant appliqué sans explication, au moment où il bouge)."""
+    if carte["partage"]:
+        return (f"La carte indique un coût total de "
+                f"{_fmt_montant(carte['montant'])}. C'est un coût "
+                f"partagé avec ton coloc : ta part est la moitié, "
+                f"{_fmt_montant(part_carte(carte))}, et c'est ce "
+                f"montant qui sort de ton compte.")
+    return (f"La carte indique {_fmt_montant(carte['montant'])}. "
+            f"C'est un coût personnel : il sort en entier de ton "
+            f"compte.")
+
+
+def appliquer_carte_imprevu(magasin, identifiant, numero,
+                            reponse="", aujourdhui=None):
+    """L'élève inscrit la carte d'imprévu qu'il a pigée en classe :
+    l'effet s'applique tout de suite au solde (source « imprevu »,
+    donc comptée dans le score de vie), la carte est gardée dans
+    son dossier avec sa réponse, et elle ne peut pas être inscrite
+    une deuxième fois."""
+    aujourdhui = _vers_date(aujourdhui) if aujourdhui else _date.today()
+    carte = carte_imprevu(numero)
+    if carte is None:
+        raise ValueError("Ce numéro de carte n'existe pas. "
+                         "Vérifie le numéro écrit sur ta carte.")
+    dossier = magasin.charger_dossier(identifiant)
+    if dossier is None:
+        raise ValueError(f"Dossier introuvable : {identifiant}")
+    vie = obtenir_vie(dossier)
+    faites = vie.setdefault("cartes", [])
+    if any(c.get("numero") == numero for c in faites):
+        raise ValueError("Cette carte est déjà inscrite dans ton "
+                         "dossier. Une carte ne se joue qu'une "
+                         "fois.")
+    part = part_carte(carte)
+    faites.append({"numero": numero, "titre": carte["titre"],
+                   "montant": -part,
+                   "date": aujourdhui.isoformat(),
+                   "reponse": (reponse or "").strip()})
+    magasin.sauvegarder_dossier(identifiant, dossier)
+    ajouter_mouvement(
+        magasin, identifiant,
+        f"Carte d'imprévu no {numero} : {carte['titre']}",
+        -part, source="imprevu", aujourdhui=aujourdhui,
+        pourquoi=pourquoi_carte(carte))
+    return {"carte": carte, "part": part}
 
 
 # --- Journal du prof : tout le chaos est consigné ---

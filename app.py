@@ -38,7 +38,8 @@ if not hasattr(donnees, "PIECE_COLOC") or not hasattr(donnees, "nouveau_jeton_se
         or not hasattr(donnees, "enregistrer_reglages") \
         or not hasattr(donnees, "calculer_score_vie") \
         or not hasattr(donnees, "comparer_prevu_vecu") \
-        or not hasattr(donnees, "basculer_classement"):
+        or not hasattr(donnees, "basculer_classement") \
+        or not hasattr(donnees, "appliquer_carte_imprevu"):
     import importlib
     importlib.reload(donnees)
 
@@ -926,6 +927,23 @@ p, li, label{ color:var(--texte); }
   font-weight:700; margin:0; color:#2B2620; }
 .s7-citation{ font-family:"Caveat",cursive; font-size:23px;
   font-weight:600; color:#3A352B; margin:8px 0; }
+/* Mes imprévus : les cartes pigées en classe, épinglées sur la
+   porte au fur et à mesure. */
+.imp-carte{ position:relative; margin-top:18px; color:var(--encre);
+  padding:22px 26px 16px; border-radius:3px; transform:rotate(-.6deg);
+  background:linear-gradient(175deg,#FFFDF4,#F4ECD4);
+  box-shadow:0 14px 32px rgba(0,0,0,.5); }
+.imp-carte::before{ content:""; position:absolute; top:-9px; left:50%;
+  width:20px; height:20px; margin-left:-10px; border-radius:50%;
+  background:#B02A20; box-shadow:inset 0 2px 5px rgba(255,255,255,.35); }
+.imp-entete{ font-family:"Special Elite",monospace; font-size:12px;
+  letter-spacing:.3em; color:#6B6257; text-align:center; }
+.imp-carte h3{ font-family:"Bebas Neue",sans-serif; font-size:27px;
+  letter-spacing:.04em; margin:6px 0 4px; color:#2B2620; }
+.imp-montant{ font-family:"Bebas Neue",sans-serif; font-size:30px;
+  color:#A93226; }
+.imp-reponse{ font-family:"Caveat",cursive; font-size:21px;
+  color:#3A352B; margin-top:6px; }
 /* Le guide : le mode d'emploi du jeu, une grande fiche épinglée.
    Chaque pas de la marche à suivre y est numéroté, en langage
    simple, pour que personne ne devine comment jouer. */
@@ -1387,21 +1405,44 @@ def formulaire_inscription():
              "tu ne pourras pas rouvrir ton dossier.")
     prenom = st.text_input("Ton prénom", key="insc_prenom")
     nom = st.text_input("Ton nom de famille", key="insc_nom")
-    groupe = st.selectbox("Ton groupe", donnees.GROUPES, key="insc_groupe")
+    # Aucune valeur par défaut, ni pour le groupe ni pour le cas
+    # (audit de l'élève perdu, 31 oct. 2026) : un menu pré-rempli
+    # inscrivait l'élève distrait dans le mauvais groupe ou avec le
+    # mauvais cas pour tout le projet, en silence. Il doit choisir
+    # lui-même, puis voir son cas avant de confirmer.
+    groupe = st.selectbox("Ton groupe", donnees.GROUPES, index=None,
+                          placeholder="Choisis ton groupe",
+                          key="insc_groupe")
     cas = st.selectbox("Le numéro de ton cas pigé en classe",
-                       list(range(1, 31)), key="insc_cas")
-    profil = PROFILS[int(cas)]
-    uri_cas = _visage_uri(profil["numero"])
-    st.markdown(
-        "<div class='carte'>"
-        + (f"<img class='insc-visage' src='{uri_cas}' "
-           f"alt='Portrait de {profil['prenom']}'>" if uri_cas else "")
-        + "<h2>Ton cas : " + profil["prenom"] + "</h2>"
-        "<div class='aide'>" + profil["situation_detail"] + "</div>"
-        "<div>C'est le cas numéro " + str(profil["numero"]) +
-        ". Si ce n'est pas ton cas, change le numéro ci-dessus.</div></div>",
-        unsafe_allow_html=True)
-    confirme = st.checkbox("C'est bien mon cas.", key="insc_confirme")
+                       list(range(1, 31)), index=None,
+                       placeholder="Choisis le numéro de ton cas",
+                       key="insc_cas")
+    if cas is None:
+        st.markdown(
+            "<div class='carte'><h2>Ton cas va paraître ici</h2>"
+            "<div class='aide'>Choisis le numéro du cas que tu as "
+            "pigé en classe : le personnage va s'afficher pour que "
+            "tu vérifies que c'est le bon avant de créer ton "
+            "compte.</div></div>",
+            unsafe_allow_html=True)
+        st.caption("Choisis ton cas pour pouvoir confirmer que "
+                   "c'est le bon.")
+        confirme = False
+        st.checkbox("C'est bien mon cas.", key="insc_confirme",
+                    disabled=True)
+    else:
+        profil = PROFILS[int(cas)]
+        uri_cas = _visage_uri(profil["numero"])
+        st.markdown(
+            "<div class='carte'>"
+            + (f"<img class='insc-visage' src='{uri_cas}' "
+               f"alt='Portrait de {profil['prenom']}'>" if uri_cas else "")
+            + "<h2>Ton cas : " + profil["prenom"] + "</h2>"
+            "<div class='aide'>" + profil["situation_detail"] + "</div>"
+            "<div>C'est le cas numéro " + str(profil["numero"]) +
+            ". Si ce n'est pas ton cas, change le numéro ci-dessus.</div></div>",
+            unsafe_allow_html=True)
+        confirme = st.checkbox("C'est bien mon cas.", key="insc_confirme")
     mot_de_passe = st.text_input(
         "Choisis un mot de passe (au moins 6 caractères)",
         type="password", key="insc_mdp", autocomplete="new-password")
@@ -1413,6 +1454,10 @@ def formulaire_inscription():
     confirmation = st.text_input(
         "Écris ton mot de passe une deuxième fois",
         type="password", key="insc_mdp2", autocomplete="new-password")
+    if not confirme:
+        st.caption("Le bouton reste fermé tant que tu n'as pas "
+                   "choisi ton cas et coché « C'est bien mon cas » "
+                   "plus haut.")
     if st.button("Créer mon compte", type="primary", disabled=not confirme):
         res = donnees.inscrire(MAGASIN, prenom, nom, groupe, cas,
                                mot_de_passe, confirmation)
@@ -3459,12 +3504,7 @@ def main():
     elif page == "guide":
         page_guide(compte, dossier, profil)
     elif page == "imprevus":
-        page_attente(
-            "Mes imprévus",
-            "C'est ici que tu inscriras le numéro de ta carte d'imprévu "
-            "quand tu en pigeras une en classe, et que tu verras les "
-            "surprises de ton enseignant.",
-            "phase P3")
+        page_imprevus(compte, dossier, profil)
 
     with st.container(key="acces_bar"):
         if st.button("Console du prof", key="vers_console"):
@@ -3564,6 +3604,100 @@ def _bloc_ton_mois(compte, dossier, profil, params, mois_courant,
     else:
         detail = "Tous les mouvements du mois sont passés. Le prochain mois s'en vient."
     return bloc, detail
+
+
+
+def page_imprevus(compte, dossier, profil):
+    """Mes imprévus : l'élève inscrit le numéro de la carte qu'il a
+    pigée en classe, l'effet s'applique tout de suite à son solde,
+    et ses cartes restent épinglées ici. Les imprévus envoyés par
+    l'enseignant, eux, paraissent en fenêtre à la connexion et dans
+    le journal de Ma vie."""
+    message = st.session_state.pop("_imp_message", None)
+    if message:
+        st.success(message)
+    vie = donnees.obtenir_vie(dossier)
+    faites = list(vie.get("cartes") or [])
+    numeros_faits = {c.get("numero") for c in faites}
+    restantes = [c["numero"] for c in donnees.CARTES_IMPREVU
+                 if c["numero"] not in numeros_faits]
+    st.markdown(
+        "<section class='carte'><h2>Mes imprévus</h2>"
+        "<div class='aide'>Quand tu piges une carte d'imprévu en "
+        "classe, écris son numéro ici. Son effet s'applique tout "
+        "de suite à ton solde, et le montant est toujours expliqué. "
+        "Une carte ne se joue qu'une fois. Les surprises envoyées "
+        "par ton enseignant paraissent dans une fenêtre quand tu "
+        "te connectes, et dans ton journal de Ma vie.</div>"
+        "</section>",
+        unsafe_allow_html=True)
+    if restantes:
+        numero = st.selectbox(
+            "Le numéro écrit sur ta carte", restantes, index=None,
+            placeholder="Choisis le numéro de ta carte",
+            key="imp_numero")
+        if numero is not None:
+            carte = donnees.carte_imprevu(int(numero))
+            part = donnees.part_carte(carte)
+            genre = ("Coût partagé avec ton coloc"
+                     if carte["partage"] else "Coût personnel")
+            st.markdown(
+                "<div class='imp-carte'>"
+                f"<div class='imp-entete'>IMPRÉVU · Nº {carte['numero']}</div>"
+                f"<h3>{html.escape(carte['titre'])}</h3>"
+                f"<div>{html.escape(carte['texte'])}</div>"
+                f"<div class='imp-montant'>{fmt_montant(carte['montant'])}</div>"
+                f"<div><b>{genre}.</b> "
+                f"{html.escape(donnees.pourquoi_carte(carte))}</div>"
+                "</div>",
+                unsafe_allow_html=True)
+            reponse = st.text_area(
+                "Ce que tu coupes ou changes pour absorber ce coût, "
+                "avec les chiffres",
+                placeholder="Ex. Je coupe mes sorties du mois et je "
+                            "mets 40 $ de côté chaque semaine.",
+                key="imp_reponse")
+            if st.button("Inscrire ma carte et appliquer l'effet",
+                         type="primary", key="imp_appliquer"):
+                if not (reponse or "").strip():
+                    st.error("Écris d'abord ce que tu coupes ou "
+                             "changes pour absorber ce coût, avec "
+                             "les chiffres. C'est écrit sur ta "
+                             "carte.")
+                else:
+                    try:
+                        res = donnees.appliquer_carte_imprevu(
+                            MAGASIN, compte["identifiant"],
+                            int(numero), reponse)
+                        st.session_state["_imp_message"] = (
+                            f"Carte nº {res['carte']['numero']} "
+                            f"inscrite : {fmt_montant(-res['part'], signe=True)} "
+                            "appliqué à ton solde. Tu la retrouves "
+                            "épinglée juste en dessous.")
+                        aller("imprevus")
+                    except ValueError as e:
+                        st.error(str(e))
+    else:
+        st.info("Tu as inscrit toutes tes cartes d'imprévu. "
+                "Il n'en reste plus à jouer.")
+    if faites:
+        st.markdown("### Tes cartes déjà inscrites")
+        for entree in reversed(faites):
+            carte = donnees.carte_imprevu(entree.get("numero"))
+            titre = (carte["titre"] if carte
+                     else entree.get("titre", ""))
+            reponse_html = (
+                f"<div class='imp-reponse'>Ce que tu changes : "
+                f"{html.escape(entree['reponse'])}</div>"
+                if entree.get("reponse") else "")
+            st.markdown(
+                "<div class='imp-carte'>"
+                f"<div class='imp-entete'>IMPRÉVU · Nº {entree.get('numero')} · {entree.get('date', '')}</div>"
+                f"<h3>{html.escape(titre)}</h3>"
+                f"<div class='imp-montant'>{fmt_montant(entree.get('montant', 0), signe=True)}</div>"
+                + reponse_html
+                + "</div>",
+                unsafe_allow_html=True)
 
 
 def page_vie(compte, dossier, profil):
