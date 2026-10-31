@@ -43,7 +43,8 @@ if not hasattr(donnees, "PIECE_COLOC") or not hasattr(donnees, "nouveau_jeton_se
         or not hasattr(donnees, "effets_reglages") \
         or not hasattr(donnees, "reaction_coloc") \
         or not hasattr(donnees, "analyser_bilans") \
-        or not hasattr(donnees, "strategies_disponibles"):
+        or not hasattr(donnees, "strategies_disponibles") \
+        or not hasattr(donnees, "enregistrer_defaut_decision"):
     import importlib
     importlib.reload(donnees)
 
@@ -3138,11 +3139,15 @@ def page_guide(compte, dossier, profil):
          "Ton travail : prendre les bonnes décisions, garder un "
          "solde en santé et terminer tes 7 sections."),
         ("Le temps avance tout seul",
-         "<b>Une semaine réelle = un mois de vie.</b> Le dimanche, "
-         "le mois se ferme et un autre commence. Tu n'as pas de "
-         "bouton à peser pour faire avancer le temps : il avance, "
-         "que tu sois là ou pas. C'est pour ça qu'il faut passer "
-         "régulièrement, comme dans une vraie vie d'appartement."),
+         "<b>Une semaine réelle = un mois de vie de 30 jours.</b> "
+         "L'argent suit les jours vécus : la paie et le loyer "
+         "tombent au jour 1, l'épicerie chaque semaine, les "
+         "factures au jour 10, le reste au jour 15. Le numéro du "
+         "jour en cours est écrit sur le papier TON MOIS de ta "
+         "porte. Tu n'as pas de bouton à peser pour faire avancer "
+         "le temps : il avance, que tu sois là ou pas. C'est pour "
+         "ça qu'il faut passer régulièrement, comme dans une "
+         "vraie vie d'appartement."),
         ("Tes 3 rendez-vous, chaque semaine",
          "Dans <b>Ma vie</b> : <b>1.</b> tranche ta décision du mois "
          "(un choix réel, avec un effet en argent, définitif) ; "
@@ -3674,7 +3679,8 @@ def _bloc_ton_mois(compte, dossier, profil, params, mois_courant,
     bloc = (
         "<div class='pf-papier pf-cal'><div class='pf-aimant pf-ableu'></div>"
         f"<div class='titre'><span>TON MOIS</span><span class='mois'>MOIS "
-        f"{min(mois_courant, donnees.MOIS_MAX)} DE {donnees.MOIS_MAX}</span></div>"
+        f"{min(mois_courant, donnees.MOIS_MAX)} DE {donnees.MOIS_MAX} · "
+        f"JOUR {jour_vie} SUR 30</span></div>"
         "<table>" + "".join(lignes) + "</table>"
         "<div class='pf-cal-legende'>Rayé = déjà passé ce "
         "mois-ci. Le cercle rouge = le prochain.</div>"
@@ -3682,12 +3688,23 @@ def _bloc_ton_mois(compte, dossier, profil, params, mois_courant,
         f"{fmt_montant(entrees)} et il sort "
         f"{fmt_montant(sorties)}.</div>"
         f"<div class='rdv'>{txt_rdv}</div></div>")
+    passes = [m for m in mouvements if m.get("jour") is not None
+              and m["jour"] < jour_vie]
+    dernier_txt = ""
+    if passes:
+        dernier = passes[-1]
+        dernier_txt = (f"Dernier : <b>{_court(dernier['libelle'])}</b> "
+                       f"({fmt_montant(dernier['montant'], signe=True)}), "
+                       f"jour {dernier['jour']}.<br>")
     if prochain is not None:
-        detail = (f"Prochain mouvement : <b>jour {prochain['jour']}, "
+        detail = (dernier_txt
+                  + f"Prochain mouvement : <b>jour {prochain['jour']}, "
                   f"{_court(prochain['libelle']).lower()}</b> "
                   f"({fmt_montant(prochain['montant'], signe=True)}).")
     else:
-        detail = "Tous les mouvements du mois sont passés. Le prochain mois s'en vient."
+        detail = (dernier_txt
+                  + "Tous les mouvements du mois sont passés. "
+                  "Le prochain mois s'en vient.")
     return bloc, detail
 
 
@@ -3709,8 +3726,9 @@ def page_imprevus(compte, dossier, profil):
     st.markdown(
         "<section class='carte'><h2>Mes imprévus</h2>"
         "<div class='aide'>Quand tu piges une carte d'imprévu en "
-        "classe, écris son numéro ici. Son effet s'applique tout "
-        "de suite à ton solde, et le montant est toujours expliqué. "
+        "classe, écris son numéro ici. Tu choisis ensuite comment "
+        "absorber son coût : tout de suite, ou avec un impact sur "
+        "ton mois prochain. Le montant est toujours expliqué. "
         "Une carte ne se joue qu'une fois. Les surprises envoyées "
         "par ton enseignant paraissent dans une fenêtre quand tu "
         "te connectes, et dans ton journal de Ma vie.</div>"
@@ -3824,7 +3842,11 @@ def page_imprevus(compte, dossier, profil):
                                 "rien ne sort maintenant. Ton "
                                 "coloc avance "
                                 f"{fmt_montant(part)} ; tu le "
-                                "rembourseras le mois prochain.")
+                                "rembourseras le mois prochain ("
+                                f"{fmt_montant(part + donnees.FRAIS_AVANCE_COLOC)} "
+                                "en tout, avec les "
+                                f"{fmt_montant(donnees.FRAIS_AVANCE_COLOC)} "
+                                "du resto).")
                         else:
                             message = (
                                 f"Carte nº {numero} inscrite : "
@@ -3868,7 +3890,7 @@ def page_vie(compte, dossier, profil):
         aller("accueil")
     params = donnees.obtenir_parametres(MAGASIN, compte["groupe"])
     vie = donnees.obtenir_vie(dossier)
-    mois_courant, _ = donnees.position_dans_mois(params)
+    mois_courant, journee_courante = donnees.position_dans_mois(params)
     if not params.get("lance_le"):
         st.markdown(
             "<section class='carte'><h2>Le calendrier n'a pas commencé</h2>"
@@ -3978,7 +4000,8 @@ def page_vie(compte, dossier, profil):
                 if choix:
                     opt = choix["options"][decision["option"]]
                     mention = ("La vie a choisi à ta place parce que tu "
-                               "n'avais pas décidé avant la fermeture."
+                               "n'avais pas décidé avant le jour limite, "
+                               "le jour 15 du mois."
                                if decision.get("defaut") else
                                "C'est définitif : pas de retour en arrière.")
                     pourquoi = (decision.get("pourquoi")
@@ -4013,7 +4036,11 @@ def page_vie(compte, dossier, profil):
                 st.markdown(
                     "<div class='vie-texte'>Les montants ne sont pas "
                     "écrits à côté des choix. Tu verras l'effet de ton "
-                    "choix seulement après l'avoir tranché.</div>",
+                    "choix seulement après l'avoir tranché.</div>"
+                    f"<div class='vie-texte'><b>À trancher avant le "
+                    f"jour 15 du mois.</b> Tu es au jour "
+                    f"{journee_courante}. Passé le jour 15, la vie "
+                    "décide à ta place.</div>",
                     unsafe_allow_html=True)
                 if st.button("Je décide, sans retour en arrière",
                              type="primary"):
@@ -4290,7 +4317,11 @@ def page_vie(compte, dossier, profil):
             pourquoi = m.get("pourquoi") or ""
             sous = (f"<div class='vie-journal-pourquoi'>Pourquoi : "
                     f"{pourquoi}</div>" if pourquoi else "")
-            return (f"<div class='ligne'><div>{_court(m['libelle'])}"
+            badge = ("<b>AUJOURD'HUI · </b>"
+                     if m.get("date_reelle")
+                     == datetime.date.today().isoformat() else "")
+            return (f"<div class='ligne'><div>{badge}"
+                    f"{_court(m['libelle'])}"
                     f"{sous}</div>"
                     f"<div class='valeur'>"
                     f"{fmt_montant(m['montant'], signe=True)}</div>"

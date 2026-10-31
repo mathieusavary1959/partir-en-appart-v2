@@ -1750,12 +1750,13 @@ def generer_mouvements_mois(dossier, profil, params, mois, identifiant=""):
                     vie["installation_payee"] = True
     facteur_epi = REGLAGES_FACTEURS["epicerie"].get(
         reglages.get("epicerie", "normal"), 1.0)
-    lib_epi = "Épicerie du mois (ta part de la semaine type)"
+    lib_epi = "Épicerie de la semaine (ta part)"
     if facteur_epi != 1.0:
         lib_epi += ", ajustée selon ton réglage"
-    ajoute(5, lib_epi,
-           -_montant_pour(dossier, "S5", "epicerie_mois_part", fermeture)
-           * facteur_epi)
+    semaine_epi = (_montant_pour(dossier, "S5", "epicerie_mois_part",
+                                 fermeture) / 4.33) * facteur_epi
+    for jour_epi in (5, 12, 19, 26):
+        ajoute(jour_epi, lib_epi, -semaine_epi)
     facteur_elec = REGLAGES_FACTEURS["electricite"].get(
         reglages.get("electricite", "normal"), 1.0)
     lib_elec = "Électricité, ta part (50 %)"
@@ -1772,26 +1773,53 @@ def generer_mouvements_mois(dossier, profil, params, mois, identifiant=""):
            -_montant_pour(dossier, "S4", "assurance", fermeture))
     ajoute(15, "Transport",
            -_montant_pour(dossier, "S5", "transport", fermeture))
-    # Décision du mois jamais prise : l'option par défaut s'applique.
-    decisions = vie.setdefault("decisions", {})
-    if str(mois) not in decisions:
+    # Décision du mois jamais prise : la ligne de l'option par
+    # défaut est émise (jour 14), mais l'enregistrement de la
+    # décision se fait dans appliquer_vie, au moment où la
+    # ligne tombe pour vrai (avant, generer marquait la
+    # décision prise dès le premier affichage du mois).
+    if str(mois) not in (vie.get("decisions") or {}):
         choix = choix_pour_mois(identifiant, mois)
         option = choix["options"][choix["defaut"]]
         ajoute(14, f"Décision manquée : {choix['titre']} "
                    f"({option['libelle']})", option["montant"],
                source="decision", pourquoi=option.get("pourquoi"))
-        decisions[str(mois)] = {"choix_id": choix["id"],
-                                "option": choix["defaut"],
-                                "defaut": True,
-                                "montant": option["montant"],
-                                "pourquoi": option.get("pourquoi") or ""}
     return mouvements
 
 
+def enregistrer_defaut_decision(vie, identifiant, mois):
+    """Enregistre la décision par défaut d'un mois (option que
+    la vie choisit quand l'élève n'a pas tranché). Appelé par
+    appliquer_vie quand le jour limite (14) est passé ou que
+    le mois est fermé, jamais avant : l'élève peut décider
+    tant que la ligne n'est pas tombée."""
+    decisions = vie.setdefault("decisions", {})
+    if str(mois) in decisions:
+        return
+    choix = choix_pour_mois(identifiant, mois)
+    option = choix["options"][choix["defaut"]]
+    decisions[str(mois)] = {
+        "choix_id": choix["id"], "option": choix["defaut"],
+        "defaut": True, "montant": option["montant"],
+        "pourquoi": option.get("pourquoi") or ""}
+
+
 def appliquer_vie(magasin, identifiant, groupe, profil, aujourdhui=None):
-    """Applique les mois de vie dus (application paresseuse, à la
+    """Applique la vie due (application paresseuse, à la
     connexion) et consigne la connexion. Renvoie la liste des
-    mouvements nouvellement appliqués."""
+    mouvements nouvellement appliqués.
+
+    Depuis le 31 oct. 2026 (demande de Mathieu : « il faut que
+    ça suive la vie qu'on tente de créer »), l'argent suit les
+    jours vécus : dans le mois en cours, chaque ligne tombe
+    quand son jour de vie arrive (la paie et le loyer au
+    jour 1, l'épicerie chaque semaine, les factures au
+    jour 10, le reste au jour 15), calculée avec les sections
+    à jour (montants vivants pour les lignes pas encore
+    tombées). Les mois fermés s'appliquent en entier, comme
+    avant. vie["mois_appliques"] ne compte que les mois
+    fermés ; les lignes du mois en cours sont dédupliquées
+    par (mois, jour, libellé)."""
     aujourdhui = _vers_date(aujourdhui) if aujourdhui else _date.today()
     dossier = magasin.charger_dossier(identifiant)
     if dossier is None:
@@ -1800,30 +1828,54 @@ def appliquer_vie(magasin, identifiant, groupe, profil, aujourdhui=None):
     params = obtenir_parametres(magasin, groupe)
     nouveaux = []
     if params.get("lance_le") and not vie.get("gele"):
-        cible = min(mois_fermes(params, aujourdhui), MOIS_MAX)
+        fermes = min(mois_fermes(params, aujourdhui), MOIS_MAX)
+        mois_courant, journee = position_dans_mois(params, aujourdhui)
+        if mois_courant >= 1:
+            dernier = min(max(fermes, mois_courant), MOIS_MAX)
+        else:
+            dernier = fermes
+        deja = {(m.get("mois"), m.get("jour"), m.get("libelle"))
+                for m in vie.get("mouvements") or []}
         for mois in range(int(vie.get("mois_appliques") or 0) + 1,
-                          cible + 1):
+                          dernier + 1):
+            ferme = mois <= fermes
             mouvements = generer_mouvements_mois(
                 dossier, profil, params, mois, identifiant)
             programmes = vie.setdefault("a_appliquer", [])
-            dus = [a for a in programmes
-                   if int(a.get("mois") or 0) <= mois]
-            vie["a_appliquer"] = [a for a in programmes
-                                  if int(a.get("mois") or 0) > mois]
-            for a in dus:
-                mouvements.append({
-                    "mois": mois, "jour": None,
-                    "libelle": a["libelle"],
-                    "montant": _arrondir2(a["montant"]),
-                    "source": a.get("source", "imprevu"),
-                    "pourquoi": a.get("pourquoi"),
-                    "date_reelle": _date.today().isoformat()})
+            restants = []
+            for a in programmes:
+                mois_prog = int(a.get("mois") or 0)
+                if mois_prog > mois:
+                    restants.append(a)
+                    continue
+                jour_prog = int(a.get("jour") or 15)
+                if ferme or mois_prog < mois or jour_prog <= journee:
+                    mouvements.append({
+                        "mois": mois, "jour": jour_prog,
+                        "libelle": a["libelle"],
+                        "montant": _arrondir2(a["montant"]),
+                        "source": a.get("source", "imprevu"),
+                        "pourquoi": a.get("pourquoi"),
+                        "date_reelle": _date.today().isoformat()})
+                else:
+                    restants.append(a)
+            vie["a_appliquer"] = restants
             for m in mouvements:
+                cle = (m.get("mois"), m.get("jour"), m.get("libelle"))
+                if cle in deja:
+                    continue
+                if not (ferme or (m.get("jour") is not None
+                                  and int(m["jour"]) <= journee)):
+                    continue
                 vie["mouvements"].append(m)
+                deja.add(cle)
                 dossier["solde"] = _arrondir2(
                     float(dossier.get("solde") or 0) + m["montant"])
                 nouveaux.append(m)
-            vie["mois_appliques"] = mois
+            if ferme or journee >= 14:
+                enregistrer_defaut_decision(vie, identifiant, mois)
+            if ferme:
+                vie["mois_appliques"] = mois
     jour_str = aujourdhui.isoformat()
     connexions = vie.setdefault("connexions", [])
     if jour_str not in connexions:
