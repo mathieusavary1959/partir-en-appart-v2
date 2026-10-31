@@ -3733,17 +3733,24 @@ def _bloc_ton_mois(compte, dossier, profil, params, mois_courant,
     vie_bloc = donnees.obtenir_vie(dossier)
     dec_bloc = (vie_bloc.get("decisions") or {}).get(
         str(min(mois_courant, donnees.MOIS_MAX)))
-    if dec_bloc and not dec_bloc.get("defaut"):
+    if dec_bloc:
         choix_bloc = next(
             (c for c in donnees.BANQUE_CHOIX_VIE
              if c["id"] == dec_bloc.get("choix_id")), None)
         if choix_bloc:
             opt_bloc = choix_bloc["options"][dec_bloc["option"]]
+            if dec_bloc.get("defaut"):
+                libelle_bloc = (f"Décision manquée : "
+                                f"{choix_bloc['titre']} "
+                                f"({opt_bloc['libelle']})")
+            else:
+                libelle_bloc = (f"Ta décision : "
+                                f"{choix_bloc['titre']} "
+                                f"({opt_bloc['libelle']})")
             mouvements.append({
                 "mois": min(mois_courant, donnees.MOIS_MAX),
                 "jour": donnees.JOUR_LIMITE_DECISION,
-                "libelle": f"Ta décision : {choix_bloc['titre']} "
-                           f"({opt_bloc['libelle']})",
+                "libelle": libelle_bloc,
                 "montant": dec_bloc.get(
                     "montant", opt_bloc["montant"]),
                 "source": "decision"})
