@@ -45,7 +45,8 @@ if not hasattr(donnees, "PIECE_COLOC") or not hasattr(donnees, "nouveau_jeton_se
         or not hasattr(donnees, "analyser_bilans") \
         or not hasattr(donnees, "strategies_disponibles") \
         or not hasattr(donnees, "enregistrer_defaut_decision") \
-        or not hasattr(donnees, "annuler_carte_imprevu"):
+        or not hasattr(donnees, "annuler_carte_imprevu") \
+        or not hasattr(donnees, "INSTALLATION_REFERENCE"):
     import importlib
     importlib.reload(donnees)
 

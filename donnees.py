@@ -1167,6 +1167,13 @@ REFERENCES_VIE = {
     "transport": 81.0,              # repère STTR
 }
 
+# Installation de référence (décision de Mathieu le 31 oct. 2026) :
+# si la S3 n'est pas terminée à la fin du mois 6, le mois 7 prélève
+# ce montant, le milieu entre rien et le plafond de 3 500 $. Quand
+# l'élève termine enfin sa S3, son vrai total remplace la
+# référence : la différence est chargée ou remboursée.
+INSTALLATION_REFERENCE = 1750.0
+
 # Mois de vie d'échéance par section (jalons traduits : fin mars = mois
 # 4, mi-avril = mois 6, début mai = mois 9).
 ECHEANCES_VIE = {"S1": 4, "S2": 4, "S3": 6, "S4": 6, "S5": 6,
@@ -1740,14 +1747,46 @@ def generer_mouvements_mois(dossier, profil, params, mois, identifiant=""):
                -_montant_pour(dossier, "S2", "loyer_part", fermeture))
     if not vie.get("installation_payee"):
         completion_s3 = (vie.get("completions") or {}).get("S3") or {}
-        if completion_s3.get("date") and fermeture is not None:
-            if _vers_date(completion_s3["date"]) <= fermeture:
-                inst = (completion_s3.get("montants") or {}).get(
-                    "installation")
-                if inst:
+        faite_a_temps = (
+            completion_s3.get("date") and fermeture is not None
+            and _vers_date(completion_s3["date"]) <= fermeture)
+        if faite_a_temps:
+            inst = (completion_s3.get("montants") or {}).get(
+                "installation")
+            if inst:
+                if vie.get("installation_reference_payee"):
+                    ecart = inst - float(
+                        vie.get("installation_reference_montant")
+                        or INSTALLATION_REFERENCE)
+                    ajoute(
+                        1, "Ajustement d'installation (ta S3 est "
+                           "terminée)", -ecart,
+                        pourquoi="Tu as terminé ta S3 : ton "
+                                 "installation réelle remplace le "
+                                 "montant de référence prélevé au "
+                                 "mois 7. Voici la différence.")
+                else:
                     ajoute(1, "Installation dans l'appartement "
-                              "(ameublement et électroménagers)", -inst)
-                    vie["installation_payee"] = True
+                              "(ameublement et électroménagers)",
+                           -inst)
+                vie["installation_payee"] = True
+        elif (mois >= 7
+                and not vie.get("installation_reference_payee")):
+            ajoute(
+                1, "Installation de référence (S3 pas terminée)",
+                -INSTALLATION_REFERENCE,
+                pourquoi="Ta S3 n'était pas terminée à la fin "
+                         "du mois 6. La vie continue : ton "
+                         "appartement se meuble quand même, au "
+                         "montant de référence de 1 750,00 $ (le "
+                         "milieu entre rien et le plafond de "
+                         "3 500 $). Si tu termines ta S3, ton "
+                         "vrai montant remplacera celui-ci : la "
+                         "différence te sera chargée ou "
+                         "remboursée.")
+            vie["installation_reference_payee"] = True
+            vie["installation_reference_montant"] = (
+                INSTALLATION_REFERENCE)
     facteur_epi = REGLAGES_FACTEURS["epicerie"].get(
         reglages.get("epicerie", "normal"), 1.0)
     lib_epi = "Épicerie de la semaine (ta part)"
