@@ -1400,7 +1400,7 @@ def vie_par_defaut():
             "decisions": {}, "bilans": {}, "connexions": [],
             "installation_payee": False, "annonces": [],
             "a_appliquer": [], "gele": False, "reglages": {},
-            "cartes": [], "coloc_vus": []}
+            "cartes": [], "coloc_vus": [], "coloc_vus_porte": []}
 
 
 def obtenir_vie(dossier):
@@ -2124,12 +2124,17 @@ def _reaction_reglages(vie):
             "source": "reglages"}
 
 
-def reaction_coloc(dossier, mois_courant):
+def reaction_coloc(dossier, mois_courant, champ="coloc_vus"):
     """La réaction du coloc en attente d'être vue, ou None.
     Priorité : la décision du mois courant ou du dernier mois,
-    puis la dernière carte partagée, puis le plan noté."""
+    puis la dernière carte partagée, puis le plan noté. Le champ
+    dit quelles vues comptent : "coloc_vus" pour Ma vie,
+    "coloc_vus_porte" pour la porte. Les deux sont indépendants
+    (retour de Mathieu, 31 oct. 2026 : il ne voyait jamais le
+    néon parce que ses gestes dans Ma vie consommaient la
+    réaction avant que la porte puisse l'allumer)."""
     vie = obtenir_vie(dossier)
-    vus = set(vie.get("coloc_vus") or [])
+    vus = set(vie.get(champ) or [])
 
     def fraiche(reaction):
         return reaction if reaction and reaction["cle"] not in vus \
@@ -2171,14 +2176,14 @@ def reaction_coloc(dossier, mois_courant):
     return fraiche(_reaction_reglages(vie))
 
 
-def marquer_coloc_vu(magasin, identifiant, cle):
-    """L'élève a vu la réaction du coloc (dans Ma vie) : le
-    néon de la porte s'éteint."""
+def marquer_coloc_vu(magasin, identifiant, cle, champ="coloc_vus"):
+    """L'élève a vu la réaction du coloc à cet endroit (Ma vie
+    ou la porte, selon le champ) : elle s'éteint là, une fois."""
     dossier = magasin.charger_dossier(identifiant)
     if dossier is None:
         return
     vie = obtenir_vie(dossier)
-    vus = vie.setdefault("coloc_vus", [])
+    vus = vie.setdefault(champ, [])
     if cle not in vus:
         vus.append(cle)
         magasin.sauvegarder_dossier(identifiant, dossier)

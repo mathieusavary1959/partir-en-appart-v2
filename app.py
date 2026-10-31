@@ -258,9 +258,13 @@ p, li, label{ color:var(--texte); }
 .pf-solde .main{ font-family:"Caveat",cursive; font-size:27px; line-height:1; }
 .pf-solde .montant{ font-family:"Bebas Neue",sans-serif; font-size:50px; line-height:1.02; }
 .pf-solde .detail{ font-size:13px; margin-top:2px; }
+.pf-solde .depart{ font-family:"Special Elite",monospace;
+  font-size:12.5px; letter-spacing:.06em; color:#6B6257; }
 .pf-solde .detail b{ color:var(--crayon); }
 
 .pf-cal{ grid-area:calendrier; background:#FFFFFF; }
+.pf-cal-legende{ font-size:12px; color:#6B6257; margin-top:7px; }
+.pf-cal-total{ font-size:13.5px; font-weight:700; margin-top:2px; }
 .pf-cal .titre{ font-family:"Bebas Neue",sans-serif; font-size:19px; letter-spacing:.14em; display:flex; justify-content:space-between; }
 .pf-cal .titre .mois{ color:var(--crayon); }
 .pf-cal table{ width:100%; border-collapse:collapse; margin-top:5px; font-size:14px; }
@@ -945,6 +949,14 @@ p, li, label{ color:var(--texte); }
   font-weight:600; color:#3A352B; margin:8px 0; }
 /* Mes imprévus : les cartes pigées en classe, épinglées sur la
    porte au fur et à mesure. */
+/* La case du numéro d'imprévu : petite boîte où le numéro
+   paraît, sans les flèches + et - (Mathieu, 31 oct. 2026). */
+.st-key-imp_saisie [data-testid="stNumberInput"]{ max-width:150px; }
+.st-key-imp_saisie [data-testid="stNumberInputStepUp"],
+.st-key-imp_saisie [data-testid="stNumberInputStepDown"]{
+  display:none; }
+.st-key-imp_saisie [data-testid="stNumberInput"] input{
+  text-align:center; font-size:21px; font-weight:700; }
 .imp-carte{ position:relative; margin-top:18px; color:var(--encre);
   padding:22px 26px 16px; border-radius:3px; transform:rotate(-.6deg);
   background:linear-gradient(175deg,#FFFDF4,#F4ECD4);
@@ -1566,7 +1578,8 @@ def html_liste_sections(dossier):
     return "".join(morceaux)
 
 
-def html_porte_accueil(compte, dossier, profil):
+def html_porte_accueil(compte, dossier, profil,
+                      reaction_porte="auto"):
     """La porte de frigo de l'accueil, remplie avec les vraies données
     de l'élève : son solde, sa paie, son coloc, ses sections."""
     coloc = profil["coloc"]
@@ -1581,8 +1594,9 @@ def html_porte_accueil(compte, dossier, profil):
     mois_courant, jour_vie = donnees.position_dans_mois(params)
     bloc_mois, detail_solde = _bloc_ton_mois(
         compte, dossier, profil, params, mois_courant, jour_vie, paie)
-    reaction = donnees.reaction_coloc(dossier, mois_courant) \
-        if mois_courant >= 1 else None
+    reaction = reaction_porte if reaction_porte != "auto" else (
+        donnees.reaction_coloc(dossier, mois_courant)
+        if mois_courant >= 1 else None)
     if reaction:
         coloc_html = (
             "<div class='pf-papier pf-coloc reaction'>"
@@ -1632,6 +1646,8 @@ def html_porte_accueil(compte, dossier, profil):
         "<div class='pf-papier pf-solde pf-balA'><div class='pf-aimant pf-arouge'></div>"
         "<div class='main'>Il te reste</div>"
         f"<div class='montant'>{fmt_montant(solde)}</div>"
+        f"<div class='depart'>Départ : "
+        f"{fmt_montant(profil['epargne_depart'])}</div>"
         f"<div class='detail'>{detail_solde}</div></div>"
 
         + bloc_mois +
@@ -1704,7 +1720,19 @@ def page_accueil(compte, dossier, profil):
         if st.button("J'ai vu, merci"):
             st.session_state.pop("_nouveaux_mouvements", None)
             st.rerun()
-    st.markdown(html_porte_accueil(compte, dossier, profil), unsafe_allow_html=True)
+    params_acc = donnees.obtenir_parametres(MAGASIN, compte["groupe"])
+    mois_acc, _ = donnees.position_dans_mois(params_acc)
+    reaction_porte = (
+        donnees.reaction_coloc(dossier, mois_acc,
+                               champ="coloc_vus_porte")
+        if mois_acc >= 1 else None)
+    st.markdown(html_porte_accueil(compte, dossier, profil,
+                                    reaction_porte),
+                unsafe_allow_html=True)
+    if reaction_porte:
+        donnees.marquer_coloc_vu(
+            MAGASIN, compte["identifiant"], reaction_porte["cle"],
+            champ="coloc_vus_porte")
     st.markdown(
         "<div class='pf-plinthe'></div><div class='pf-sol'>"
         "<div class='pf-reflet'></div><div class='pf-plancher'></div></div>",
@@ -3627,11 +3655,20 @@ def _bloc_ton_mois(compte, dossier, profil, params, mois_courant,
     else:
         txt_rdv = (f"Ta décision du mois : <b>{txt_decision}</b> · "
                    f"Ton bilan éclair : <b>{txt_bilan}</b>")
+    entrees = sum(m["montant"] for m in mouvements
+                  if m["montant"] > 0)
+    sorties = -sum(m["montant"] for m in mouvements
+                   if m["montant"] < 0)
     bloc = (
         "<div class='pf-papier pf-cal'><div class='pf-aimant pf-ableu'></div>"
         f"<div class='titre'><span>TON MOIS</span><span class='mois'>MOIS "
         f"{min(mois_courant, donnees.MOIS_MAX)} DE {donnees.MOIS_MAX}</span></div>"
         "<table>" + "".join(lignes) + "</table>"
+        "<div class='pf-cal-legende'>Rayé = déjà passé ce "
+        "mois-ci. Le cercle rouge = le prochain.</div>"
+        f"<div class='pf-cal-total'>Ce mois-ci : il entre "
+        f"{fmt_montant(entrees)} et il sort "
+        f"{fmt_montant(sorties)}.</div>"
         f"<div class='rdv'>{txt_rdv}</div></div>")
     if prochain is not None:
         detail = (f"Prochain mouvement : <b>jour {prochain['jour']}, "
@@ -3674,13 +3711,14 @@ def page_imprevus(compte, dossier, profil):
     # 31 oct. 2026) : l'élève inscrit lui-même le numéro de la
     # carte physique pigée en classe, dans une case numérique.
     # Il ne peut donc pas magasiner la carte la moins chère.
-    numero_saisi = st.number_input(
-        "Le numéro écrit sur ta carte",
-        min_value=0, max_value=99, step=1, value=None,
-        placeholder="Tape le numéro de ta carte, ex. : 7",
-        key="imp_numero")
-    st.caption("Tape toi-même le numéro de la carte que tu as "
-               "pigée en classe : il est écrit dessus.")
+    with st.container(key="imp_saisie"):
+        numero_saisi = st.number_input(
+            "Le numéro écrit sur ta carte",
+            min_value=0, max_value=99, step=1, value=None,
+            placeholder="Ex. : 7",
+            key="imp_numero")
+        st.caption("Tape toi-même le numéro de la carte que tu "
+                   "as pigée en classe : il est écrit dessus.")
     if numero_saisi is not None:
         numero = int(numero_saisi)
         if numero in numeros_faits:
