@@ -39,7 +39,9 @@ if not hasattr(donnees, "PIECE_COLOC") or not hasattr(donnees, "nouveau_jeton_se
         or not hasattr(donnees, "calculer_score_vie") \
         or not hasattr(donnees, "comparer_prevu_vecu") \
         or not hasattr(donnees, "basculer_classement") \
-        or not hasattr(donnees, "appliquer_carte_imprevu"):
+        or not hasattr(donnees, "appliquer_carte_imprevu") \
+        or not hasattr(donnees, "effets_reglages") \
+        or not hasattr(donnees, "reaction_coloc"):
     import importlib
     importlib.reload(donnees)
 
@@ -300,6 +302,19 @@ p, li, label{ color:var(--texte); }
 .pf-coloc{ grid-area:coloc; background:linear-gradient(180deg,#DCEBF7,#C9DDF2); }
 .pf-coloc .main{ font-family:"Caveat",cursive; font-size:22px; line-height:1.18; }
 .pf-coloc .sig{ font-family:"Caveat",cursive; font-size:21px; text-align:right; }
+/* Quand le coloc réagit, son post-it bleu s'allume en néon :
+   un halo bleu qui pulse doucement, l'effet vivant de la porte.
+   Spécification de Mathieu, 31 oct. 2026. */
+.pf-coloc.reaction{ animation:neonColoc 1.8s ease-in-out infinite;
+  z-index:3; }
+.pf-coloc.reaction .main{ font-weight:700; }
+.pf-coloc .reaction-mention{ font-family:"Special Elite",monospace;
+  font-size:11px; letter-spacing:.25em; color:#0B5FA5; }
+@keyframes neonColoc{
+ 0%,100%{ box-shadow:0 0 6px rgba(53,182,255,.55),
+   0 0 18px rgba(53,182,255,.35), 0 14px 30px rgba(0,0,0,.5); }
+ 50%{ box-shadow:0 0 14px rgba(53,182,255,.95),
+   0 0 38px rgba(53,182,255,.65), 0 14px 30px rgba(0,0,0,.5); } }
 
 .pf-epicerie{ grid-area:epicerie; color:var(--encre); padding-top:10px;
   background:repeating-linear-gradient(180deg,#FFFDF4 0 27px,#E4DCC4 27px 28px); }
@@ -1098,6 +1113,9 @@ p, li, label{ color:var(--texte); }
   letter-spacing:.26em; color:#9FB6C4; line-height:30px;
   padding-left:18px; }
 .st-key-vie_reglages .vie-objet-mention{ color:#9FB6C4; }
+.st-key-vie_reglages .ligne{ color:#E8EEF2;
+  border-bottom:1px dashed #454B5C; }
+.st-key-vie_reglages .ligne .valeur{ color:#FFD94D; font-weight:700; }
 .st-key-vie_reglages .vie-objet-titre{ color:#F5F2EA; }
 .st-key-vie_reglages .vie-texte{ color:#C9CEDA; }
 .st-key-vie_reglages [data-testid="stWidgetLabel"] p{
@@ -1562,6 +1580,23 @@ def html_porte_accueil(compte, dossier, profil):
     mois_courant, jour_vie = donnees.position_dans_mois(params)
     bloc_mois, detail_solde = _bloc_ton_mois(
         compte, dossier, profil, params, mois_courant, jour_vie, paie)
+    reaction = donnees.reaction_coloc(dossier, mois_courant) \
+        if mois_courant >= 1 else None
+    if reaction:
+        coloc_html = (
+            "<div class='pf-papier pf-coloc reaction'>"
+            "<div class='pf-aimant pf-ableu'></div>"
+            "<div class='reaction-mention'>TON COLOC A RÉAGI</div>"
+            f"<div class='main'>{html.escape(reaction['texte'])}</div>"
+            f"<div class='sig'>- {coloc['prenom']}, ton coloc</div>"
+            "<div class='cafe'></div></div>")
+    else:
+        coloc_html = (
+            "<div class='pf-papier pf-coloc'>"
+            "<div class='pf-aimant pf-ableu'></div>"
+            f"<div class='main'>{coloc['description']}</div>"
+            f"<div class='sig'>- {coloc['prenom']}, ton coloc</div>"
+            "<div class='cafe'></div></div>")
     croquis = (
         "<svg viewBox='0 0 320 168' width='100%' height='auto' aria-label='Croquis de l appartement'>"
         "<g fill='none' stroke='#2A2620' stroke-width='3'>"
@@ -1613,11 +1648,9 @@ def html_porte_accueil(compte, dossier, profil):
         "<div class='consigne'>Coche au crayon, comme pour vrai. Ton enseignant "
         "lance le calendrier quand la classe est prête.</div></div>"
 
-        "<div class='pf-papier pf-coloc'><div class='pf-aimant pf-ableu'></div>"
-        f"<div class='main'>{coloc['description']}</div>"
-        f"<div class='sig'>- {coloc['prenom']}, ton coloc</div><div class='cafe'></div></div>"
+        + coloc_html
 
-        "<div class='pf-papier pf-epicerie'><div class='pf-aimant pf-avert'></div>"
+        + "<div class='pf-papier pf-epicerie'><div class='pf-aimant pf-avert'></div>"
         "<div class='titre'>Épicerie de la semaine</div>"
         "<div class='txt'>Ta première liste apparaîtra ici, à la S5.</div></div>"
 
@@ -3754,6 +3787,52 @@ def page_vie(compte, dossier, profil):
         f"<div class='vie-etats'>{etats}</div></section>",
         unsafe_allow_html=True)
 
+    # --- La couche histoire : le coloc réagit (son post-it bleu
+    # de la porte s'éteint quand l'élève passe ici), et la
+    # décision du mois passé laisse une trace écrite.
+    if mois_courant >= 1:
+        reaction = donnees.reaction_coloc(dossier, mois_courant)
+        if reaction:
+            st.markdown(
+                "<section class='carte bloc-accent'>"
+                "<h2>Ton coloc a réagi</h2>"
+                f"<div class='aide'>{html.escape(reaction['texte'])}"
+                "</div>"
+                f"<div class='aide'>- {html.escape(profil['coloc']['prenom'])}, "
+                "ton coloc</div></section>",
+                unsafe_allow_html=True)
+            donnees.marquer_coloc_vu(
+                MAGASIN, compte["identifiant"], reaction["cle"])
+        if mois_courant >= 2:
+            passee = (vie.get("decisions") or {}).get(
+                str(mois_courant - 1))
+            if passee:
+                choix_p = donnees.choix_pour_mois(
+                    compte["identifiant"], mois_courant - 1)
+                options_p = choix_p.get("options") or []
+                idx_p = passee.get("option")
+                libelle_p = (options_p[idx_p]["libelle"]
+                             if isinstance(idx_p, int)
+                             and 0 <= idx_p < len(options_p) else "")
+                mention_p = (" La vie avait choisi à ta place, "
+                             "parce que tu n'avais pas décidé."
+                             if passee.get("defaut") else "")
+                pourquoi_p = passee.get("pourquoi") or ""
+                st.markdown(
+                    "<section class='carte'><h2>Le mois passé, "
+                    "dans ton histoire</h2>"
+                    f"<div class='aide'>Ta décision : "
+                    f"{html.escape(choix_p['titre'])}"
+                    f" ({html.escape(libelle_p)})."
+                    f"{mention_p}</div>"
+                    + (f"<div class='aide'>Pourquoi ça comptait : "
+                       f"{html.escape(pourquoi_p)}</div>"
+                       if pourquoi_p else "")
+                    + "<div class='aide'>Cette décision fait "
+                      "partie de ton histoire d'appart : tu la "
+                      "retrouveras en S7.</div></section>",
+                    unsafe_allow_html=True)
+
     # --- Les deux rendez-vous du mois en cours ---
     if mois_courant >= 1:
         with st.container(key="vie_decision"):
@@ -3842,14 +3921,26 @@ def page_vie(compte, dossier, profil):
                     ["Ça s'est bien passé", "C'était serré",
                      "C'était difficile"],
                     key=f"bilan_radio_{mois_courant}")
+                st.markdown(
+                    "<div class='vie-texte'>Complète la phrase "
+                    "commencée : une courte phrase suffit, et "
+                    "c'est elle qui te servira en S6 et en S7."
+                    "</div>",
+                    unsafe_allow_html=True)
                 phrase = st.text_input(
-                    "En une phrase, pourquoi ?",
+                    "Ta phrase, pourquoi ?",
+                    value=donnees.bilan_amorce(mois_courant),
                     key=f"bilan_phrase_{mois_courant}")
+                st.caption(
+                    f"Exemple : {donnees.bilan_exemple(mois_courant)}")
                 if st.button("Je note mon bilan"):
-                    donnees.enregistrer_bilan(
-                        MAGASIN, compte["identifiant"], mois_courant,
-                        reponse, phrase.strip())
-                    st.rerun()
+                    try:
+                        donnees.enregistrer_bilan(
+                            MAGASIN, compte["identifiant"],
+                            mois_courant, reponse, phrase.strip())
+                        st.rerun()
+                    except ValueError as e:
+                        st.error(str(e))
         if decision and bilan:
             fermeture = donnees.date_fermeture_mois(params, mois_courant)
             texte_fermeture = (
@@ -3893,40 +3984,122 @@ def page_vie(compte, dossier, profil):
                     "plan tant que le mois en cours n'est pas fermé."
                     "</div>",
                     unsafe_allow_html=True)
+                LIB_HEURES = {
+                    "garder": "Garder mes heures",
+                    "plus": "Demander 4 h de plus par semaine",
+                    "moins": "Réduire de 4 h par semaine, "
+                             "pour étudier"}
+                LIB_EPICERIE = {
+                    "normal": "Comme d'habitude",
+                    "serrer": "Serrer un peu (-10 %)",
+                    "mieux": "Mieux manger (+10 %)"}
+                LIB_ELECTRICITE = {
+                    "normal": "Comme d'habitude",
+                    "econome": "Économe (-10 %)",
+                    "confort": "Confort (+10 %)"}
                 heures = st.radio(
                     "Tes heures de travail",
                     options=["garder", "plus", "moins"],
-                    format_func=lambda c: {
-                        "garder": "Garder mes heures",
-                        "plus": "Demander 4 h de plus par semaine",
-                        "moins": "Réduire de 4 h par semaine, "
-                                 "pour étudier"}[c],
+                    format_func=lambda c: LIB_HEURES[c],
                     horizontal=True, key=f"reg_heures_{mois_courant}",
                     index=["garder", "plus", "moins"].index(
                         plan["heures"]) if plan else 0)
                 epicerie = st.radio(
                     "Ton épicerie",
                     options=["normal", "serrer", "mieux"],
-                    format_func=lambda c: {
-                        "normal": "Comme d'habitude",
-                        "serrer": "Serrer un peu (-10 %)",
-                        "mieux": "Mieux manger (+10 %)"}[c],
+                    format_func=lambda c: LIB_EPICERIE[c],
                     horizontal=True, key=f"reg_epicerie_{mois_courant}",
                     index=["normal", "serrer", "mieux"].index(
                         plan["epicerie"]) if plan else 0)
                 electricite = st.radio(
                     "Ton électricité",
                     options=["normal", "econome", "confort"],
-                    format_func=lambda c: {
-                        "normal": "Comme d'habitude",
-                        "econome": "Économe (-10 %)",
-                        "confort": "Confort (+10 %)"}[c],
+                    format_func=lambda c: LIB_ELECTRICITE[c],
                     horizontal=True,
                     key=f"reg_electricite_{mois_courant}",
                     index=["normal", "econome", "confort"].index(
                         plan["electricite"]) if plan else 0)
                 candidat = {"heures": heures, "epicerie": epicerie,
                             "electricite": electricite}
+                # Ton plan, levier par levier : l'effet en
+                # dollars de CHAQUE levier sur ses chiffres à
+                # lui, et son effet de vie. Sans ça, il coche
+                # un peu n'importe quoi (Mathieu, 31 oct.).
+                infos_plan = donnees.effets_reglages(
+                    dossier, profil, params, mois_courant + 1,
+                    candidat)
+                eff = infos_plan["effets"]
+                bases = infos_plan["base"]
+                VIE_HEURES = {
+                    "garder": "Ton horaire ne change pas.",
+                    "plus": "Tu rentres plus tard et tu seras "
+                            "plus fatigué : tes cours et ton "
+                            "coloc vont le sentir.",
+                    "moins": "Plus de temps pour étudier et "
+                             "souffler."}
+                VIE_EPICERIE = {
+                    "normal": "Vos repas restent comme "
+                              "d'habitude.",
+                    "serrer": "Les repas se répètent un peu, "
+                              "et ton coloc risque de trouver "
+                              "la fin du mois serrée.",
+                    "mieux": "Vous mangez mieux : ça paraît "
+                             "dans l'énergie et dans l'humeur "
+                             "à la maison."}
+                VIE_ELECTRICITE = {
+                    "normal": "Le chauffage reste comme "
+                              "d'habitude.",
+                    "econome": "On baisse le chauffage d'un "
+                               "cran et on met un chandail "
+                               "de plus.",
+                    "confort": "Bien au chaud tout le mois, "
+                               "sans avoir à y penser."}
+
+                def _argent_heures():
+                    if eff["heures"] > 0:
+                        return (f"+{fmt_montant(eff['heures'])} "
+                                "de paie nette")
+                    if eff["heures"] < 0:
+                        return (f"{fmt_montant(eff['heures'], signe=True)} "
+                                "de paie nette")
+                    return "paie inchangée"
+
+                def _argent_poste(effet, base, nom):
+                    if effet > 0:
+                        return (f"tu économises "
+                                f"{fmt_montant(effet)} sur "
+                                f"{fmt_montant(base)}")
+                    if effet < 0:
+                        return (f"tu dépenses "
+                                f"{fmt_montant(-effet)} de plus "
+                                f"sur {fmt_montant(base)}")
+                    return f"reste à {fmt_montant(base)}"
+
+                lignes_plan = (
+                    "<div class='vie-objet-mention'>Ton plan, "
+                    "levier par levier</div>"
+                    "<div class='ligne'><div>"
+                    f"<b>Heures</b> : {LIB_HEURES[heures]}<br>"
+                    f"<span class='vie-texte'>"
+                    f"{VIE_HEURES[heures]}</span></div>"
+                    f"<div class='valeur'>{_argent_heures()}</div>"
+                    "</div>"
+                    "<div class='ligne'><div>"
+                    f"<b>Épicerie</b> : {LIB_EPICERIE[epicerie]}"
+                    f"<br><span class='vie-texte'>"
+                    f"{VIE_EPICERIE[epicerie]}</span></div>"
+                    f"<div class='valeur'>"
+                    f"{_argent_poste(eff['epicerie'], bases['epicerie'], 'épicerie')}"
+                    "</div></div>"
+                    "<div class='ligne'><div>"
+                    f"<b>Électricité</b> : "
+                    f"{LIB_ELECTRICITE[electricite]}<br>"
+                    f"<span class='vie-texte'>"
+                    f"{VIE_ELECTRICITE[electricite]}</span></div>"
+                    f"<div class='valeur'>"
+                    f"{_argent_poste(eff['electricite'], bases['electricite'], 'électricité')}"
+                    "</div></div>")
+                st.markdown(lignes_plan, unsafe_allow_html=True)
                 _, total_plan = donnees.projeter_mois(
                     dossier, profil, params, mois_courant + 1, candidat)
                 _, total_base = donnees.projeter_mois(

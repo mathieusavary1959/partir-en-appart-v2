@@ -1283,13 +1283,61 @@ BANQUE_BILANS = [
     "En un mot : ce mois-ci, ton argent a travaillé pour toi ou contre toi ?",
 ]
 
+# Amorces et exemples des bilans éclair (retour de Mathieu, 31 oct.
+# 2026 : « l'élève ne saura pas quoi écrire »). À chaque question,
+# une phrase déjà commencée que l'élève complète, et un exemple
+# rempli. L'amorce est alignée par index sur BANQUE_BILANS.
+AMORCES_BILANS = [
+    "Ce qui m'a coûté le plus cher, c'est ",
+    "Si c'était à refaire, je ",
+    "Mon solde me surprend parce que ",
+    "Le montant le plus injuste, c'est ",
+    "La décision que je changerais, c'est ",
+    "Je me sens en contrôle parce que ",
+    "L'imprévu qui m'a le plus appris, c'est ",
+    "Avec mon coloc, les comptes sont ",
+    "Ce mois-ci, mon argent a travaillé ",
+]
+
+EXEMPLES_BILANS = [
+    "Ce qui m'a coûté le plus cher, c'est mon loyer, parce qu'il "
+    "part dès le premier du mois.",
+    "Si c'était à refaire, je réparerais tout de suite, parce "
+    "qu'attendre m'a coûté plus cher au bout du compte.",
+    "Mon solde me surprend en bien parce que je pensais être "
+    "plus serré après mon épicerie.",
+    "Le montant le plus injuste, c'est la franchise d'assurance, "
+    "parce que je paie pour un dégât que je n'ai pas causé.",
+    "La décision que je changerais, c'est d'avoir attendu pour "
+    "mon écran de cellulaire, parce que ça m'a nui au travail.",
+    "Je me sens en contrôle parce que je sais maintenant "
+    "exactement ce qui sort le 1er du mois.",
+    "L'imprévu qui m'a le plus appris, c'est la crevaison, parce "
+    "que je n'avais aucune réserve pour ce genre de coup.",
+    "Avec mon coloc, les comptes sont justes parce qu'on sépare "
+    "tout en deux, sauf mon cellulaire que je paie seul.",
+    "Ce mois-ci, mon argent a travaillé pour moi parce que j'ai "
+    "fini le mois avec plus que ce que je pensais.",
+]
+
+
+def bilan_amorce(mois):
+    """Le début de phrase du bilan de ce mois, à compléter."""
+    return AMORCES_BILANS[(int(mois) - 1) % len(AMORCES_BILANS)]
+
+
+def bilan_exemple(mois):
+    """Un exemple de bilan rempli pour ce mois."""
+    return EXEMPLES_BILANS[(int(mois) - 1) % len(EXEMPLES_BILANS)]
+
+
 
 def vie_par_defaut():
     return {"mouvements": [], "mois_appliques": 0, "completions": {},
             "decisions": {}, "bilans": {}, "connexions": [],
             "installation_payee": False, "annonces": [],
             "a_appliquer": [], "gele": False, "reglages": {},
-            "cartes": []}
+            "cartes": [], "coloc_vus": []}
 
 
 def obtenir_vie(dossier):
@@ -1778,10 +1826,19 @@ def enregistrer_bilan(magasin, identifiant, mois, reponse_choix,
     dossier = magasin.charger_dossier(identifiant)
     if dossier is None:
         raise ValueError(f"Dossier introuvable : {identifiant}")
+    phrase_nette = (phrase or "").strip()
+    if not phrase_nette or phrase_nette == bilan_amorce(mois).strip():
+        raise ValueError(
+            "Complète la phrase commencée : le début tout seul ne "
+            "compte pas. Une courte phrase suffit.")
+    if len(phrase_nette) < 8:
+        raise ValueError(
+            "Écris une vraie phrase, même courte : c'est elle qui "
+            "te servira en S6 et en S7.")
     vie = obtenir_vie(dossier)
     vie.setdefault("bilans", {})[str(mois)] = {
         "question": BANQUE_BILANS[(int(mois) - 1) % len(BANQUE_BILANS)],
-        "choix": reponse_choix, "phrase": phrase or "",
+        "choix": reponse_choix, "phrase": phrase_nette,
         "date": _date.today().isoformat()}
     magasin.sauvegarder_dossier(identifiant, dossier)
     return dossier
@@ -1829,6 +1886,34 @@ def projeter_mois(dossier, profil, params, mois_cible, reglages=None):
                       "Décision manquée")]
     total = _arrondir2(sum(m["montant"] for m in mouvements))
     return mouvements, total
+
+
+def effets_reglages(dossier, profil, params, mois_cible, candidat):
+    """L'effet de CHAQUE levier du plan, séparément, en dollars :
+    on compare la projection du mois avec un seul levier changé à
+    la projection sans aucun changement (retour de Mathieu,
+    31 oct. 2026 : sinon l'élève coche un peu n'importe quoi, il
+    ne voit que le total combiné). Renvoie aussi les montants de
+    base de son épicerie et de son électricité, pour que les
+    pourcentages aient un sens pour lui."""
+    neutre = {"heures": "garder", "epicerie": "normal",
+              "electricite": "normal"}
+    mouv_base, total_base = projeter_mois(
+        dossier, profil, params, mois_cible, dict(neutre))
+    effets = {}
+    for levier in ("heures", "epicerie", "electricite"):
+        un_seul = dict(neutre)
+        un_seul[levier] = candidat[levier]
+        _, total_un = projeter_mois(
+            dossier, profil, params, mois_cible, un_seul)
+        effets[levier] = _arrondir2(total_un - total_base)
+    base = {"epicerie": 0.0, "electricite": 0.0}
+    for m in mouv_base:
+        cat = categoriser_mouvement(m)
+        if cat in base:
+            base[cat] = _arrondir2(base[cat] - m["montant"])
+    return {"effets": effets, "base": base,
+            "total_base": total_base}
 
 
 def position_dans_mois(params, aujourdhui=None):
@@ -1910,6 +1995,118 @@ def poser_annonce(magasin, identifiant, texte, aujourdhui=None):
 def annonces_non_vues(dossier):
     vie = obtenir_vie(dossier)
     return [a for a in vie.get("annonces") or [] if not a.get("vu")]
+
+
+# --- Le coloc réagit (couche histoire, retour de Mathieu,
+# 31 oct. 2026) : l'élève doit sentir qu'il fait partie d'une
+# histoire où ses décisions ont des impacts. Après un geste qui
+# touche la vie de la maison (décision, carte partagée, plan du
+# prochain mois), le coloc laisse un mot sur son post-it bleu de
+# la porte, en effet néon, jusqu'à ce que l'élève le voie dans
+# Ma vie. Une réaction à la fois : la plus parlante d'abord.
+
+REACTIONS_DECISIONS = {
+    "frigo-bruit": "Le frigo fait sa vie, maintenant. Merci "
+                   "d'avoir tranché.",
+    "heures-sup": "Je te vois travailler fort. Fais pas "
+                  "l'erreur de t'épuiser, hein.",
+    "ecran-fissure": "Ton écran, je le vois tous les jours. "
+                     "Je sais ce que tu as choisi.",
+    "sortie-vendredi": "Vendredi, je saurai à quoi m'en tenir. "
+                       "Merci d'avoir décidé.",
+    "dent-douleur": "Une dent qui fait mal, ça ne se négocie "
+                    "pas. J'espère que ça va mieux.",
+    "coloc-cuisine": "Quand ça cuisine gros, toute la maison "
+                     "en profite. Moi le premier.",
+}
+
+REACTIONS_CARTES = {
+    1: "Le frigo remarche et la bouffe est sauvée. Bien joué, "
+       "partenaire.",
+    7: "Le plancher a souffert, mais on s'en est sortis à deux.",
+}
+
+
+def _reaction_reglages(vie):
+    """La réaction du coloc au dernier plan noté, s'il change
+    quelque chose à la vie de la maison."""
+    reglages = vie.get("reglages") or {}
+    if not reglages:
+        return None
+    mois = max(reglages, key=lambda m: int(m))
+    plan = reglages[mois]
+    if plan.get("heures") == "plus":
+        texte = "Tu travailles plus, ce mois-là. Je te garde "                 "une assiette au chaud."
+    elif plan.get("heures") == "moins":
+        texte = "Moins d'heures, plus de livres. Je respecte ça."
+    elif plan.get("epicerie") == "serrer":
+        texte = "J'ai vu ton plan d'épicerie. Serré, hein. "                 "Je vais apprendre à aimer les pâtes."
+    elif plan.get("epicerie") == "mieux":
+        texte = "Mieux manger, ce mois-là ? Là, tu parles."
+    else:
+        return None
+    return {"cle": f"reglages-{mois}", "texte": texte,
+            "source": "reglages"}
+
+
+def reaction_coloc(dossier, mois_courant):
+    """La réaction du coloc en attente d'être vue, ou None.
+    Priorité : la décision du mois courant ou du dernier mois,
+    puis la dernière carte partagée, puis le plan noté."""
+    vie = obtenir_vie(dossier)
+    vus = set(vie.get("coloc_vus") or [])
+
+    def fraiche(reaction):
+        return reaction if reaction and reaction["cle"] not in vus \
+            else None
+
+    decisions = vie.get("decisions") or {}
+    for mois in (mois_courant, mois_courant - 1):
+        if mois < 1:
+            continue
+        d = decisions.get(str(mois))
+        if not d:
+            continue
+        if d.get("defaut"):
+            texte = ("Tu n'avais pas décidé, alors la vie l'a "
+                     "fait à ta place. La prochaine fois, tranche "
+                     "toi-même : ça fait une différence.")
+        else:
+            texte = REACTIONS_DECISIONS.get(
+                d.get("choix_id"),
+                "J'ai vu passer ta décision. Elle compte, ici.")
+        r = fraiche({"cle": f"decision-{mois}", "texte": texte,
+                     "source": "decision"})
+        if r:
+            return r
+    cartes = vie.get("cartes") or []
+    if cartes:
+        derniere = cartes[-1]
+        carte = carte_imprevu(derniere.get("numero"))
+        if carte and carte["partage"]:
+            texte = REACTIONS_CARTES.get(
+                carte["numero"],
+                "Ça, on vient de le vivre à deux. Merci pour "
+                "ta part.")
+            r = fraiche({"cle": f"carte-{carte['numero']}-"
+                                f"{derniere.get('date', '')}",
+                         "texte": texte, "source": "carte"})
+            if r:
+                return r
+    return fraiche(_reaction_reglages(vie))
+
+
+def marquer_coloc_vu(magasin, identifiant, cle):
+    """L'élève a vu la réaction du coloc (dans Ma vie) : le
+    néon de la porte s'éteint."""
+    dossier = magasin.charger_dossier(identifiant)
+    if dossier is None:
+        return
+    vie = obtenir_vie(dossier)
+    vus = vie.setdefault("coloc_vus", [])
+    if cle not in vus:
+        vus.append(cle)
+        magasin.sauvegarder_dossier(identifiant, dossier)
 
 
 def marquer_annonces_vues(magasin, identifiant):
