@@ -3730,12 +3730,33 @@ def _bloc_ton_mois(compte, dossier, profil, params, mois_courant,
     mouvements = donnees.generer_mouvements_mois(
         dossier_copie, profil, params, min(mois_courant, donnees.MOIS_MAX),
         compte["identifiant"])
-    # La décision par défaut ne s'applique qu'à la fermeture du mois :
-    # tant que l'élève peut encore décider, on ne l'affiche pas comme
-    # une « décision manquée » dans les mouvements à venir.
+    # La décision par défaut ne paraît que lorsqu'elle est
+    # tombée (jour limite passé) : avant, l'élève peut encore
+    # décider, on ne l'affiche pas comme « manquée ».
     mouvements = [m for m in mouvements
-                  if not str(m.get("libelle", "")).startswith(
-                      "Décision manquée")]
+                  if not (str(m.get("libelle", "")).startswith(
+                      "Décision manquée")
+                          and int(m.get("jour") or 0) >= jour_vie)]
+    # La décision PRISE par l'élève fait partie du mois : on
+    # l'ajoute au jour limite, pour que les totaux de TON MOIS
+    # disent tout l'argent du mois, comme le solde.
+    vie_bloc = donnees.obtenir_vie(dossier)
+    dec_bloc = (vie_bloc.get("decisions") or {}).get(
+        str(min(mois_courant, donnees.MOIS_MAX)))
+    if dec_bloc and not dec_bloc.get("defaut"):
+        choix_bloc = next(
+            (c for c in donnees.BANQUE_CHOIX_VIE
+             if c["id"] == dec_bloc.get("choix_id")), None)
+        if choix_bloc:
+            opt_bloc = choix_bloc["options"][dec_bloc["option"]]
+            mouvements.append({
+                "mois": min(mois_courant, donnees.MOIS_MAX),
+                "jour": donnees.JOUR_LIMITE_DECISION,
+                "libelle": f"Ta décision : {choix_bloc['titre']} "
+                           f"({opt_bloc['libelle']})",
+                "montant": dec_bloc.get(
+                    "montant", opt_bloc["montant"]),
+                "source": "decision"})
     par_jour = {}
     for m in mouvements:
         par_jour.setdefault(m["jour"], []).append(m)
@@ -3788,7 +3809,7 @@ def _bloc_ton_mois(compte, dossier, profil, params, mois_courant,
               and m["jour"] < jour_vie]
     dernier_txt = ""
     if passes:
-        dernier = passes[-1]
+        dernier = max(passes, key=lambda m: m["jour"])
         dernier_txt = (f"Dernier : <b>{_court(dernier['libelle'])}</b> "
                        f"({fmt_montant(dernier['montant'], signe=True)}), "
                        f"jour {dernier['jour']}.<br>")
