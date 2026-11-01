@@ -30,6 +30,24 @@ except Exception:
     FOND_CUISINE_JPG_B64 = ""
 
 try:
+    from logo_data import LOGO_CLE_PNG_B64
+except Exception:
+    LOGO_CLE_PNG_B64 = ""
+
+
+def _icone_page():
+    if not LOGO_CLE_PNG_B64:
+        return None
+    try:
+        import io
+
+        from PIL import Image
+
+        return Image.open(io.BytesIO(base64.b64decode(LOGO_CLE_PNG_B64)))
+    except Exception:
+        return None
+
+try:
     import extra_streamlit_components as stx
 except Exception:
     stx = None
@@ -56,7 +74,7 @@ if not hasattr(donnees, "PIECE_COLOC") or not hasattr(donnees, "nouveau_jeton_se
     import importlib
     importlib.reload(donnees)
 
-st.set_page_config(page_title="Partir en appart!", layout="wide")
+st.set_page_config(page_title="Partir en appart!", page_icon=_icone_page(), layout="wide")
 
 # --------------------------------------------------------------------- style
 # Univers « la porte de frigo » : mur de cuisine sombre, porte émaillée,
