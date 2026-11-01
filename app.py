@@ -2395,6 +2395,29 @@ def _synchroniser_s3(brouillon):
         brouillon["note_coloc"] = etat["s3_note_coloc"]
 
 
+def _enregistrer_s3_maintenant(compte, brouillon):
+    """Écrit le brouillon S3 dans le dossier, tout de suite, et
+    garde l'heure pour le dire à l'élève."""
+    donnees.enregistrer_s3(MAGASIN, compte["identifiant"], brouillon)
+    st.session_state["s3_dernier_enregistrement"] = (
+        datetime.datetime.now().strftime("%H h %M"))
+
+
+def _sauvegarde_auto_s3(compte, dossier, brouillon):
+    """Enregistrement automatique de la S3 (exigence de Mathieu,
+    31 oct. 2026, après la perte de ses propres meubles) : la S3
+    est le travail le plus long des élèves, son brouillon ne
+    doit jamais vivre seulement dans la session. Dès qu'il
+    diffère du dossier stocké, il est écrit dans le dossier :
+    fermer la page, rafraîchir, changer d'appareil ou un
+    redémarrage de l'app ne peut plus rien effacer."""
+    import json as _json
+    actuel = donnees.obtenir_s3(dossier)
+    if _json.dumps(brouillon, sort_keys=True, default=str) != \
+            _json.dumps(actuel, sort_keys=True, default=str):
+        _enregistrer_s3_maintenant(compte, brouillon)
+
+
 def _tampon_html(niveau):
     if niveau is None:
         return ""
@@ -2427,6 +2450,7 @@ def page_s3(compte, dossier, profil):
         aller("accueil")
     brouillon = _init_brouillon_s3(compte, dossier)
     gen = _s3_gen()
+    _sauvegarde_auto_s3(compte, dossier, brouillon)
     deja_fait = dossier.get("progression", {}).get("S3") == "fait"
 
     st.markdown(
@@ -2445,6 +2469,14 @@ def page_s3(compte, dossier, profil):
         "liens un par un. La chambre de ton coloc ne te coûte rien : "
         "il apporte ses meubles.</div></div>",
         unsafe_allow_html=True)
+    _dernier_enr = st.session_state.get("s3_dernier_enregistrement")
+    st.caption(
+        "Tout ce que tu écris sur cette page s'enregistre "
+        "automatiquement dans ton dossier"
+        + (f" (dernier enregistrement à {_dernier_enr})."
+           if _dernier_enr else ".")
+        + " Tu peux fermer la page et revenir plus tard : rien "
+          "ne se perd.")
     if deja_fait:
         st.success("Tu as déjà meublé ton appartement. Tu peux quand même "
                    "modifier tes bons et réenregistrer.")
@@ -2523,6 +2555,7 @@ def page_s3(compte, dossier, profil):
                                  use_container_width=True):
                         _synchroniser_s3(brouillon)
                         brouillon["pieces"][piece].pop(j)
+                        _enregistrer_s3_maintenant(compte, brouillon)
                         st.session_state["s3_gen"] = gen + 1
                         st.rerun()
                 st.text_input(
@@ -2534,6 +2567,7 @@ def page_s3(compte, dossier, profil):
             if st.button("Ajouter un article", key=f"s3_p{i}_ajout"):
                 _synchroniser_s3(brouillon)
                 brouillon["pieces"][piece].append(donnees.article_par_defaut(piece))
+                _enregistrer_s3_maintenant(compte, brouillon)
                 st.session_state["s3_gen"] = gen + 1
                 st.rerun()
             total_piece, part_piece = donnees.totaux_piece(brouillon, piece)
@@ -2594,11 +2628,13 @@ def page_s3(compte, dossier, profil):
                              use_container_width=True):
                     _synchroniser_s3(brouillon)
                     brouillon["electro"].pop(j)
+                    _enregistrer_s3_maintenant(compte, brouillon)
                     st.session_state["s3_gen"] = gen + 1
                     st.rerun()
         if st.button("Ajouter un électroménager", key="s3_e_ajout"):
             _synchroniser_s3(brouillon)
             brouillon["electro"].append(donnees.electro_par_defaut())
+            _enregistrer_s3_maintenant(compte, brouillon)
             st.session_state["s3_gen"] = gen + 1
             st.rerun()
         total_e, part_e = donnees.totaux_electro(brouillon)
