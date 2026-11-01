@@ -1178,6 +1178,25 @@ REFERENCES_VIE = {
 # ne coûte que son vrai montant.
 INSTALLATION_REFERENCE = 3500.0
 
+# Le crédit quand le solde passe sous zéro (demande de Mathieu
+# le 31 oct. 2026) : l'élève choisit qui avance l'argent, carte
+# de crédit ou marge de crédit, aux taux réels typiques du
+# Canada en 2026 (carte : 20,99 %, le taux courant des grandes
+# banques ; marge personnelle non garantie : taux préférentiel
+# + environ 5 %). Le choix reste pour tout le projet. Tant que
+# le solde est négatif au début d'un mois, un mois d'intérêts
+# tombe au jour 1, calculé sur la dette d'ouverture : les
+# intérêts s'ajoutent à la dette, c'est l'intérêt composé.
+# Quand le solde redevient positif, plus aucun intérêt : le
+# crédit s'arrête, comme dans la vraie vie. Sans choix au jour
+# limite, la vie choisit la carte (la chère).
+TAUX_CARTE_CREDIT = 0.2099
+TAUX_MARGE_CREDIT = 0.0995
+PRODUITS_CREDIT = {
+    "carte": {"libelle": "carte de crédit", "taux": TAUX_CARTE_CREDIT},
+    "marge": {"libelle": "marge de crédit", "taux": TAUX_MARGE_CREDIT},
+}
+
 # Mois de vie d'échéance par section (jalons traduits : fin mars = mois
 # 4, mi-avril = mois 6, début mai = mois 9).
 ECHEANCES_VIE = {"S1": 4, "S2": 4, "S3": 6, "S4": 6, "S5": 6,
@@ -1411,7 +1430,8 @@ def vie_par_defaut():
             "decisions": {}, "bilans": {}, "connexions": [],
             "installation_payee": False, "annonces": [],
             "a_appliquer": [], "gele": False, "reglages": {},
-            "cartes": [], "coloc_vus": [], "coloc_vus_porte": []}
+            "cartes": [], "coloc_vus": [], "coloc_vus_porte": [],
+            "credit": {}}
 
 
 def obtenir_vie(dossier):
@@ -1848,6 +1868,54 @@ def enregistrer_defaut_decision(vie, identifiant, mois):
         "pourquoi": option.get("pourquoi") or ""}
 
 
+# --- Le crédit (solde négatif) ---
+
+def produit_credit(vie):
+    """Le produit de crédit en place ('carte' ou 'marge'), ou
+    None si l'élève n'a jamais eu à choisir."""
+    return (vie.get("credit") or {}).get("produit")
+
+
+def interets_payes(vie):
+    """Le total des intérêts chargés depuis le début, recalculé
+    depuis le journal (source 'interet')."""
+    return _arrondir2(sum(
+        -float(m.get("montant") or 0)
+        for m in vie.get("mouvements") or []
+        if m.get("source") == "interet"))
+
+
+def enregistrer_choix_credit(magasin, identifiant, produit, mois):
+    """L'élève choisit son produit de crédit. Le choix est
+    définitif : il le suit pour tout le projet, et le crédit
+    s'active et s'arrête tout seul selon le signe du solde."""
+    if produit not in PRODUITS_CREDIT:
+        raise ValueError("Produit de crédit inconnu.")
+    dossier = magasin.charger_dossier(identifiant)
+    if dossier is None:
+        raise ValueError(f"Dossier introuvable : {identifiant}")
+    vie = obtenir_vie(dossier)
+    if produit_credit(vie):
+        raise ValueError("Le produit de crédit est déjà choisi.")
+    vie["credit"] = {"produit": produit, "defaut": False,
+                     "mois_debut": int(mois)}
+    magasin.sauvegarder_dossier(identifiant, dossier)
+    return dossier
+
+
+def enregistrer_defaut_credit(vie, dossier, mois):
+    """Si le solde est négatif et qu'aucun produit n'est choisi,
+    la vie choisit à la place de l'élève : la carte de crédit,
+    la chère. Renvoie True si le défaut vient d'être posé."""
+    if produit_credit(vie):
+        return False
+    if float(dossier.get("solde") or 0) >= 0:
+        return False
+    vie["credit"] = {"produit": "carte", "defaut": True,
+                     "mois_debut": int(mois)}
+    return True
+
+
 def appliquer_vie(magasin, identifiant, groupe, profil, aujourdhui=None):
     """Applique la vie due (application paresseuse, à la
     connexion) et consigne la connexion. Renvoie la liste des
@@ -1883,6 +1951,58 @@ def appliquer_vie(magasin, identifiant, groupe, profil, aujourdhui=None):
         for mois in range(int(vie.get("mois_appliques") or 0) + 1,
                           dernier + 1):
             ferme = mois <= fermes
+            # Intérêts sur la dette, calculés ICI et pas dans la
+            # génération : à ce point précis de la boucle, le
+            # solde du dossier est exactement celui de la fin du
+            # mois passé (les mois précédents sont fermés et
+            # tombés, aucune ligne de CE mois n'est encore
+            # tombée). Un mois d'intérêts tombe au jour 1 sur
+            # cette dette d'ouverture ; ils s'ajoutent à la
+            # dette, donc ils portent intérêt le mois suivant
+            # (intérêts composés). Solde positif : aucun
+            # intérêt, le crédit est arrêté. Jamais au mois 1.
+            produit_en_place = produit_credit(vie)
+            mois_pas_commence = not any(
+                m.get("mois") == mois
+                for m in vie.get("mouvements") or [])
+            if mois >= 2 and mois_pas_commence and (
+                    produit_en_place in PRODUITS_CREDIT):
+                info_credit = PRODUITS_CREDIT[produit_en_place]
+                libelle_interets = (
+                    f"Intérêts sur ta {info_credit['libelle']}")
+                dette_ouverture = -float(dossier.get("solde") or 0)
+                if dette_ouverture > 0 and (
+                        mois, 1, libelle_interets) not in deja:
+                    interets = _arrondir2(
+                        dette_ouverture * info_credit["taux"] / 12)
+                    if interets >= 0.01:
+                        taux_affiche = (
+                            f"{info_credit['taux'] * 100:.2f}"
+                            .replace(".", ",") + " %")
+                        vie["mouvements"].append({
+                            "mois": mois, "jour": 1,
+                            "libelle": libelle_interets,
+                            "montant": -interets, "source": "interet",
+                            "pourquoi": (
+                                f"Tu commences le mois en devant "
+                                f"{_fmt_montant(dette_ouverture)} "
+                                f"sur ta {info_credit['libelle']} "
+                                f"({taux_affiche} par année). Un "
+                                f"mois d'intérêts coûte "
+                                f"{_fmt_montant(interets)}, et ce "
+                                f"montant s'ajoute à ta dette : le "
+                                f"mois prochain, tu paieras aussi "
+                                f"des intérêts dessus. C'est ça, "
+                                f"les intérêts composés. Quand ton "
+                                f"solde redeviendra positif, les "
+                                f"intérêts arrêteront "
+                                f"complètement."),
+                            "date_reelle": _date.today().isoformat()})
+                        deja.add((mois, 1, libelle_interets))
+                        dossier["solde"] = _arrondir2(
+                            float(dossier.get("solde") or 0)
+                            - interets)
+                        nouveaux.append(vie["mouvements"][-1])
             mouvements = generer_mouvements_mois(
                 dossier, profil, params, mois, identifiant)
             programmes = vie.setdefault("a_appliquer", [])
@@ -1918,6 +2038,17 @@ def appliquer_vie(magasin, identifiant, groupe, profil, aujourdhui=None):
                 nouveaux.append(m)
             if ferme or journee >= JOUR_LIMITE_DECISION:
                 enregistrer_defaut_decision(vie, identifiant, mois)
+                if enregistrer_defaut_credit(vie, dossier, mois):
+                    vie.setdefault("annonces", []).append({
+                        "texte": (
+                            "La vie a choisi à ta place : tes dettes "
+                            "sont sur une carte de crédit (20,99 % "
+                            "par année), parce que ton solde était "
+                            "sous zéro et que tu n'avais pas choisi "
+                            "ton produit de crédit avant le jour 14. "
+                            "Une marge de crédit t'aurait coûté "
+                            "moins cher."),
+                        "date": aujourdhui.isoformat(), "vu": False})
             if ferme:
                 vie["mois_appliques"] = mois
     jour_str = aujourdhui.isoformat()

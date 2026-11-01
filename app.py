@@ -51,6 +51,7 @@ if not hasattr(donnees, "PIECE_COLOC") or not hasattr(donnees, "nouveau_jeton_se
         or not hasattr(donnees, "strategies_disponibles") \
         or not hasattr(donnees, "enregistrer_defaut_decision") \
         or not hasattr(donnees, "annuler_carte_imprevu") \
+        or not hasattr(donnees, "TAUX_CARTE_CREDIT") \
         or not hasattr(donnees, "INSTALLATION_REFERENCE"):
     import importlib
     importlib.reload(donnees)
@@ -4284,6 +4285,83 @@ def page_imprevus(compte, dossier, profil):
                 unsafe_allow_html=True)
 
 
+def _bloc_credit(compte, dossier, vie, mois_courant):
+    """Le crédit dans Ma vie : le choix du produit quand le solde
+    passe sous zéro, puis l'état du crédit (actif ou arrêté) et
+    le compteur d'intérêts payés."""
+    solde = float(dossier.get("solde") or 0)
+    produit = donnees.produit_credit(vie)
+    total_interets = donnees.interets_payes(vie)
+    if not produit and solde >= 0:
+        return
+    if not produit:
+        dette = -solde
+        couts = {}
+        for cle_p, info in donnees.PRODUITS_CREDIT.items():
+            couts[cle_p] = round(dette * info["taux"] / 12, 2)
+        st.markdown(
+            "<section class='carte bloc-accent'>"
+            "<h2>Tu es dans le rouge</h2>"
+            f"<div class='aide'>Ton solde est à "
+            f"<b>{fmt_montant(solde)}</b>. Dans la vraie vie, on ne "
+            "paie pas avec de l'argent qu'on n'a pas : quelqu'un "
+            "avance l'argent pour toi, et ça coûte des intérêts. "
+            "Choisis qui t'avance, avant le jour "
+            f"{donnees.JOUR_LIMITE_DECISION} du mois. Si tu ne "
+            "choisis pas, la vie choisira la carte de crédit, la "
+            "plus chère. Ce choix te suit pour tout le projet : "
+            "ton crédit s'activera chaque fois que tu seras sous "
+            "zéro, et il arrêtera dès que tu auras tout "
+            "remboursé.</div></section>",
+            unsafe_allow_html=True)
+        choix = st.radio(
+            "Qui avance l'argent ?",
+            ["carte", "marge"],
+            format_func=lambda c: (
+                f"La carte de crédit : 20,99 % par année. "
+                f"Sur ta dette de {fmt_montant(dette)}, un mois "
+                f"te coûterait environ {fmt_montant(couts['carte'])} "
+                f"d'intérêts."
+                if c == "carte" else
+                f"La marge de crédit : 9,95 % par année. "
+                f"Sur ta dette de {fmt_montant(dette)}, un mois "
+                f"te coûterait environ {fmt_montant(couts['marge'])} "
+                f"d'intérêts."),
+            key="credit_radio")
+        if st.button("Je choisis ce produit", type="primary"):
+            donnees.enregistrer_choix_credit(
+                MAGASIN, compte["identifiant"], choix, mois_courant)
+            st.rerun()
+        return
+    info = donnees.PRODUITS_CREDIT[produit]
+    taux_affiche = (f"{info['taux'] * 100:.2f}".replace(".", ",")
+                    + " %")
+    mention_defaut = (
+        " La vie l'a choisi à ta place, parce que tu n'avais pas "
+        "décidé avant le jour limite."
+        if (vie.get("credit") or {}).get("defaut") else "")
+    if solde < 0:
+        etat = (f"Tu dois présentement <b>{fmt_montant(-solde)}</b>. "
+                "Le 1er de chaque mois, les intérêts tombent sur ce "
+                "que tu dois, et ils s'ajoutent à ta dette.")
+    else:
+        etat = ("Ton solde est positif : <b>ton crédit est "
+                "arrêté</b>, il ne te coûte plus rien. Il se "
+                "réactivera tout seul si tu repasses sous zéro.")
+    compteur = (
+        f"<div class='aide'>Intérêts payés depuis le début : "
+        f"<b>{fmt_montant(total_interets)}</b>. C'est de l'argent "
+        "qui n'a rien acheté : juste le prix d'avoir été dans le "
+        "rouge.</div>" if total_interets > 0 else "")
+    st.markdown(
+        "<section class='carte'><h2>Ton crédit</h2>"
+        f"<div class='aide'>Tes dettes sont sur ta "
+        f"<b>{info['libelle']}</b> ({taux_affiche} par année)."
+        f"{mention_defaut}</div>"
+        f"<div class='aide'>{etat}</div>{compteur}</section>",
+        unsafe_allow_html=True)
+
+
 def page_vie(compte, dossier, profil):
     if st.button("Retour à l'accueil"):
         aller("accueil")
@@ -4347,6 +4425,7 @@ def page_vie(compte, dossier, profil):
             "chaque jour.</div>"
             + html_calendrier_vie(journee_courante)
             + "</section>", unsafe_allow_html=True)
+        _bloc_credit(compte, dossier, vie, mois_courant)
 
     # --- La couche histoire : le coloc réagit (son post-it bleu
     # de la porte s'éteint quand l'élève passe ici), et la
