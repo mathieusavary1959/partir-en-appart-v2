@@ -1299,6 +1299,56 @@ BANQUE_CHOIX_VIE = [
           "pourquoi": "Aucun montant : chacun continue ses courses "
                       "de son bord, rien ne change."}],
      "defaut": 1},
+    {"id": "fuite-eau", "titre": "Une fuite d'eau dans la salle de bain",
+     "texte": "Un tuyau fuit sous le lavabo et l'eau commence à "
+              "s'étendre sur le plancher. C'est un coût à partager "
+              "avec ton coloc. Tu fais quoi ?",
+     "options": [
+         {"libelle": "Faire venir le plombier maintenant",
+          "montant": -240.0,
+          "pourquoi": "Un plombier tout de suite : environ 480 $ "
+                      "pour l'appartement, donc 240 $ pour ta part. "
+                      "La fuite est réglée avant qu'elle abîme le "
+                      "plancher."},
+         {"libelle": "Mettre une chaudière et attendre",
+          "montant": -460.0,
+          "pourquoi": "L'eau s'infiltre tranquillement dans le "
+                      "plancher : les dégâts montent à environ "
+                      "920 $ pour l'appartement, donc 460 $ pour ta "
+                      "part. Attendre a presque doublé la facture."}],
+     "defaut": 1},
+    {"id": "frais-scolaires", "titre": "Tes frais scolaires sont dus",
+     "texte": "La réinscription et le matériel de la session sont "
+              "à payer avant la date limite. Tu fais quoi ?",
+     "options": [
+         {"libelle": "Payer les frais à temps", "montant": -210.0,
+          "pourquoi": "Réinscription et matériel pour la session : "
+                      "210 $, payés avant la date limite. C'est "
+                      "réglé, sans frais de plus."},
+         {"libelle": "Payer quand tu y penseras", "montant": -285.0,
+          "pourquoi": "Les mêmes frais de 210 $, plus 75 $ de "
+                      "frais de retard parce que tu as dépassé la "
+                      "date limite. Total : 285 $. Le retard coûte "
+                      "75 $ pour rien."}],
+     "defaut": 1},
+    {"id": "portable-lache", "titre": "Ton ordinateur portable lâche",
+     "texte": "Ton portable ne démarre plus, en pleine session. "
+              "Tu en as besoin pour tes travaux. Tu fais quoi ?",
+     "options": [
+         {"libelle": "Le faire réparer tout de suite",
+          "montant": -190.0,
+          "pourquoi": "Diagnostic et réparation en atelier : "
+                      "environ 190 $. Tu récupères ton portable et "
+                      "tes fichiers, et tu peux continuer tes "
+                      "travaux."},
+         {"libelle": "Attendre et essayer de t'en passer",
+          "montant": -340.0,
+          "pourquoi": "Tu perds du temps sur tes travaux, puis tu "
+                      "fais comme tout le monde : tu rachètes un "
+                      "portable usagé en urgence pour 340 $, sans "
+                      "avoir pu magasiner. Attendre a coûté plus "
+                      "cher que réparer."}],
+     "defaut": 1},
 ]
 
 BANQUE_BILANS = [
